@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { CATEGORIES_DATA } from '../data/categoriesData';
 import { PRODUCTS_DATA } from '../data/productsData';
-import type { CategorySlug, Product } from '../types';
-import { SwatchViewer3D } from '../components/3d/SwatchViewer3D';
-import { Layers, PackageCheck, ArrowLeft, Filter } from 'lucide-react';
+import type { CategorySlug } from '../types';
+import { PackageCheck, ArrowLeft, Filter } from 'lucide-react';
 
 interface CategoryPageProps {
   categorySlug: CategorySlug;
@@ -18,10 +17,6 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
 }) => {
   const categoryInfo = CATEGORIES_DATA[categorySlug] || CATEGORIES_DATA['fabrics'];
   const categoryProducts = PRODUCTS_DATA.filter((p) => p.categorySlug === categorySlug);
-
-  const [selectedProductFor3D, setSelectedProductFor3D] = useState<Product | null>(
-    categoryProducts[0] || null
-  );
 
   const [filterPrice, setFilterPrice] = useState<string>('All');
 
@@ -79,69 +74,6 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
                 <PackageCheck className="w-4 h-4" />
                 <span>Request Category Swatch Box</span>
               </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 3D Swatch Inspector Component Integration */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-[#1A1918] rounded-3xl p-8 sm:p-12 border border-[#C5A059]/30 shadow-2xl text-[#FDFBF7]">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            <div className="lg:col-span-5 space-y-6">
-              <span className="text-xs uppercase tracking-widest text-[#C5A059] font-medium flex items-center gap-1.5">
-                <Layers className="w-4 h-4" /> Interactive 3D Swatch Studio
-              </span>
-              <h2 className="font-serif text-3xl sm:text-4xl text-[#FDFBF7]">
-                360° Material Inspector
-              </h2>
-              <p className="text-xs sm:text-sm text-[#D8C8B8] font-light leading-relaxed">
-                Rotate and inspect physical yarn weaves, surface sheen, and custom colorways for {categoryInfo.title}.
-              </p>
-
-              {/* Product Selector for 3D View */}
-              {categoryProducts.length > 0 && (
-                <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-widest text-[#8C7A6B] block">
-                    Select Product to Inspect:
-                  </label>
-                  <div className="space-y-2">
-                    {categoryProducts.map((p) => (
-                      <button
-                        key={p.id}
-                        onClick={() => setSelectedProductFor3D(p)}
-                        className={`w-full p-3 rounded-xl text-left border transition-all text-xs flex items-center justify-between ${
-                          selectedProductFor3D?.id === p.id
-                            ? 'bg-[#C5A059]/20 border-[#C5A059] text-[#FDFBF7]'
-                            : 'bg-white/5 border-white/10 text-[#D8C8B8] hover:border-white/30'
-                        }`}
-                      >
-                        <div>
-                          <strong className="block text-sm font-serif">{p.name}</strong>
-                          <span className="text-[10px] text-[#8C7A6B]">{p.materialComposition}</span>
-                        </div>
-                        <span className="text-[10px] uppercase tracking-wider text-[#C5A059] font-semibold">
-                          {p.priceCategory}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="lg:col-span-7">
-              {selectedProductFor3D ? (
-                <SwatchViewer3D
-                  swatchType={selectedProductFor3D.swatchType}
-                  colors={selectedProductFor3D.swatchColors}
-                  productName={selectedProductFor3D.name}
-                />
-              ) : (
-                <div className="p-8 text-center text-[#D8C8B8]">
-                  Select a product to inspect in 3D.
-                </div>
-              )}
             </div>
           </div>
         </div>

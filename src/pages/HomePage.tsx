@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { HeroCanvas } from '../components/3d/HeroCanvas';
 import { CategoryTile } from '../components/ui/CategoryTile';
 import { CATEGORIES_DATA } from '../data/categoriesData';
 import { PROJECTS_DATA } from '../data/projectsData';
 import { BRANDS_DATA } from '../data/brandsData';
 import type { CategorySlug, Project } from '../types';
-import { ArrowRight, Sparkles, Star, Layers, ChevronRight } from 'lucide-react';
-import { SwatchViewer3D } from '../components/3d/SwatchViewer3D';
+import { ArrowRight, Sparkles, Star } from 'lucide-react';
 
 interface HomePageProps {
   onNavigate: (tab: string, categorySlug?: CategorySlug) => void;
@@ -19,11 +18,6 @@ export const HomePage: React.FC<HomePageProps> = ({
   onOpenProject,
   onRequestSwatches
 }) => {
-  const [featuredCategoryIndex, setFeaturedCategoryIndex] = useState(0);
-
-  const heroCategories = Object.values(CATEGORIES_DATA);
-  const activeCategoryFor3D = heroCategories[featuredCategoryIndex];
-
   return (
     <div className="space-y-24 sm:space-y-32 pb-24">
       {/* --- HERO SECTION --- */}
@@ -78,7 +72,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             </div>
           </div>
 
-          {/* Right 3D Interactive Hero Canvas */}
+          {/* Right Professional Furnishing Showcase */}
           <div className="lg:col-span-7">
             <HeroCanvas />
           </div>
@@ -138,7 +132,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             </h2>
           </div>
           <p className="text-xs text-[#8C7A6B] max-w-md font-light">
-            Select any category below to inspect our material compositions, origin stories, and 3D texture archives.
+            Select any category below to inspect our material compositions, origin stories, and texture archives.
           </p>
         </div>
 
@@ -150,75 +144,6 @@ export const HomePage: React.FC<HomePageProps> = ({
               onClick={(catId) => onNavigate('category', catId)}
             />
           ))}
-        </div>
-      </section>
-
-      {/* --- INTERACTIVE 3D SWATCH VIEWER SHOWCASE SECTION --- */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-[#1A1918] rounded-3xl p-8 sm:p-12 border border-[#C5A059]/30 shadow-2xl text-[#FDFBF7]">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            <div className="lg:col-span-5 space-y-6">
-              <span className="text-xs uppercase tracking-widest text-[#C5A059] font-medium flex items-center gap-1.5">
-                <Layers className="w-4 h-4" /> 360° Material Inspector
-              </span>
-              <h3 className="font-serif text-3xl sm:text-4xl text-[#FDFBF7] leading-tight">
-                Inspect Real-Time Textures & Custom Colorways
-              </h3>
-              <p className="text-xs sm:text-sm text-[#D8C8B8] font-light leading-relaxed">
-                Test how our woven silks, mohair velvets, basswood slats, and hand-carved rugs react to ambient light and custom color palettes in our 3D Studio.
-              </p>
-
-              {/* Category Selector Tabs for 3D */}
-              <div className="flex flex-wrap gap-2 pt-2">
-                {heroCategories.slice(0, 5).map((cat, idx) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setFeaturedCategoryIndex(idx)}
-                    className={`px-3 py-1.5 rounded-full text-xs transition-all ${
-                      featuredCategoryIndex === idx
-                        ? 'bg-[#C5A059] text-[#1A1918] font-bold'
-                        : 'bg-white/5 text-[#D8C8B8] hover:bg-white/10'
-                    }`}
-                  >
-                    {cat.title}
-                  </button>
-                ))}
-              </div>
-
-              <div className="pt-4">
-                <button
-                  onClick={() => onNavigate('category', activeCategoryFor3D.id as CategorySlug)}
-                  className="inline-flex items-center space-x-2 text-xs uppercase tracking-widest font-bold text-[#C5A059] hover:text-[#D4AF37]"
-                >
-                  <span>Explore {activeCategoryFor3D.title} Full Collection</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="lg:col-span-7">
-              <SwatchViewer3D
-                swatchType={
-                  activeCategoryFor3D.id === 'fabrics'
-                    ? 'silk'
-                    : activeCategoryFor3D.id === 'curtains-upholstery'
-                    ? 'velvet'
-                    : activeCategoryFor3D.id === 'blinds'
-                    ? 'wood'
-                    : activeCategoryFor3D.id === 'rugs'
-                    ? 'weave'
-                    : 'linen'
-                }
-                colors={[
-                  { name: 'Champagne Gold', hex: '#D4AF37', roughness: 0.3, metalness: 0.2 },
-                  { name: 'Deep Emerald', hex: '#1C3026', roughness: 0.25, metalness: 0.1 },
-                  { name: 'Oxblood Velvet', hex: '#3B1C1C', roughness: 0.2, metalness: 0.15 },
-                  { name: 'Oyster Linen', hex: '#EBE5D8', roughness: 0.6, metalness: 0.05 }
-                ]}
-                productName={activeCategoryFor3D.title}
-              />
-            </div>
-          </div>
         </div>
       </section>
 
