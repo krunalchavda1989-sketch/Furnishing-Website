@@ -177,10 +177,11 @@ export const SampleRequestModal: React.FC<SampleRequestModalProps> = ({
 
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-full bg-[#C5A059] text-[#1A1918] font-bold uppercase tracking-widest text-xs hover:bg-[#D4AF37] transition-all flex items-center justify-center space-x-2 shadow-lg"
+                disabled={isSubmitting}
+                className="w-full py-3.5 rounded-full bg-[#C5A059] text-[#1A1918] font-bold uppercase tracking-widest text-xs hover:bg-[#D4AF37] transition-all flex items-center justify-center space-x-2 shadow-lg disabled:opacity-50 cursor-pointer"
               >
                 <Send className="w-4 h-4" />
-                <span>Dispatch Swatch Box</span>
+                <span>{isSubmitting ? 'Dispatching Swatch Box...' : 'Dispatch Swatch Box'}</span>
               </button>
             </form>
           </div>

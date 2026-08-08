@@ -3,33 +3,38 @@ import {
   LayoutDashboard,
   Package,
   Layers,
-  Sparkles,
   LogOut,
   ExternalLink,
   Search,
   Plus,
   TrendingUp,
   CheckCircle2,
-  Clock,
   Truck,
-  Filter,
   Shield,
-  User,
   Settings,
-  Mail,
-  Phone,
-  MapPin,
   Building2,
   Trash2,
-  Edit,
-  Eye,
-  Database
+  Database,
+  RefreshCw,
+  ShieldCheck,
+  UserCheck
 } from 'lucide-react';
-import type { AdminUser, SwatchRequestItem } from '../../types/adminTypes';
+import type { AdminUser, SwatchRequestItem, AuditLogItem } from '../../types/adminTypes';
+import type { Product, CategorySlug } from '../../types';
 import { CATEGORIES_DATA } from '../../data/categoriesData';
 import { PRODUCTS_DATA } from '../../data/productsData';
 import { PROJECTS_DATA } from '../../data/projectsData';
-import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import {
+  supabase,
+  isSupabaseConfigured,
+  testSupabaseConnection,
+  fetchProductsFromSupabase,
+  createProductInSupabase,
+  deleteProductInSupabase,
+  fetchAdminAuditLogsFromSupabase,
+  logAdminActivityInSupabase,
+  fetchAdminUsersFromSupabase
+} from '../../lib/supabase';
 
 interface AdminDashboardProps {
   user: AdminUser;
@@ -37,7 +42,7 @@ interface AdminDashboardProps {
   onReturnToSite: () => void;
 }
 
-// MOCK SWATCH REQUESTS FOR DEMO / OFFLINE FALLBACK
+// FALLBACK SWATCH REQUESTS FOR OFFLINE / INITIAL DEMO
 const INITIAL_SWATCH_REQUESTS: SwatchRequestItem[] = [
   {
     id: 'SW-9041',
@@ -82,18 +87,91 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onLogout,
   onReturnToSite
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'swatches' | 'projects' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'swatches' | 'audit-logs' | 'projects' | 'settings'>('overview');
   const [swatchRequests, setSwatchRequests] = useState<SwatchRequestItem[]>(INITIAL_SWATCH_REQUESTS);
+  const [productsList, setProductsList] = useState<Product[]>(PRODUCTS_DATA);
+  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
+  const [adminUsersList, setAdminUsersList] = useState<AdminUser[]>([
+    {
+      id: 'adm-001',
+      name: 'Lady Vivienne Sterling',
+      email: 'admin@maison-drape.com',
+      role: 'Master Curator',
+      status: 'Active',
+      lastLogin: 'Today'
+    }
+  ]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('All');
   const [showAddProductModal, setShowAddProductModal] = useState(false);
 
-  // Fetch live swatch requests from Supabase on load if configured
+  // Supabase Database Connection & Ping Metrics
+  const [dbMetrics, setDbMetrics] = useState<{
+    tested: boolean;
+    connected: boolean;
+    latencyMs: number;
+    message: string;
+    isTesting: boolean;
+  }>({
+    tested: false,
+    connected: false,
+    latencyMs: 0,
+    message: 'Initializing...',
+    isTesting: false
+  });
+
+  // Add Product Form State
+  const [newProductForm, setNewProductForm] = useState({
+    name: '',
+    categorySlug: 'fabrics' as CategorySlug,
+    materialComposition: '',
+    origin: 'Como, Italy',
+    priceCategory: 'Bespoke',
+    shortDescription: '',
+    widthOrDimensions: '140 cm width',
+    image: 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&q=80&w=1200'
+  });
+
+  // Load all live Supabase data on mount
   useEffect(() => {
-    if (isSupabaseConfigured) {
-      fetchSupabaseSwatchRequests();
-    }
+    runDatabaseCheck();
+    fetchLiveSupabaseData();
   }, []);
+
+  const runDatabaseCheck = async () => {
+    setDbMetrics((prev) => ({ ...prev, isTesting: true }));
+    const res = await testSupabaseConnection();
+    setDbMetrics({
+      tested: true,
+      connected: res.success,
+      latencyMs: res.latencyMs,
+      message: res.message,
+      isTesting: false
+    });
+  };
+
+  const fetchLiveSupabaseData = async () => {
+    if (!isSupabaseConfigured) return;
+
+    // 1. Fetch Swatch Requests
+    fetchSupabaseSwatchRequests();
+
+    // 2. Fetch Products
+    const dbProds = await fetchProductsFromSupabase();
+    if (dbProds && dbProds.length > 0) {
+      setProductsList(dbProds);
+    }
+
+    // 3. Fetch Audit Logs
+    const logs = await fetchAdminAuditLogsFromSupabase();
+    setAuditLogs(logs);
+
+    // 4. Fetch Admin Users
+    const admins = await fetchAdminUsersFromSupabase();
+    if (admins && admins.length > 0) {
+      setAdminUsersList(admins);
+    }
+  };
 
   const fetchSupabaseSwatchRequests = async () => {
     try {
@@ -113,12 +191,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           categorySlug: item.category_slug,
           swatchesRequested: item.swatches_requested || [],
           status: item.status || 'Pending',
-          requestDate: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          requestDate: new Date(item.created_at).toLocaleDateString([], {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
         }));
         setSwatchRequests(formatted);
       }
     } catch (err) {
-      console.warn('Supabase fetch error, using local fallback:', err);
+      console.warn('Supabase swatch fetch exception:', err);
     }
   };
 
@@ -134,14 +217,86 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           .from('swatch_requests')
           .update({ status: newStatus })
           .eq('id', id);
+
+        await logAdminActivityInSupabase(
+          user.email,
+          'SWATCH_STATUS_UPDATED',
+          `Updated swatch request #${id} status to ${newStatus}`
+        );
+
+        // Refresh audit logs
+        const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+        setAuditLogs(updatedLogs);
       } catch (err) {
         console.warn('Supabase status update error:', err);
       }
     }
   };
 
-  const filteredProducts = PRODUCTS_DATA.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.materialComposition.toLowerCase().includes(searchTerm.toLowerCase());
+  // Create Product Handler
+  const handleCreateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProductForm.name || !newProductForm.materialComposition) return;
+
+    const catObj = CATEGORIES_DATA[newProductForm.categorySlug] || CATEGORIES_DATA['fabrics'];
+
+    const newProd: Product = {
+      id: `PRD-${Date.now().toString().slice(-4)}`,
+      name: newProductForm.name,
+      categorySlug: newProductForm.categorySlug,
+      categoryName: catObj.title,
+      shortDescription: newProductForm.shortDescription || `${newProductForm.name} crafted in ${newProductForm.origin}`,
+      fullDescription: `${newProductForm.name} represents the pinnacle of luxury furnishing architecture.`,
+      materialComposition: newProductForm.materialComposition,
+      widthOrDimensions: newProductForm.widthOrDimensions,
+      origin: newProductForm.origin,
+      priceCategory: newProductForm.priceCategory as any,
+      image: newProductForm.image,
+      galleryImages: [newProductForm.image],
+      swatchColors: [{ name: 'Classic Gold', hex: '#C5A059' }],
+      swatchType: newProductForm.categorySlug === 'fabrics' ? 'silk' : 'linen',
+      tags: ['Bespoke', 'Atelier']
+    };
+
+    setProductsList((prev) => [newProd, ...prev]);
+    setShowAddProductModal(false);
+
+    if (isSupabaseConfigured) {
+      await createProductInSupabase(newProd, user.email);
+      const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+      setAuditLogs(updatedLogs);
+    }
+
+    // Reset form
+    setNewProductForm({
+      name: '',
+      categorySlug: 'fabrics',
+      materialComposition: '',
+      origin: 'Como, Italy',
+      priceCategory: 'Bespoke',
+      shortDescription: '',
+      widthOrDimensions: '140 cm width',
+      image: 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&q=80&w=1200'
+    });
+  };
+
+  // Delete Product Handler
+  const handleDeleteProduct = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to remove "${name}" from the active catalog?`)) return;
+
+    setProductsList((prev) => prev.filter((p) => p.id !== id));
+
+    if (isSupabaseConfigured) {
+      await deleteProductInSupabase(id, user.email);
+      const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+      setAuditLogs(updatedLogs);
+    }
+  };
+
+  const filteredProducts = productsList.filter((p) => {
+    const matchesSearch =
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.materialComposition.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCat = selectedCategoryFilter === 'All' || p.categorySlug === selectedCategoryFilter;
     return matchesSearch && matchesCat;
   });
@@ -165,7 +320,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </span>
               </div>
               <span className="text-[11px] text-[#D4AF37] font-medium block">
-                Atelier Curator Administration
+                Atelier Curator Administration & Supabase Sync
               </span>
             </div>
           </div>
@@ -174,7 +329,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {/* User Profile Badge */}
             <div className="hidden sm:flex items-center space-x-2.5 bg-white/5 border border-white/10 px-3.5 py-1.5 rounded-full">
               <div className="w-7 h-7 rounded-full bg-[#C5A059] text-[#121110] font-bold text-xs flex items-center justify-center">
-                VS
+                {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
               </div>
               <div className="text-left leading-tight">
                 <span className="block text-xs font-bold text-white">{user.name}</span>
@@ -184,7 +339,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <button
               onClick={onReturnToSite}
-              className="px-3.5 py-1.5 rounded-full border border-white/15 bg-white/5 text-white hover:bg-white/10 text-xs font-semibold uppercase tracking-wider transition-all flex items-center space-x-1.5"
+              className="px-3.5 py-1.5 rounded-full border border-white/15 bg-white/5 text-white hover:bg-white/10 text-xs font-semibold uppercase tracking-wider transition-all flex items-center space-x-1.5 cursor-pointer"
             >
               <ExternalLink className="w-3.5 h-3.5 text-[#C5A059]" />
               <span className="hidden md:inline">Live Site</span>
@@ -192,7 +347,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <button
               onClick={onLogout}
-              className="px-3.5 py-1.5 rounded-full bg-red-950/60 border border-red-500/30 text-red-200 hover:bg-red-900/60 text-xs font-semibold uppercase tracking-wider transition-all flex items-center space-x-1.5"
+              className="px-3.5 py-1.5 rounded-full bg-red-950/60 border border-red-500/30 text-red-200 hover:bg-red-900/60 text-xs font-semibold uppercase tracking-wider transition-all flex items-center space-x-1.5 cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5 text-red-400" />
               <span>Logout</span>
@@ -203,13 +358,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* --- DASHBOARD NAVIGATION TABS BAR --- */}
       <div className="bg-[#121110] border-b border-white/10 px-4 sm:px-8">
-        <div className="max-w-7xl mx-auto flex items-center space-x-2 sm:space-x-6 overflow-x-auto py-2">
+        <div className="max-w-7xl mx-auto flex items-center space-x-2 sm:space-x-4 overflow-x-auto py-2">
           {[
-            { id: 'overview', label: 'Overview & Analytics', icon: LayoutDashboard },
-            { id: 'products', label: 'Product Catalog', icon: Package },
-            { id: 'swatches', label: 'Swatch Orders', icon: Layers, badge: swatchRequests.filter(s => s.status === 'Pending').length },
+            { id: 'overview', label: 'Overview & Sync', icon: LayoutDashboard },
+            { id: 'products', label: 'Product Catalog', icon: Package, badge: productsList.length },
+            {
+              id: 'swatches',
+              label: 'Swatch Orders',
+              icon: Layers,
+              badge: swatchRequests.filter((s) => s.status === 'Pending').length
+            },
+            { id: 'audit-logs', label: 'Security Audit Logs', icon: ShieldCheck, badge: auditLogs.length },
             { id: 'projects', label: 'Residence Portfolio', icon: Building2 },
-            { id: 'settings', label: 'Admin Security', icon: Settings }
+            { id: 'settings', label: 'Curator Staff', icon: Settings }
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -217,7 +378,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest font-semibold transition-all whitespace-nowrap ${
+                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest font-semibold transition-all whitespace-nowrap cursor-pointer ${
                   isActive
                     ? 'bg-[#C5A059] text-[#121110] shadow-lg font-bold'
                     : 'text-[#D8C8B8] hover:text-[#F5D07F] hover:bg-white/5'
@@ -226,7 +387,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <Icon className="w-4 h-4" />
                 <span>{tab.label}</span>
                 {tab.badge !== undefined && tab.badge > 0 && (
-                  <span className={`ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${isActive ? 'bg-[#121110] text-[#F5D07F]' : 'bg-[#C5A059] text-[#121110]'}`}>
+                  <span
+                    className={`ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      isActive ? 'bg-[#121110] text-[#F5D07F]' : 'bg-[#C5A059] text-[#121110]'
+                    }`}
+                  >
                     {tab.badge}
                   </span>
                 )}
@@ -241,6 +406,52 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {/* ================= OVERVIEW TAB ================= */}
         {activeTab === 'overview' && (
           <div className="space-y-8 animate-in fade-in duration-300">
+            {/* Live Supabase Connection & Latency Banner */}
+            <div className="bg-[#141312] border border-[#C5A059]/40 rounded-3xl p-6 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-[#C5A059]/10 rounded-full blur-3xl pointer-events-none"></div>
+
+              <div className="space-y-2 relative z-10">
+                <div className="flex items-center space-x-2.5">
+                  <Database className="w-5 h-5 text-[#F5D07F]" />
+                  <h3 className="font-serif text-xl font-bold text-white">Supabase Cloud Database Status</h3>
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#C5A059]/20 text-[#F5D07F] text-[10px] font-mono font-bold uppercase border border-[#C5A059]/40">
+                    ywsmtfhzlhljeqetmvol
+                  </span>
+                </div>
+                <p className="text-xs text-[#D8C8B8]">
+                  Real-time database synchronization active for Swatch Requests, Atelier Catalog Products, and Curator Security Audit Logs.
+                </p>
+                <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-[#8C7A6B] pt-1">
+                  <span>SSL Connection: 256-bit TLS</span>
+                  <span>•</span>
+                  <span>Tables Synced: swatch_requests, products, admin_users, admin_audit_logs</span>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-4 shrink-0 relative z-10">
+                <div className="text-right">
+                  <span className="block text-[11px] uppercase tracking-wider text-[#D4AF37] font-semibold">
+                    Ping Latency
+                  </span>
+                  <span className="font-mono text-2xl font-bold text-emerald-400">
+                    {dbMetrics.latencyMs ? `${dbMetrics.latencyMs} ms` : 'Live'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    runDatabaseCheck();
+                    fetchLiveSupabaseData();
+                  }}
+                  disabled={dbMetrics.isTesting}
+                  className="p-3 rounded-xl bg-[#C5A059] text-[#121110] font-bold hover:bg-[#D4AF37] transition-all shadow-md flex items-center gap-2 cursor-pointer"
+                  title="Re-test Supabase Connection"
+                >
+                  <RefreshCw className={`w-4 h-4 ${dbMetrics.isTesting ? 'animate-spin' : ''}`} />
+                  <span className="text-xs uppercase tracking-wider">Sync Now</span>
+                </button>
+              </div>
+            </div>
+
             {/* KPI Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-5 shadow-xl space-y-3">
@@ -249,12 +460,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <Layers className="w-4 h-4 text-[#C5A059]" />
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="font-serif text-3xl font-bold text-white">48</span>
+                  <span className="font-serif text-3xl font-bold text-white">{swatchRequests.length}</span>
                   <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
                     <TrendingUp className="w-3.5 h-3.5" /> +14% this week
                   </span>
                 </div>
-                <span className="text-[11px] text-[#8C7A6B] block">3 Pending dispatch</span>
+                <span className="text-[11px] text-[#8C7A6B] block">
+                  {swatchRequests.filter((s) => s.status === 'Pending').length} Pending dispatch
+                </span>
               </div>
 
               <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-5 shadow-xl space-y-3">
@@ -263,12 +476,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <Package className="w-4 h-4 text-[#C5A059]" />
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="font-serif text-3xl font-bold text-white">
-                    {PRODUCTS_DATA.length}
-                  </span>
+                  <span className="font-serif text-3xl font-bold text-white">{productsList.length}</span>
                   <span className="text-xs text-emerald-400 font-semibold">8 Categories</span>
                 </div>
-                <span className="text-[11px] text-[#8C7A6B] block">100% Bespoke Sourced</span>
+                <span className="text-[11px] text-[#8C7A6B] block">Synced with Supabase DB</span>
               </div>
 
               <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-5 shadow-xl space-y-3">
@@ -277,9 +488,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <Building2 className="w-4 h-4 text-[#C5A059]" />
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="font-serif text-3xl font-bold text-white">
-                    {PROJECTS_DATA.length}
-                  </span>
+                  <span className="font-serif text-3xl font-bold text-white">{PROJECTS_DATA.length}</span>
                   <span className="text-xs text-[#F5D07F] font-semibold">Superyachts & Villas</span>
                 </div>
                 <span className="text-[11px] text-[#8C7A6B] block">Mayfair, Como & NYC</span>
@@ -287,14 +496,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-5 shadow-xl space-y-3">
                 <div className="flex items-center justify-between text-xs text-[#D4AF37] uppercase tracking-wider font-semibold">
-                  <span>Curator Security</span>
+                  <span>Security Audit Logs</span>
                   <Shield className="w-4 h-4 text-[#C5A059]" />
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="font-serif text-2xl font-bold text-emerald-400">Active</span>
-                  <span className="text-xs text-[#D8C8B8]">Session SSL</span>
+                  <span className="font-serif text-3xl font-bold text-emerald-400">{auditLogs.length}</span>
+                  <span className="text-xs text-[#D8C8B8]">Recorded Events</span>
                 </div>
-                <span className="text-[11px] text-[#8C7A6B] block">Logged in as Master</span>
+                <span className="text-[11px] text-[#8C7A6B] block">Logged to admin_audit_logs</span>
               </div>
             </div>
 
@@ -302,35 +511,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
                 <div>
-                  <h3 className="font-serif text-xl text-white font-bold">
-                    Recent Client Swatch Requests
-                  </h3>
+                  <h3 className="font-serif text-xl text-white font-bold">Recent Client Swatch Requests</h3>
                   <p className="text-xs text-[#D8C8B8]">
                     Manage complimentary swatch box dispatches for high-net-worth clients.
                   </p>
                 </div>
                 <button
                   onClick={() => setActiveTab('swatches')}
-                  className="text-xs uppercase tracking-widest text-[#F5D07F] hover:underline font-semibold"
+                  className="text-xs uppercase tracking-widest text-[#F5D07F] hover:underline font-semibold cursor-pointer"
                 >
                   View All ({swatchRequests.length}) &rarr;
                 </button>
               </div>
 
               <div className="space-y-3">
-                {swatchRequests.map((req) => (
+                {swatchRequests.slice(0, 4).map((req) => (
                   <div
                     key={req.id}
                     className="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-[#C5A059]/50 transition-all"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center space-x-2">
-                        <span className="text-xs font-mono font-bold text-[#F5D07F]">
+                        <span className="text-xs font-mono font-bold text-[#F5D07F] bg-[#C5A059]/20 px-2 py-0.5 rounded border border-[#C5A059]/40">
                           {req.id}
                         </span>
-                        <span className="text-sm font-semibold text-white">
-                          {req.clientName}
-                        </span>
+                        <span className="text-sm font-semibold text-white">{req.clientName}</span>
                         <span className="text-[11px] text-[#8C7A6B]">({req.requestDate})</span>
                       </div>
                       <p className="text-xs text-[#D8C8B8]">{req.address}</p>
@@ -365,7 +570,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {req.status === 'Pending' && (
                         <button
                           onClick={() => handleUpdateSwatchStatus(req.id, 'Dispatched')}
-                          className="px-3 py-1 rounded-lg bg-[#C5A059] text-[#121110] text-xs font-bold uppercase tracking-wider hover:bg-[#D4AF37] transition-all flex items-center gap-1"
+                          className="px-3 py-1 rounded-lg bg-[#C5A059] text-[#121110] text-xs font-bold uppercase tracking-wider hover:bg-[#D4AF37] transition-all flex items-center gap-1 cursor-pointer"
                         >
                           <Truck className="w-3.5 h-3.5" />
                           <span>Dispatch</span>
@@ -374,7 +579,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {req.status === 'Dispatched' && (
                         <button
                           onClick={() => handleUpdateSwatchStatus(req.id, 'Delivered')}
-                          className="px-3 py-1 rounded-lg bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-emerald-500 transition-all flex items-center gap-1"
+                          className="px-3 py-1 rounded-lg bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-emerald-500 transition-all flex items-center gap-1 cursor-pointer"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>Mark Delivered</span>
@@ -395,12 +600,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div>
                 <h2 className="font-serif text-2xl font-bold text-white">Product Catalog Management</h2>
                 <p className="text-xs text-[#D8C8B8]">
-                  Inspect and curate active items across all 8 atelier archive categories.
+                  Inspect and curate active luxury furnishing items synced live with Supabase Cloud DB.
                 </p>
               </div>
               <button
                 onClick={() => setShowAddProductModal(true)}
-                className="px-4 py-2.5 rounded-xl bg-[#C5A059] text-[#121110] font-bold text-xs uppercase tracking-widest hover:bg-[#D4AF37] transition-all flex items-center justify-center space-x-2 shadow-lg"
+                className="px-4 py-2.5 rounded-xl bg-[#C5A059] text-[#121110] font-bold text-xs uppercase tracking-widest hover:bg-[#D4AF37] transition-all flex items-center justify-center space-x-2 shadow-lg cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add New Catalog Product</span>
@@ -424,9 +629,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <select
                   value={selectedCategoryFilter}
                   onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none"
+                  className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none cursor-pointer"
                 >
-                  <option value="All" className="bg-[#141312] text-white">All Categories ({PRODUCTS_DATA.length})</option>
+                  <option value="All" className="bg-[#141312] text-white">
+                    All Categories ({productsList.length})
+                  </option>
                   {Object.values(CATEGORIES_DATA).map((cat) => (
                     <option key={cat.id} value={cat.id} className="bg-[#141312] text-white">
                       {cat.title}
@@ -473,8 +680,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </span>
                         </td>
                         <td className="p-4 text-right space-x-2">
-                          <button className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-white transition-all" title="Edit Product">
-                            <Edit className="w-3.5 h-3.5" />
+                          <button
+                            onClick={() => handleDeleteProduct(prod.id, prod.name)}
+                            className="p-1.5 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 transition-all border border-red-500/30 cursor-pointer"
+                            title="Delete Product"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </td>
                       </tr>
@@ -492,7 +703,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="pb-4 border-b border-white/10">
               <h2 className="font-serif text-2xl font-bold text-white">Client Swatch Sample Orders</h2>
               <p className="text-xs text-[#D8C8B8]">
-                Inspect high-net-worth client swatch requests and manage dispatch fulfillment.
+                Inspect high-net-worth client swatch requests synced live with Supabase `swatch_requests` table.
               </p>
             </div>
 
@@ -554,19 +765,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleUpdateSwatchStatus(req.id, 'Pending')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${req.status === 'Pending' ? 'bg-[#C5A059] text-[#121110]' : 'bg-white/5 text-white hover:bg-white/10'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          req.status === 'Pending' ? 'bg-[#C5A059] text-[#121110]' : 'bg-white/5 text-white hover:bg-white/10'
+                        }`}
                       >
                         Pending
                       </button>
                       <button
                         onClick={() => handleUpdateSwatchStatus(req.id, 'Dispatched')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${req.status === 'Dispatched' ? 'bg-blue-600 text-white' : 'bg-white/5 text-white hover:bg-white/10'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          req.status === 'Dispatched' ? 'bg-blue-600 text-white' : 'bg-white/5 text-white hover:bg-white/10'
+                        }`}
                       >
                         Dispatched
                       </button>
                       <button
                         onClick={() => handleUpdateSwatchStatus(req.id, 'Delivered')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${req.status === 'Delivered' ? 'bg-emerald-600 text-white' : 'bg-white/5 text-white hover:bg-white/10'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          req.status === 'Delivered' ? 'bg-emerald-600 text-white' : 'bg-white/5 text-white hover:bg-white/10'
+                        }`}
                       >
                         Delivered
                       </button>
@@ -574,6 +791,57 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ================= AUDIT LOGS TAB ================= */}
+        {activeTab === 'audit-logs' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="pb-4 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="font-serif text-2xl font-bold text-white">Security & Activity Audit Logs</h2>
+                <p className="text-xs text-[#D8C8B8]">
+                  Real-time security event tracking persisted inside Supabase `admin_audit_logs` table.
+                </p>
+              </div>
+              <button
+                onClick={async () => {
+                  const logs = await fetchAdminAuditLogsFromSupabase();
+                  setAuditLogs(logs);
+                }}
+                className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs text-white font-semibold flex items-center gap-2 cursor-pointer shrink-0"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-[#C5A059]" />
+                <span>Refresh Logs</span>
+              </button>
+            </div>
+
+            <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl overflow-hidden shadow-xl">
+              <div className="p-4 border-b border-white/10 bg-white/5 flex items-center justify-between text-xs text-[#D4AF37] font-bold uppercase tracking-wider">
+                <span>Recent Admin Activity Records</span>
+                <span>{auditLogs.length} Events Logged</span>
+              </div>
+              <div className="divide-y divide-white/5 text-xs">
+                {auditLogs.length === 0 ? (
+                  <div className="p-8 text-center text-[#8C7A6B]">No security logs recorded yet.</div>
+                ) : (
+                  auditLogs.map((log) => (
+                    <div key={log.id} className="p-4 hover:bg-white/5 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2">
+                          <span className="px-2 py-0.5 rounded bg-[#C5A059]/20 text-[#F5D07F] font-mono text-[10px] font-bold border border-[#C5A059]/30">
+                            {log.action}
+                          </span>
+                          <span className="font-semibold text-white">{log.adminEmail}</span>
+                        </div>
+                        <p className="text-xs text-[#D8C8B8]">{log.details}</p>
+                      </div>
+                      <span className="text-[11px] font-mono text-[#8C7A6B] shrink-0">{log.createdAt}</span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -590,7 +858,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {PROJECTS_DATA.map((prj) => (
-                <div key={prj.id} className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl overflow-hidden shadow-xl space-y-3">
+                <div
+                  key={prj.id}
+                  className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl overflow-hidden shadow-xl space-y-3"
+                >
                   <div className="relative h-44 overflow-hidden">
                     <img src={prj.heroImage} alt={prj.title} className="w-full h-full object-cover" />
                     <span className="absolute top-3 left-3 bg-[#121110]/80 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-[#F5D07F] border border-[#C5A059]/30 uppercase">
@@ -598,7 +869,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </span>
                   </div>
                   <div className="p-4 space-y-2">
-                    <span className="text-[10px] text-[#C5A059] uppercase tracking-wider">{prj.location} ({prj.year})</span>
+                    <span className="text-[10px] text-[#C5A059] uppercase tracking-wider">
+                      {prj.location} ({prj.year})
+                    </span>
                     <h4 className="font-serif text-lg text-white font-bold">{prj.title}</h4>
                     <p className="text-xs text-[#D8C8B8] line-clamp-2">{prj.description}</p>
                     <span className="text-[11px] text-[#8C7A6B] block">Designed by {prj.designer}</span>
@@ -611,18 +884,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         {/* ================= SETTINGS TAB ================= */}
         {activeTab === 'settings' && (
-          <div className="space-y-6 animate-in fade-in duration-300 max-w-3xl">
+          <div className="space-y-6 animate-in fade-in duration-300 max-w-4xl">
             <div className="pb-4 border-b border-white/10">
-              <h2 className="font-serif text-2xl font-bold text-white">Admin Security & Curator Settings</h2>
+              <h2 className="font-serif text-2xl font-bold text-white">Admin Security & Curator Staff</h2>
               <p className="text-xs text-[#D8C8B8]">
-                Manage active master admin profile credentials, session timeouts, and system access.
+                Manage active master admin profile credentials, session timeouts, and Supabase database access.
               </p>
             </div>
 
             <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-6 shadow-xl space-y-6">
               <div className="flex items-center space-x-4 pb-4 border-b border-white/10">
                 <div className="w-16 h-16 rounded-full bg-[#C5A059] text-[#121110] font-bold text-2xl flex items-center justify-center shadow-lg">
-                  VS
+                  {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                 </div>
                 <div>
                   <h3 className="font-serif text-xl font-bold text-white">{user.name}</h3>
@@ -631,11 +904,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               </div>
 
-              <div className="space-y-3 text-xs">
-                <h4 className="font-semibold text-[#D4AF37] uppercase tracking-widest">Demo Master Credentials Recap</h4>
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10 font-mono space-y-1">
-                  <p><span className="text-[#8C7A6B]">Admin Email:</span> <strong className="text-white">admin@maison-drape.com</strong></p>
-                  <p><span className="text-[#8C7A6B]">Master Password:</span> <strong className="text-[#F5D07F]">MaisonAdmin2026!</strong></p>
+              {/* Team Members List from Supabase */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-[#D4AF37] uppercase tracking-widest text-xs flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-[#C5A059]" />
+                  <span>Authorized Master Admin Team</span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {adminUsersList.map((admin) => (
+                    <div key={admin.id} className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-white text-xs">{admin.name}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
+                          {admin.status || 'Active'}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-[#C5A059] block">{admin.role}</span>
+                      <span className="text-[11px] text-[#8C7A6B] font-mono block">{admin.email}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3 text-xs pt-4 border-t border-white/10">
+                <h4 className="font-semibold text-[#D4AF37] uppercase tracking-widest">Supabase Cloud Database Instance</h4>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10 font-mono space-y-2">
+                  <p>
+                    <span className="text-[#8C7A6B]">Project URL:</span>{' '}
+                    <strong className="text-white">https://ywsmtfhzlhljeqetmvol.supabase.co</strong>
+                  </p>
+                  <p>
+                    <span className="text-[#8C7A6B]">Admin Auth Email:</span>{' '}
+                    <strong className="text-white">{user.email}</strong>
+                  </p>
+                  <p>
+                    <span className="text-[#8C7A6B]">Database RLS Policy:</span>{' '}
+                    <strong className="text-emerald-400">Strict Multi-Tenant Row Level Security Active</strong>
+                  </p>
                 </div>
               </div>
             </div>
@@ -643,18 +948,119 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         )}
       </main>
 
-      {/* --- ADD PRODUCT MOCKUP MODAL --- */}
+      {/* --- ADD PRODUCT MODAL --- */}
       {showAddProductModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-[#141312] border border-[#C5A059]/40 rounded-3xl p-6 max-w-lg w-full space-y-4 text-white">
-            <h3 className="font-serif text-xl font-bold">Add New Product to Catalog</h3>
-            <p className="text-xs text-[#D8C8B8]">Simulate adding a new luxury textile or curtain product to the active atelier archive.</p>
-            <input type="text" placeholder="Product Name (e.g. Como Raw Silk Voile)" className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white" />
-            <input type="text" placeholder="Material Composition (e.g. 100% Silk)" className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white" />
-            <div className="flex justify-end space-x-3 pt-2">
-              <button onClick={() => setShowAddProductModal(false)} className="px-4 py-2 rounded-xl bg-white/10 text-xs font-bold">Cancel</button>
-              <button onClick={() => setShowAddProductModal(false)} className="px-4 py-2 rounded-xl bg-[#C5A059] text-[#121110] text-xs font-bold">Save Product</button>
+          <div className="bg-[#141312] border border-[#C5A059]/40 rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-5 text-white shadow-2xl">
+            <div>
+              <h3 className="font-serif text-2xl font-bold text-white">Add New Product to Catalog</h3>
+              <p className="text-xs text-[#D8C8B8]">
+                New products are written directly to your live Supabase `products` catalog table.
+              </p>
             </div>
+
+            <form onSubmit={handleCreateProduct} className="space-y-4 text-xs">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Product Name</label>
+                <input
+                  type="text"
+                  required
+                  value={newProductForm.name}
+                  onChange={(e) => setNewProductForm({ ...newProductForm, name: e.target.value })}
+                  placeholder="e.g. Florentine Jacquard Damask"
+                  className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Category</label>
+                  <select
+                    value={newProductForm.categorySlug}
+                    onChange={(e) => setNewProductForm({ ...newProductForm, categorySlug: e.target.value as CategorySlug })}
+                    className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none cursor-pointer"
+                  >
+                    {Object.values(CATEGORIES_DATA).map((cat) => (
+                      <option key={cat.id} value={cat.id} className="bg-[#141312]">
+                        {cat.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Price Tier</label>
+                  <select
+                    value={newProductForm.priceCategory}
+                    onChange={(e) => setNewProductForm({ ...newProductForm, priceCategory: e.target.value })}
+                    className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none cursor-pointer"
+                  >
+                    <option value="Bespoke" className="bg-[#141312]">Bespoke</option>
+                    <option value="Haute Couture" className="bg-[#141312]">Haute Couture</option>
+                    <option value="Atelier Reserve" className="bg-[#141312]">Atelier Reserve</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Material Composition</label>
+                <input
+                  type="text"
+                  required
+                  value={newProductForm.materialComposition}
+                  onChange={(e) => setNewProductForm({ ...newProductForm, materialComposition: e.target.value })}
+                  placeholder="e.g. 70% Silk, 30% Egyptian Cotton"
+                  className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Origin</label>
+                  <input
+                    type="text"
+                    value={newProductForm.origin}
+                    onChange={(e) => setNewProductForm({ ...newProductForm, origin: e.target.value })}
+                    className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Dimensions / Width</label>
+                  <input
+                    type="text"
+                    value={newProductForm.widthOrDimensions}
+                    onChange={(e) => setNewProductForm({ ...newProductForm, widthOrDimensions: e.target.value })}
+                    className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Image URL</label>
+                <input
+                  type="url"
+                  value={newProductForm.image}
+                  onChange={(e) => setNewProductForm({ ...newProductForm, image: e.target.value })}
+                  className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowAddProductModal(false)}
+                  className="px-4 py-2.5 rounded-xl bg-white/10 text-xs font-bold hover:bg-white/20 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-[#C5A059] text-[#121110] text-xs font-bold uppercase tracking-wider hover:bg-[#D4AF37] transition-all shadow-lg cursor-pointer"
+                >
+                  Save Product to Supabase
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

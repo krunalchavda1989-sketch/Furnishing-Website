@@ -5,6 +5,7 @@ export interface AdminUser {
   role: 'Master Curator' | 'Super Admin' | 'Catalog Editor';
   avatar?: string;
   lastLogin: string;
+  status?: 'Active' | 'Suspended';
 }
 
 export interface SwatchRequestItem {
@@ -18,6 +19,14 @@ export interface SwatchRequestItem {
   swatchesRequested: string[];
   status: 'Pending' | 'Dispatched' | 'Delivered' | 'Archived';
   requestDate: string;
+}
+
+export interface AuditLogItem {
+  id: string;
+  adminEmail: string;
+  action: string;
+  details?: string;
+  createdAt: string;
 }
 
 export interface SystemStat {

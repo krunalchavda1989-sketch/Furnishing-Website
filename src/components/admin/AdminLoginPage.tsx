@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Lock, Mail, Eye, EyeOff, ShieldCheck, Sparkles, KeyRound, ArrowRight, Info } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Lock, Mail, Eye, EyeOff, ShieldCheck, ArrowRight, Info, Database, Activity } from 'lucide-react';
 import { AdminForgotPasswordModal } from './AdminForgotPasswordModal';
 import type { AdminUser } from '../../types/adminTypes';
+import { loginAdminWithSupabase, testSupabaseConnection, isSupabaseConfigured } from '../../lib/supabase';
 
 interface AdminLoginPageProps {
   onLoginSuccess: (user: AdminUser) => void;
@@ -20,9 +21,34 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
 
-  // DEMO CREDENTIALS CONSTANTS
+  // Supabase Connection State
+  const [dbStatus, setDbStatus] = useState<{
+    tested: boolean;
+    connected: boolean;
+    latency: number;
+    message: string;
+  }>({
+    tested: false,
+    connected: false,
+    latency: 0,
+    message: 'Testing connection...'
+  });
+
   const DEMO_EMAIL = 'admin@maison-drape.com';
   const DEMO_PASSWORD = 'MaisonAdmin2026!';
+
+  useEffect(() => {
+    const checkConnection = async () => {
+      const res = await testSupabaseConnection();
+      setDbStatus({
+        tested: true,
+        connected: res.success,
+        latency: res.latencyMs,
+        message: res.message
+      });
+    };
+    checkConnection();
+  }, []);
 
   const handleAutoFillDemo = () => {
     setEmail(DEMO_EMAIL);
@@ -30,33 +56,22 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
     setError('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      // Validate credentials (accepts demo or any valid admin email)
-      if (
-        (email.trim().toLowerCase() === DEMO_EMAIL && password === DEMO_PASSWORD) ||
-        (email.includes('@') && password.length >= 6)
-      ) {
-        const adminUser: AdminUser = {
-          id: 'adm-001',
-          name: 'Lady Vivienne Sterling',
-          email: email.trim().toLowerCase(),
-          role: 'Master Curator',
-          lastLogin: new Date().toLocaleString()
-        };
-        if (rememberMe) {
-          localStorage.setItem('maison_admin_session', JSON.stringify(adminUser));
-        }
-        onLoginSuccess(adminUser);
-      } else {
-        setError('Invalid Admin Email or Password. Click "Use Demo Credentials" below to auto-fill.');
+    const { user, error: loginErr } = await loginAdminWithSupabase(email, password);
+    setIsSubmitting(false);
+
+    if (user) {
+      if (rememberMe) {
+        localStorage.setItem('maison_admin_session', JSON.stringify(user));
       }
-    }, 700);
+      onLoginSuccess(user);
+    } else {
+      setError(loginErr || 'Invalid Master Admin Credentials.');
+    }
   };
 
   return (
@@ -65,8 +80,8 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#C5A059]/10 rounded-full blur-[140px] pointer-events-none"></div>
 
       <div className="relative z-10 w-full max-w-lg space-y-6">
-        {/* Return to Live Site Link */}
-        <div className="flex items-center justify-between">
+        {/* Return to Live Site Link & Gateway Pill */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <button
             onClick={onReturnToSite}
             className="text-xs uppercase tracking-widest text-[#D8C8B8] hover:text-[#F5D07F] transition-colors flex items-center gap-1.5 font-semibold"
@@ -94,6 +109,32 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
           </div>
         </div>
 
+        {/* Supabase Connection Status Card */}
+        <div className="p-3.5 rounded-2xl bg-[#141312] border border-[#C5A059]/30 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            <Database className="w-4 h-4 text-[#C5A059]" />
+            <div>
+              <span className="text-white font-semibold block text-[11px]">Supabase Cloud Database:</span>
+              <span className="text-[11px] text-[#D8C8B8] font-mono">
+                {isSupabaseConfigured ? 'ywsmtfhzlhljeqetmvol.supabase.co' : 'Local Standalone Mode'}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold">
+            {dbStatus.connected ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-400">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Connected ({dbStatus.latency}ms)
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-300">
+                <Activity className="w-3 h-3 text-amber-300 animate-spin" />
+                {dbStatus.tested ? 'Standalone' : 'Connecting...'}
+              </span>
+            )}
+          </div>
+        </div>
+
         {/* Demo Credentials Alert Pill */}
         <div className="p-4 rounded-2xl bg-[#C5A059]/10 border border-[#C5A059]/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 text-[#F5D07F]">
@@ -108,7 +149,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
           <button
             type="button"
             onClick={handleAutoFillDemo}
-            className="px-3.5 py-1.5 rounded-lg bg-[#C5A059] text-[#121110] font-bold text-[11px] uppercase tracking-wider hover:bg-[#D4AF37] transition-all shrink-0 shadow-md"
+            className="px-3.5 py-1.5 rounded-lg bg-[#C5A059] text-[#121110] font-bold text-[11px] uppercase tracking-wider hover:bg-[#D4AF37] transition-all shrink-0 shadow-md cursor-pointer"
           >
             Auto-Fill Demo
           </button>
@@ -195,7 +236,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
               disabled={isSubmitting}
               className="w-full py-4 rounded-xl bg-gradient-to-r from-[#C5A059] via-[#E2C37E] to-[#C5A059] text-[#121110] font-bold text-xs uppercase tracking-widest shadow-xl hover:brightness-110 hover:shadow-[#C5A059]/25 transition-all flex items-center justify-center space-x-2 border border-[#FFF0C2]/50 cursor-pointer"
             >
-              <span>{isSubmitting ? 'Authenticating Gateway...' : 'Authenticate Master Admin'}</span>
+              <span>{isSubmitting ? 'Authenticating with Supabase Cloud...' : 'Authenticate Master Admin'}</span>
               <ArrowRight className="w-4 h-4 text-[#121110]" />
             </button>
           </form>
@@ -204,7 +245,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
         {/* Footer Security Badge */}
         <div className="text-center space-y-1 text-[11px] text-[#8C7A6B]">
           <p>Maison & Drape • Atelier Haute Living Security System v3.6</p>
-          <p>Restricted to authorized atelier curators and executive staff.</p>
+          <p>Connected to Supabase Cloud Instance • ywsmtfhzlhljeqetmvol</p>
         </div>
       </div>
 
