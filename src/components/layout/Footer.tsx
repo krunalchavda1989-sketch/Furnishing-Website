@@ -173,7 +173,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onRequestSwatches })
             <button onClick={() => onNavigate('contact')} className="hover:text-[#C5A059]">
               Private Consultation
             </button>
-            <span className="hover:text-[#C5A059] cursor-pointer">Terms & Trade Accounts</span>
+            <button onClick={() => onNavigate('admin')} className="text-[#C5A059] font-bold hover:underline flex items-center gap-1">
+              <span>Master Admin Portal</span>
+            </button>
           </div>
         </div>
       </div>

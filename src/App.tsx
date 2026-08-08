@@ -10,13 +10,45 @@ import { BrandsPage } from './pages/BrandsPage';
 import { ContactPage } from './pages/ContactPage';
 import { ProjectModal } from './components/ui/ProjectModal';
 import { SampleRequestModal } from './components/ui/SampleRequestModal';
+import { AdminLoginPage } from './components/admin/AdminLoginPage';
+import { AdminDashboard } from './components/admin/AdminDashboard';
 import type { CategorySlug, Project } from './types';
+import type { AdminUser } from './types/adminTypes';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<string>('home');
   const [activeCategorySlug, setActiveCategorySlug] = useState<CategorySlug>('fabrics');
   const [selectedProjectModal, setSelectedProjectModal] = useState<Project | null>(null);
   const [isSampleModalOpen, setIsSampleModalOpen] = useState<boolean>(false);
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+
+  // Check URL pathname for /admin & restore saved admin session on initial load
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path.startsWith('/admin') || path.startsWith('/admin/login')) {
+      setActiveTab('admin');
+    }
+
+    const savedSession = localStorage.getItem('maison_admin_session');
+    if (savedSession) {
+      try {
+        setAdminUser(JSON.parse(savedSession));
+      } catch (err) {
+        localStorage.removeItem('maison_admin_session');
+      }
+    }
+  }, []);
+
+  // Listen to popstate / URL changes
+  useEffect(() => {
+    const handlePopState = () => {
+      if (window.location.pathname.startsWith('/admin')) {
+        setActiveTab('admin');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Scroll to top on tab change
   useEffect(() => {
@@ -27,15 +59,53 @@ export function App() {
     if (categorySlug) {
       setActiveCategorySlug(categorySlug);
       setActiveTab('category');
+      window.history.pushState({}, '', `/category/${categorySlug}`);
     } else {
       setActiveTab(tab);
+      if (tab === 'admin') {
+        window.history.pushState({}, '', '/admin');
+      } else {
+        window.history.pushState({}, '', tab === 'home' ? '/' : `/${tab}`);
+      }
     }
   };
 
   const handleNavigateToCategory = (catSlug: CategorySlug) => {
     setActiveCategorySlug(catSlug);
     setActiveTab('category');
+    window.history.pushState({}, '', `/category/${catSlug}`);
   };
+
+  const handleAdminLoginSuccess = (user: AdminUser) => {
+    setAdminUser(user);
+    setActiveTab('admin');
+    window.history.pushState({}, '', '/admin');
+  };
+
+  const handleAdminLogout = () => {
+    setAdminUser(null);
+    localStorage.removeItem('maison_admin_session');
+  };
+
+  // Render Admin View if activeTab is 'admin' or path is /admin
+  if (activeTab === 'admin') {
+    if (!adminUser) {
+      return (
+        <AdminLoginPage
+          onLoginSuccess={handleAdminLoginSuccess}
+          onReturnToSite={() => handleNavigate('home')}
+        />
+      );
+    }
+
+    return (
+      <AdminDashboard
+        user={adminUser}
+        onLogout={handleAdminLogout}
+        onReturnToSite={() => handleNavigate('home')}
+      />
+    );
+  }
 
   return (
     <SmoothScrollProvider>
@@ -103,3 +173,4 @@ export function App() {
 }
 
 export default App;
+
