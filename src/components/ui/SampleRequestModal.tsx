@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CATEGORIES_DATA } from '../../data/categoriesData';
 import type { CategorySlug } from '../../types';
 import { X, CheckCircle2, PackageCheck, Send, Sparkles } from 'lucide-react';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 
 interface SampleRequestModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export const SampleRequestModal: React.FC<SampleRequestModalProps> = ({
 
   const [step, setStep] = useState(1);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([defaultCategory]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -41,8 +43,29 @@ export const SampleRequestModal: React.FC<SampleRequestModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+
+    if (isSupabaseConfigured) {
+      try {
+        const catTitles = selectedCategories.map((c) => CATEGORIES_DATA[c]?.title || c);
+        await supabase.from('swatch_requests').insert({
+          client_name: formData.fullName,
+          email: formData.email,
+          phone: formData.phone || '',
+          address: `${formData.address}, ${formData.city}, ${formData.country}`,
+          category_title: catTitles.join(', '),
+          category_slug: selectedCategories[0] || 'fabrics',
+          swatches_requested: catTitles,
+          status: 'Pending'
+        });
+      } catch (err) {
+        console.warn('Supabase swatch request submit error:', err);
+      }
+    }
+
+    setIsSubmitting(false);
     setStep(2);
   };
 

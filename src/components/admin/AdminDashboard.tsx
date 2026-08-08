@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Package,
@@ -22,12 +22,14 @@ import {
   Building2,
   Trash2,
   Edit,
-  Eye
+  Eye,
+  Database
 } from 'lucide-react';
 import type { AdminUser, SwatchRequestItem } from '../../types/adminTypes';
 import { CATEGORIES_DATA } from '../../data/categoriesData';
 import { PRODUCTS_DATA } from '../../data/productsData';
 import { PROJECTS_DATA } from '../../data/projectsData';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 
 interface AdminDashboardProps {
   user: AdminUser;
@@ -35,7 +37,7 @@ interface AdminDashboardProps {
   onReturnToSite: () => void;
 }
 
-// MOCK SWATCH REQUESTS FOR DEMO
+// MOCK SWATCH REQUESTS FOR DEMO / OFFLINE FALLBACK
 const INITIAL_SWATCH_REQUESTS: SwatchRequestItem[] = [
   {
     id: 'SW-9041',
@@ -86,11 +88,56 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('All');
   const [showAddProductModal, setShowAddProductModal] = useState(false);
 
+  // Fetch live swatch requests from Supabase on load if configured
+  useEffect(() => {
+    if (isSupabaseConfigured) {
+      fetchSupabaseSwatchRequests();
+    }
+  }, []);
+
+  const fetchSupabaseSwatchRequests = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('swatch_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        const formatted: SwatchRequestItem[] = data.map((item) => ({
+          id: item.id.substring(0, 8).toUpperCase(),
+          clientName: item.client_name,
+          email: item.email,
+          phone: item.phone || '',
+          address: item.address,
+          categoryTitle: item.category_title,
+          categorySlug: item.category_slug,
+          swatchesRequested: item.swatches_requested || [],
+          status: item.status || 'Pending',
+          requestDate: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }));
+        setSwatchRequests(formatted);
+      }
+    } catch (err) {
+      console.warn('Supabase fetch error, using local fallback:', err);
+    }
+  };
+
   // Status Change Handler for Swatch Requests
-  const handleUpdateSwatchStatus = (id: string, newStatus: SwatchRequestItem['status']) => {
+  const handleUpdateSwatchStatus = async (id: string, newStatus: SwatchRequestItem['status']) => {
     setSwatchRequests((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
     );
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase
+          .from('swatch_requests')
+          .update({ status: newStatus })
+          .eq('id', id);
+      } catch (err) {
+        console.warn('Supabase status update error:', err);
+      }
+    }
   };
 
   const filteredProducts = PRODUCTS_DATA.filter((p) => {
