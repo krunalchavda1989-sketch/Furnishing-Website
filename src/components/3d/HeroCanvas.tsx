@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Eye, MapPin, ChevronRight, Layers, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Eye, MapPin, ChevronRight, CheckCircle2 } from 'lucide-react';
 
 interface FurnishingScene {
   id: string;
