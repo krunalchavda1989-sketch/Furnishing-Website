@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { SHOWROOMS_DATA } from '../data/brandsData';
 import { CATEGORIES_DATA } from '../data/categoriesData';
-import { MapPin, Phone, Mail, Clock, Send, CheckCircle2, Sparkles, Calendar } from 'lucide-react';
+import { MapPin, Phone, Mail, Clock, Send, CheckCircle2, Sparkles } from 'lucide-react';
+import { submitContactInquiryInSupabase } from '../lib/supabase';
 
 export const ContactPage: React.FC = () => {
   const [selectedShowroomIndex, setSelectedShowroomIndex] = useState(0);
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formState, setFormState] = useState({
     fullName: '',
     email: '',
@@ -17,13 +19,31 @@ export const ContactPage: React.FC = () => {
 
   const activeShowroom = SHOWROOMS_DATA[selectedShowroomIndex] || SHOWROOMS_DATA[0];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formState.fullName || !formState.email) return;
+
+    setIsSubmitting(true);
+
+    const categoryTitle =
+      CATEGORIES_DATA[formState.productInterest as keyof typeof CATEGORIES_DATA]?.title || formState.productInterest;
+
+    await submitContactInquiryInSupabase({
+      clientName: formState.fullName,
+      email: formState.email,
+      phone: formState.phone,
+      productInterest: categoryTitle,
+      projectScope: formState.projectScope,
+      preferredShowroom: `${activeShowroom.city} Showroom (${activeShowroom.country})`,
+      message: formState.message || 'Consultation request submitted from website contact portal.'
+    });
+
+    setIsSubmitting(false);
     setSubmitted(true);
   };
 
   return (
-    <div className="pt-28 sm:pt-36 pb-24 space-y-20">
+    <div className="pt-28 sm:pt-36 pb-24 space-y-20 font-sans">
       {/* Header */}
       <section className="max-w-4xl mx-auto px-4 text-center space-y-4">
         <span className="text-xs uppercase tracking-widest text-[#C5A059] font-medium block">
@@ -52,17 +72,27 @@ export const ContactPage: React.FC = () => {
             </div>
 
             {submitted ? (
-              <div className="py-12 text-center space-y-4 bg-[#242220] rounded-2xl border border-[#C5A059]/40 p-6">
+              <div className="py-12 text-center space-y-4 bg-[#242220] rounded-2xl border border-[#C5A059]/40 p-6 animate-in fade-in">
                 <div className="w-16 h-16 rounded-full bg-[#1C3026] border border-[#C5A059] flex items-center justify-center mx-auto text-[#C5A059]">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
-                <h3 className="font-serif text-2xl text-[#FDFBF7]">Inquiry Received</h3>
+                <h3 className="font-serif text-2xl text-[#FDFBF7]">Inquiry Received & Synced</h3>
                 <p className="text-xs text-[#D8C8B8] max-w-md mx-auto font-light leading-relaxed">
-                  Thank you, <strong className="text-[#FDFBF7]">{formState.fullName}</strong>. A senior textile consultant from our {activeShowroom.city} team will contact you within 24 hours to review your project scope.
+                  Thank you, <strong className="text-[#FDFBF7]">{formState.fullName}</strong>. Your inquiry has been transmitted directly to our Master Admin portal and senior textile consultants at our {activeShowroom.city} showroom. We will review your project scope within 24 hours.
                 </p>
                 <button
-                  onClick={() => setSubmitted(false)}
-                  className="mt-4 px-6 py-2.5 rounded-full bg-[#C5A059] text-[#1A1918] text-xs font-bold uppercase tracking-widest"
+                  onClick={() => {
+                    setSubmitted(false);
+                    setFormState({
+                      fullName: '',
+                      email: '',
+                      phone: '',
+                      productInterest: 'fabrics',
+                      projectScope: 'Full Residence Refurbishment',
+                      message: ''
+                    });
+                  }}
+                  className="mt-4 px-6 py-2.5 rounded-full bg-[#C5A059] text-[#1A1918] text-xs font-bold uppercase tracking-widest hover:bg-[#D4AF37] transition-all cursor-pointer"
                 >
                   Submit Another Inquiry
                 </button>
@@ -118,7 +148,7 @@ export const ContactPage: React.FC = () => {
                     <select
                       value={formState.productInterest}
                       onChange={(e) => setFormState({ ...formState, productInterest: e.target.value })}
-                      className="w-full bg-[#242220] border border-white/15 rounded-xl px-4 py-3 text-xs text-[#FDFBF7] focus:outline-none focus:border-[#C5A059]"
+                      className="w-full bg-[#242220] border border-white/15 rounded-xl px-4 py-3 text-xs text-[#FDFBF7] focus:outline-none focus:border-[#C5A059] cursor-pointer"
                     >
                       {Object.values(CATEGORIES_DATA).map((c) => (
                         <option key={c.id} value={c.id} className="bg-[#1A1918]">
@@ -144,10 +174,11 @@ export const ContactPage: React.FC = () => {
 
                 <button
                   type="submit"
-                  className="w-full py-4 rounded-full bg-[#C5A059] text-[#1A1918] font-bold uppercase tracking-widest text-xs hover:bg-[#D4AF37] transition-all flex items-center justify-center space-x-2 shadow-xl"
+                  disabled={isSubmitting}
+                  className="w-full py-4 rounded-full bg-[#C5A059] text-[#1A1918] font-bold uppercase tracking-widest text-xs hover:bg-[#D4AF37] transition-all flex items-center justify-center space-x-2 shadow-xl disabled:opacity-50 cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
-                  <span>Request Private Consultation</span>
+                  <span>{isSubmitting ? 'Transmitting Inquiry...' : 'Request Private Consultation'}</span>
                 </button>
               </form>
             )}
@@ -159,63 +190,73 @@ export const ContactPage: React.FC = () => {
               <span className="text-xs uppercase tracking-widest text-[#C5A059] font-semibold">
                 Global Flagships & Design Hubs
               </span>
-              <h3 className="font-serif text-2xl text-[#1A1918]">Our International Showrooms</h3>
+              <h2 className="font-serif text-3xl text-[#1A1918] font-normal">Our Showrooms</h2>
             </div>
 
-            {/* Showroom Selector Tabs */}
-            <div className="grid grid-cols-2 gap-2">
-              {SHOWROOMS_DATA.map((shw, idx) => (
-                <button
-                  key={shw.id}
+            <div className="space-y-3">
+              {SHOWROOMS_DATA.map((sr, idx) => (
+                <div
+                  key={sr.id}
                   onClick={() => setSelectedShowroomIndex(idx)}
-                  className={`p-3 rounded-xl border text-xs text-left transition-all ${
+                  className={`p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
                     selectedShowroomIndex === idx
-                      ? 'bg-[#1A1918] text-[#C5A059] border-[#C5A059] font-semibold'
-                      : 'bg-[#F5EFE6] text-[#4A4844] border-[#D8C8B8] hover:border-[#C5A059]'
+                      ? 'bg-[#1A1918] text-[#FDFBF7] border-[#C5A059] shadow-xl'
+                      : 'bg-white text-[#1A1918] border-black/10 hover:border-[#C5A059]/50'
                   }`}
                 >
-                  {shw.city}
-                </button>
+                  <div className="space-y-1">
+                    <span className="text-[10px] uppercase tracking-widest text-[#C5A059] font-bold">
+                      {sr.country}
+                    </span>
+                    <h3 className="font-serif text-xl font-bold">{sr.city} Showroom</h3>
+                    <p className="text-xs opacity-75">{sr.address}</p>
+                  </div>
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
+                      selectedShowroomIndex === idx ? 'bg-[#C5A059] text-[#1A1918]' : 'bg-black/5 text-[#1A1918]'
+                    }`}
+                  >
+                    &rarr;
+                  </div>
+                </div>
               ))}
             </div>
 
-            {/* Selected Showroom Details Card */}
-            <div className="bg-[#F5EFE6] rounded-3xl p-6 border border-[#C5A059]/30 shadow-xl space-y-4">
-              <div className="relative h-48 rounded-2xl overflow-hidden">
-                <img src={activeShowroom.image} alt={activeShowroom.city} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
-                <div className="absolute bottom-3 left-3 text-[#FDFBF7]">
-                  <h4 className="font-serif text-xl text-[#FDFBF7]">{activeShowroom.city}</h4>
-                  <span className="text-[10px] uppercase tracking-widest text-[#C5A059]">{activeShowroom.country}</span>
+            {/* Active Showroom Detailed Card */}
+            <div className="bg-[#FAF7F2] rounded-3xl p-6 border border-[#C5A059]/20 space-y-4">
+              <div className="relative h-44 rounded-2xl overflow-hidden shadow-md">
+                <img
+                  src={activeShowroom.image}
+                  alt={activeShowroom.city}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-4">
+                  <div className="text-white">
+                    <span className="text-[10px] uppercase font-bold tracking-widest text-[#F5D07F]">
+                      Private Appointments
+                    </span>
+                    <h4 className="font-serif text-xl font-bold">{activeShowroom.city} Atelier</h4>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-3 text-xs text-[#1A1918]">
-                <div className="flex items-start space-x-3">
-                  <MapPin className="w-4 h-4 text-[#C5A059] shrink-0 mt-0.5" />
+              <div className="space-y-2 text-xs text-[#4A4844]">
+                <div className="flex items-center space-x-2">
+                  <MapPin className="w-4 h-4 text-[#C5A059] shrink-0" />
                   <span>{activeShowroom.address}</span>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   <Phone className="w-4 h-4 text-[#C5A059] shrink-0" />
                   <span>{activeShowroom.phone}</span>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   <Mail className="w-4 h-4 text-[#C5A059] shrink-0" />
                   <span>{activeShowroom.email}</span>
                 </div>
-                <div className="flex items-start space-x-3">
-                  <Clock className="w-4 h-4 text-[#C5A059] shrink-0 mt-0.5" />
+                <div className="flex items-center space-x-2">
+                  <Clock className="w-4 h-4 text-[#C5A059] shrink-0" />
                   <span>{activeShowroom.hours}</span>
                 </div>
-              </div>
-
-              {/* Mock Map View */}
-              <div className="p-4 bg-[#1A1918] text-[#D8C8B8] rounded-xl border border-[#C5A059]/20 text-[11px] flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Calendar className="w-4 h-4 text-[#C5A059]" />
-                  <span>Private Appointments Available Today</span>
-                </div>
-                <span className="text-[#C5A059] font-bold">Book Visit</span>
               </div>
             </div>
           </div>

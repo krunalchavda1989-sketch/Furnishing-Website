@@ -21,6 +21,19 @@ export interface SwatchRequestItem {
   requestDate: string;
 }
 
+export interface ContactInquiryItem {
+  id: string;
+  clientName: string;
+  email: string;
+  phone: string;
+  productInterest: string;
+  projectScope: string;
+  preferredShowroom: string;
+  message: string;
+  status: 'New' | 'Contacted' | 'Scheduled' | 'Archived';
+  requestDate: string;
+}
+
 export interface AuditLogItem {
   id: string;
   adminEmail: string;

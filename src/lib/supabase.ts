@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import type { AdminUser, AuditLogItem } from '../types/adminTypes';
+import type { AdminUser, AuditLogItem, ContactInquiryItem } from '../types/adminTypes';
 import type { Product } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
@@ -312,5 +312,126 @@ export const fetchAdminUsersFromSupabase = async (): Promise<AdminUser[]> => {
   } catch (err) {
     console.warn('Error fetching admin users from Supabase:', err);
     return [];
+  }
+};
+
+/**
+ * Submit Contact Inquiry to Supabase
+ */
+export const submitContactInquiryInSupabase = async (inquiryData: {
+  clientName: string;
+  email: string;
+  phone?: string;
+  productInterest?: string;
+  projectScope?: string;
+  preferredShowroom?: string;
+  message: string;
+}): Promise<boolean> => {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase.from('contact_inquiries').insert({
+      client_name: inquiryData.clientName,
+      email: inquiryData.email,
+      phone: inquiryData.phone || '',
+      product_interest: inquiryData.productInterest || 'General Inquiry',
+      project_scope: inquiryData.projectScope || 'Consultation Request',
+      preferred_showroom: inquiryData.preferredShowroom || 'Mayfair London',
+      message: inquiryData.message,
+      status: 'New'
+    });
+
+    if (error) {
+      console.warn('Error inserting contact inquiry to Supabase:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('Exception inserting contact inquiry to Supabase:', err);
+    return false;
+  }
+};
+
+/**
+ * Fetch Contact Inquiries from Supabase
+ */
+export const fetchContactInquiriesFromSupabase = async (): Promise<ContactInquiryItem[]> => {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const { data, error } = await supabase
+      .from('contact_inquiries')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error || !data) return [];
+
+    return data.map((item) => ({
+      id: item.id.substring(0, 8).toUpperCase(),
+      clientName: item.client_name,
+      email: item.email,
+      phone: item.phone || '',
+      productInterest: item.product_interest || 'General',
+      projectScope: item.project_scope || 'Bespoke Consultation',
+      preferredShowroom: item.preferred_showroom || 'Mayfair Showroom',
+      message: item.message || '',
+      status: item.status || 'New',
+      requestDate: new Date(item.created_at).toLocaleDateString([], {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }));
+  } catch (err) {
+    console.warn('Error fetching contact inquiries from Supabase:', err);
+    return [];
+  }
+};
+
+/**
+ * Update Contact Inquiry Status in Supabase
+ */
+export const updateContactInquiryStatusInSupabase = async (
+  id: string,
+  newStatus: ContactInquiryItem['status'],
+  adminEmail: string
+): Promise<boolean> => {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase
+      .from('contact_inquiries')
+      .update({ status: newStatus })
+      .ilike('id', `${id}%`);
+
+    if (error) {
+      console.warn('Error updating inquiry status in Supabase:', error);
+      return false;
+    }
+
+    await logAdminActivityInSupabase(
+      adminEmail,
+      'INQUIRY_STATUS_UPDATED',
+      `Updated contact inquiry #${id} status to ${newStatus}`
+    );
+    return true;
+  } catch (err) {
+    console.warn('Exception updating inquiry status in Supabase:', err);
+    return false;
+  }
+};
+
+/**
+ * Delete Contact Inquiry in Supabase
+ */
+export const deleteContactInquiryInSupabase = async (id: string, adminEmail: string): Promise<boolean> => {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase.from('contact_inquiries').delete().ilike('id', `${id}%`);
+    if (error) return false;
+
+    await logAdminActivityInSupabase(adminEmail, 'INQUIRY_DELETED', `Deleted contact inquiry ID: ${id}`);
+    return true;
+  } catch (err) {
+    console.warn('Exception deleting contact inquiry in Supabase:', err);
+    return false;
   }
 };

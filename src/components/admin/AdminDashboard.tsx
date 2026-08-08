@@ -8,8 +8,6 @@ import {
   Search,
   Plus,
   TrendingUp,
-  CheckCircle2,
-  Truck,
   Shield,
   Settings,
   Building2,
@@ -17,9 +15,11 @@ import {
   Database,
   RefreshCw,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  Mail,
+  PhoneCall
 } from 'lucide-react';
-import type { AdminUser, SwatchRequestItem, AuditLogItem } from '../../types/adminTypes';
+import type { AdminUser, SwatchRequestItem, AuditLogItem, ContactInquiryItem } from '../../types/adminTypes';
 import type { Product, CategorySlug } from '../../types';
 import { CATEGORIES_DATA } from '../../data/categoriesData';
 import { PRODUCTS_DATA } from '../../data/productsData';
@@ -33,7 +33,10 @@ import {
   deleteProductInSupabase,
   fetchAdminAuditLogsFromSupabase,
   logAdminActivityInSupabase,
-  fetchAdminUsersFromSupabase
+  fetchAdminUsersFromSupabase,
+  fetchContactInquiriesFromSupabase,
+  updateContactInquiryStatusInSupabase,
+  deleteContactInquiryInSupabase
 } from '../../lib/supabase';
 
 interface AdminDashboardProps {
@@ -42,7 +45,7 @@ interface AdminDashboardProps {
   onReturnToSite: () => void;
 }
 
-// FALLBACK SWATCH REQUESTS FOR OFFLINE / INITIAL DEMO
+// FALLBACK INITIAL DATA
 const INITIAL_SWATCH_REQUESTS: SwatchRequestItem[] = [
   {
     id: 'SW-9041',
@@ -67,18 +70,33 @@ const INITIAL_SWATCH_REQUESTS: SwatchRequestItem[] = [
     swatchesRequested: ['Florentine Mohair Velvet', 'Acoustic Sheer Flax'],
     status: 'Dispatched',
     requestDate: 'Yesterday'
+  }
+];
+
+const INITIAL_CONTACT_INQUIRIES: ContactInquiryItem[] = [
+  {
+    id: 'INQ-8021',
+    clientName: 'Lady Eleanor Vance',
+    email: 'e.vance@mayfair-villas.co.uk',
+    phone: '+44 20 7946 0811',
+    productInterest: 'Bespoke Fabrics',
+    projectScope: 'Full Villa Refurbishment',
+    preferredShowroom: 'London Mayfair Showroom (UK)',
+    message: 'Requesting initial private consultation for silk drape installation across Mayfair penthouse residence.',
+    status: 'New',
+    requestDate: 'Today at 11:15'
   },
   {
-    id: 'SW-9039',
-    clientName: 'Sebastian Vance',
-    email: 'svance@vancedesign.com',
-    phone: '+1 212 555 0198',
-    address: '740 Park Avenue, Penthouse B, New York, NY 10021',
-    categoryTitle: 'Hand-Knotted Rugs',
-    categorySlug: 'rugs',
-    swatchesRequested: ['Himalayan Wool & Botanical Silk', 'Tibetan Cut-Loop Weave'],
-    status: 'Delivered',
-    requestDate: '3 days ago'
+    id: 'INQ-8020',
+    clientName: 'Viscount Harrison Thorne',
+    email: 'h.thorne@kensington-residences.com',
+    phone: '+44 20 7946 0722',
+    productInterest: 'Curtains & Upholstery',
+    projectScope: 'Drawing Room Upholstery',
+    preferredShowroom: 'Paris Avenue Montaigne Showroom (France)',
+    message: 'Interested in velvet upholstery & acoustic sheers for historical drawing room restoration.',
+    status: 'Contacted',
+    requestDate: 'Yesterday'
   }
 ];
 
@@ -87,8 +105,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onLogout,
   onReturnToSite
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'swatches' | 'audit-logs' | 'projects' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'inquiries' | 'products' | 'swatches' | 'audit-logs' | 'projects' | 'settings'
+  >('overview');
+
   const [swatchRequests, setSwatchRequests] = useState<SwatchRequestItem[]>(INITIAL_SWATCH_REQUESTS);
+  const [contactInquiries, setContactInquiries] = useState<ContactInquiryItem[]>(INITIAL_CONTACT_INQUIRIES);
   const [productsList, setProductsList] = useState<Product[]>(PRODUCTS_DATA);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   const [adminUsersList, setAdminUsersList] = useState<AdminUser[]>([
@@ -101,8 +123,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       lastLogin: 'Today'
     }
   ]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('All');
+  const [inquiryStatusFilter, setInquiryStatusFilter] = useState('All');
   const [showAddProductModal, setShowAddProductModal] = useState(false);
 
   // Supabase Database Connection & Ping Metrics
@@ -153,20 +177,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const fetchLiveSupabaseData = async () => {
     if (!isSupabaseConfigured) return;
 
-    // 1. Fetch Swatch Requests
+    // 1. Fetch Contact Inquiries
+    const inqs = await fetchContactInquiriesFromSupabase();
+    if (inqs && inqs.length > 0) {
+      setContactInquiries(inqs);
+    }
+
+    // 2. Fetch Swatch Requests
     fetchSupabaseSwatchRequests();
 
-    // 2. Fetch Products
+    // 3. Fetch Products
     const dbProds = await fetchProductsFromSupabase();
     if (dbProds && dbProds.length > 0) {
       setProductsList(dbProds);
     }
 
-    // 3. Fetch Audit Logs
+    // 4. Fetch Audit Logs
     const logs = await fetchAdminAuditLogsFromSupabase();
     setAuditLogs(logs);
 
-    // 4. Fetch Admin Users
+    // 5. Fetch Admin Users
     const admins = await fetchAdminUsersFromSupabase();
     if (admins && admins.length > 0) {
       setAdminUsersList(admins);
@@ -205,6 +235,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // Status Change Handler for Contact Inquiries
+  const handleUpdateInquiryStatus = async (id: string, newStatus: ContactInquiryItem['status']) => {
+    setContactInquiries((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
+    );
+
+    if (isSupabaseConfigured) {
+      await updateContactInquiryStatusInSupabase(id, newStatus, user.email);
+      const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+      setAuditLogs(updatedLogs);
+    }
+  };
+
+  // Delete Contact Inquiry
+  const handleDeleteInquiry = async (id: string, clientName: string) => {
+    if (!window.confirm(`Are you sure you want to delete inquiry from "${clientName}"?`)) return;
+
+    setContactInquiries((prev) => prev.filter((i) => i.id !== id));
+
+    if (isSupabaseConfigured) {
+      await deleteContactInquiryInSupabase(id, user.email);
+      const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+      setAuditLogs(updatedLogs);
+    }
+  };
+
   // Status Change Handler for Swatch Requests
   const handleUpdateSwatchStatus = async (id: string, newStatus: SwatchRequestItem['status']) => {
     setSwatchRequests((prev) =>
@@ -224,7 +280,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           `Updated swatch request #${id} status to ${newStatus}`
         );
 
-        // Refresh audit logs
         const updatedLogs = await fetchAdminAuditLogsFromSupabase();
         setAuditLogs(updatedLogs);
       } catch (err) {
@@ -267,7 +322,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setAuditLogs(updatedLogs);
     }
 
-    // Reset form
     setNewProductForm({
       name: '',
       categorySlug: 'fabrics',
@@ -299,6 +353,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       p.materialComposition.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCat = selectedCategoryFilter === 'All' || p.categorySlug === selectedCategoryFilter;
     return matchesSearch && matchesCat;
+  });
+
+  const filteredInquiries = contactInquiries.filter((inq) => {
+    const matchesSearch =
+      inq.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inq.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inq.message.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = inquiryStatusFilter === 'All' || inq.status === inquiryStatusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   return (
@@ -361,6 +424,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="max-w-7xl mx-auto flex items-center space-x-2 sm:space-x-4 overflow-x-auto py-2">
           {[
             { id: 'overview', label: 'Overview & Sync', icon: LayoutDashboard },
+            {
+              id: 'inquiries',
+              label: 'Client Inquiries',
+              icon: Mail,
+              badge: contactInquiries.filter((i) => i.status === 'New').length
+            },
             { id: 'products', label: 'Product Catalog', icon: Package, badge: productsList.length },
             {
               id: 'swatches',
@@ -419,12 +488,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-[#D8C8B8]">
-                  Real-time database synchronization active for Swatch Requests, Atelier Catalog Products, and Curator Security Audit Logs.
+                  Real-time database synchronization active for Contact Inquiries, Swatch Requests, Catalog Products, and Security Audit Logs.
                 </p>
                 <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-[#8C7A6B] pt-1">
                   <span>SSL Connection: 256-bit TLS</span>
                   <span>•</span>
-                  <span>Tables Synced: swatch_requests, products, admin_users, admin_audit_logs</span>
+                  <span>Tables Synced: contact_inquiries, swatch_requests, products, admin_users, admin_audit_logs</span>
                 </div>
               </div>
 
@@ -456,6 +525,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-5 shadow-xl space-y-3">
                 <div className="flex items-center justify-between text-xs text-[#D4AF37] uppercase tracking-wider font-semibold">
+                  <span>Client Inquiries</span>
+                  <Mail className="w-4 h-4 text-[#C5A059]" />
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <span className="font-serif text-3xl font-bold text-white">{contactInquiries.length}</span>
+                  <span className="text-xs text-amber-400 font-semibold">
+                    {contactInquiries.filter((i) => i.status === 'New').length} New Action Required
+                  </span>
+                </div>
+                <span className="text-[11px] text-[#8C7A6B] block">Synced with contact_inquiries</span>
+              </div>
+
+              <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-5 shadow-xl space-y-3">
+                <div className="flex items-center justify-between text-xs text-[#D4AF37] uppercase tracking-wider font-semibold">
                   <span>Swatch Requests</span>
                   <Layers className="w-4 h-4 text-[#C5A059]" />
                 </div>
@@ -479,19 +562,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <span className="font-serif text-3xl font-bold text-white">{productsList.length}</span>
                   <span className="text-xs text-emerald-400 font-semibold">8 Categories</span>
                 </div>
-                <span className="text-[11px] text-[#8C7A6B] block">Synced with Supabase DB</span>
-              </div>
-
-              <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-5 shadow-xl space-y-3">
-                <div className="flex items-center justify-between text-xs text-[#D4AF37] uppercase tracking-wider font-semibold">
-                  <span>Residence Portfolio</span>
-                  <Building2 className="w-4 h-4 text-[#C5A059]" />
-                </div>
-                <div className="flex items-baseline justify-between">
-                  <span className="font-serif text-3xl font-bold text-white">{PROJECTS_DATA.length}</span>
-                  <span className="text-xs text-[#F5D07F] font-semibold">Superyachts & Villas</span>
-                </div>
-                <span className="text-[11px] text-[#8C7A6B] block">Mayfair, Como & NYC</span>
+                <span className="text-[11px] text-[#8C7A6B] block">Synced with products table</span>
               </div>
 
               <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-5 shadow-xl space-y-3">
@@ -507,88 +578,252 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </div>
 
-            {/* Recent Swatch Requests Feed */}
+            {/* Recent Contact Inquiries Preview */}
             <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
                 <div>
-                  <h3 className="font-serif text-xl text-white font-bold">Recent Client Swatch Requests</h3>
+                  <h3 className="font-serif text-xl text-white font-bold">Recent Client Contact Inquiries</h3>
                   <p className="text-xs text-[#D8C8B8]">
-                    Manage complimentary swatch box dispatches for high-net-worth clients.
+                    Inquiries submitted from the public contact page requiring atelier curator consultation.
                   </p>
                 </div>
                 <button
-                  onClick={() => setActiveTab('swatches')}
+                  onClick={() => setActiveTab('inquiries')}
                   className="text-xs uppercase tracking-widest text-[#F5D07F] hover:underline font-semibold cursor-pointer"
                 >
-                  View All ({swatchRequests.length}) &rarr;
+                  View All ({contactInquiries.length}) &rarr;
                 </button>
               </div>
 
               <div className="space-y-3">
-                {swatchRequests.slice(0, 4).map((req) => (
+                {contactInquiries.slice(0, 3).map((inq) => (
                   <div
-                    key={req.id}
+                    key={inq.id}
                     className="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-[#C5A059]/50 transition-all"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center space-x-2">
                         <span className="text-xs font-mono font-bold text-[#F5D07F] bg-[#C5A059]/20 px-2 py-0.5 rounded border border-[#C5A059]/40">
-                          {req.id}
+                          {inq.id}
                         </span>
-                        <span className="text-sm font-semibold text-white">{req.clientName}</span>
-                        <span className="text-[11px] text-[#8C7A6B]">({req.requestDate})</span>
+                        <span className="text-sm font-semibold text-white">{inq.clientName}</span>
+                        <span className="text-[11px] text-[#8C7A6B]">({inq.requestDate})</span>
                       </div>
-                      <p className="text-xs text-[#D8C8B8]">{req.address}</p>
-                      <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                        <span className="text-[10px] uppercase font-bold text-[#C5A059]">
-                          {req.categoryTitle}:
-                        </span>
-                        {req.swatchesRequested.map((sw, idx) => (
-                          <span
-                            key={idx}
-                            className="px-2 py-0.5 rounded-full bg-white/10 text-[10px] text-white"
-                          >
-                            {sw}
-                          </span>
-                        ))}
+                      <p className="text-xs text-[#D8C8B8] line-clamp-1">{inq.message}</p>
+                      <div className="flex flex-wrap items-center gap-3 pt-1 text-[10px] text-[#C5A059]">
+                        <span>Interest: <strong>{inq.productInterest}</strong></span>
+                        <span>•</span>
+                        <span>Showroom: <strong>{inq.preferredShowroom}</strong></span>
                       </div>
                     </div>
 
                     <div className="flex items-center space-x-2 shrink-0">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                          req.status === 'Pending'
+                          inq.status === 'New'
                             ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                            : req.status === 'Dispatched'
+                            : inq.status === 'Contacted'
                             ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
-                            : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            : inq.status === 'Scheduled'
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            : 'bg-white/10 text-gray-300'
                         }`}
                       >
-                        {req.status}
+                        {inq.status}
                       </span>
-
-                      {req.status === 'Pending' && (
-                        <button
-                          onClick={() => handleUpdateSwatchStatus(req.id, 'Dispatched')}
-                          className="px-3 py-1 rounded-lg bg-[#C5A059] text-[#121110] text-xs font-bold uppercase tracking-wider hover:bg-[#D4AF37] transition-all flex items-center gap-1 cursor-pointer"
-                        >
-                          <Truck className="w-3.5 h-3.5" />
-                          <span>Dispatch</span>
-                        </button>
-                      )}
-                      {req.status === 'Dispatched' && (
-                        <button
-                          onClick={() => handleUpdateSwatchStatus(req.id, 'Delivered')}
-                          className="px-3 py-1 rounded-lg bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-emerald-500 transition-all flex items-center gap-1 cursor-pointer"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Mark Delivered</span>
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleUpdateInquiryStatus(inq.id, 'Contacted')}
+                        className="px-3 py-1.5 rounded-lg bg-[#C5A059] text-[#121110] text-xs font-bold uppercase tracking-wider hover:bg-[#D4AF37] transition-all cursor-pointer"
+                      >
+                        Mark Contacted
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= CLIENT INQUIRIES TAB ================= */}
+        {activeTab === 'inquiries' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="pb-4 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="font-serif text-2xl font-bold text-white">Contact Form Inquiries Module</h2>
+                <p className="text-xs text-[#D8C8B8]">
+                  Manage private consultations, trade inquiries, and client quotes submitted from the storefront.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    const inqs = await fetchContactInquiriesFromSupabase();
+                    if (inqs) setContactInquiries(inqs);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs text-white font-semibold flex items-center gap-2 cursor-pointer shrink-0"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-[#C5A059]" />
+                  <span>Refresh Inquiries</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Bar */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+              <div className="md:col-span-8 relative">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search inquiries by client name, email, or message..."
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/15 focus:border-[#C5A059] focus:outline-none text-xs text-white placeholder-white/40"
+                />
+                <Search className="w-4 h-4 text-[#C5A059] absolute left-3.5 top-3" />
+              </div>
+
+              <div className="md:col-span-4">
+                <select
+                  value={inquiryStatusFilter}
+                  onChange={(e) => setInquiryStatusFilter(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none cursor-pointer"
+                >
+                  <option value="All" className="bg-[#141312]">All Statuses ({contactInquiries.length})</option>
+                  <option value="New" className="bg-[#141312]">New Action Required</option>
+                  <option value="Contacted" className="bg-[#141312]">Contacted</option>
+                  <option value="Scheduled" className="bg-[#141312]">Scheduled</option>
+                  <option value="Archived" className="bg-[#141312]">Archived</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Inquiries Grid */}
+            <div className="grid grid-cols-1 gap-4">
+              {filteredInquiries.length === 0 ? (
+                <div className="p-12 text-center bg-[#141312] border border-[#C5A059]/30 rounded-2xl text-[#8C7A6B]">
+                  No matching contact form inquiries found.
+                </div>
+              ) : (
+                filteredInquiries.map((inq) => (
+                  <div
+                    key={inq.id}
+                    className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-6 shadow-xl space-y-4 hover:border-[#C5A059]/60 transition-all"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-white/10 gap-2">
+                      <div className="flex items-center space-x-3">
+                        <span className="font-mono text-xs font-bold text-[#F5D07F] bg-[#C5A059]/20 px-2.5 py-1 rounded-md border border-[#C5A059]/40">
+                          {inq.id}
+                        </span>
+                        <h4 className="font-serif text-lg font-bold text-white">{inq.clientName}</h4>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <span className="text-xs text-[#8C7A6B]">Submitted: {inq.requestDate}</span>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                            inq.status === 'New'
+                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                              : inq.status === 'Contacted'
+                              ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                              : inq.status === 'Scheduled'
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                              : 'bg-white/10 text-gray-300 border border-white/20'
+                          }`}
+                        >
+                          {inq.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">
+                          Client Contact Info
+                        </span>
+                        <p className="text-white font-medium flex items-center gap-1.5">
+                          <Mail className="w-3.5 h-3.5 text-[#C5A059]" />
+                          <a href={`mailto:${inq.email}`} className="hover:underline">
+                            {inq.email}
+                          </a>
+                        </p>
+                        {inq.phone && (
+                          <p className="text-[#D8C8B8] flex items-center gap-1.5 mt-0.5">
+                            <PhoneCall className="w-3.5 h-3.5 text-[#C5A059]" />
+                            <a href={`tel:${inq.phone}`} className="hover:underline">
+                              {inq.phone}
+                            </a>
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">
+                          Showroom & Category Interest
+                        </span>
+                        <p className="text-white font-medium">{inq.productInterest}</p>
+                        <p className="text-[#D8C8B8]">{inq.preferredShowroom}</p>
+                        <span className="text-[10px] text-[#C5A059] block mt-0.5">Scope: {inq.projectScope}</span>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">
+                          Client Inquiry Message
+                        </span>
+                        <p className="text-[#D8C8B8] leading-relaxed italic bg-white/5 p-3 rounded-xl border border-white/10">
+                          "{inq.message}"
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div className="flex items-center space-x-2 text-xs text-[#8C7A6B]">
+                        <span>Action Workflow:</span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => handleUpdateInquiryStatus(inq.id, 'New')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            inq.status === 'New' ? 'bg-amber-500 text-black' : 'bg-white/5 text-white hover:bg-white/10'
+                          }`}
+                        >
+                          New
+                        </button>
+                        <button
+                          onClick={() => handleUpdateInquiryStatus(inq.id, 'Contacted')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            inq.status === 'Contacted' ? 'bg-blue-600 text-white' : 'bg-white/5 text-white hover:bg-white/10'
+                          }`}
+                        >
+                          Mark Contacted
+                        </button>
+                        <button
+                          onClick={() => handleUpdateInquiryStatus(inq.id, 'Scheduled')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            inq.status === 'Scheduled' ? 'bg-emerald-600 text-white' : 'bg-white/5 text-white hover:bg-white/10'
+                          }`}
+                        >
+                          Schedule Meeting
+                        </button>
+                        <button
+                          onClick={() => handleUpdateInquiryStatus(inq.id, 'Archived')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            inq.status === 'Archived' ? 'bg-gray-700 text-white' : 'bg-white/5 text-white hover:bg-white/10'
+                          }`}
+                        >
+                          Archive
+                        </button>
+                        <button
+                          onClick={() => handleDeleteInquiry(inq.id, inq.clientName)}
+                          className="p-1.5 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 transition-all border border-red-500/30 cursor-pointer ml-2"
+                          title="Delete Inquiry"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
