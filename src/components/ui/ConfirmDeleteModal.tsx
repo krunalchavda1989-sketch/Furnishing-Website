@@ -22,11 +22,11 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md bg-[#141312] border border-red-500/40 rounded-3xl p-6 sm:p-7 text-[#FDFBF7] shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-md bg-[#0F1714] border border-red-500/40 rounded-3xl p-6 sm:p-7 text-[#E9DFD1] shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
         {/* Top Close Button */}
         <button
           onClick={onCancel}
-          className="absolute top-4 right-4 p-1.5 rounded-full bg-white/5 text-[#D8C8B8] hover:bg-white/10 hover:text-white transition-all cursor-pointer border border-white/10"
+          className="absolute top-4 right-4 p-1.5 rounded-full bg-white/5 text-[#8C9A90] hover:bg-white/10 hover:text-white transition-all cursor-pointer border border-white/10"
         >
           <X className="w-4 h-4" />
         </button>
@@ -45,9 +45,9 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
         </div>
 
         <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-xs space-y-1">
-          <span className="text-[#8C7A6B] block uppercase tracking-wider text-[10px] font-semibold">Target {itemType}:</span>
+          <span className="text-[#8C9A90] block uppercase tracking-wider text-[10px] font-semibold">Target {itemType}:</span>
           <p className="text-white font-semibold font-mono truncate">{itemName}</p>
-          <p className="text-[#D8C8B8] text-[11px] pt-1">
+          <p className="text-[#8C9A90] text-[11px] pt-1">
             This action cannot be undone. The entry will be permanently removed from active archives and database records.
           </p>
         </div>

@@ -2,14 +2,21 @@
 
 @layer base {
   :root {
-    --bg-ivory: #FDFBF7;
-    --bg-sand: #F5EFE6;
-    --bg-taupe: #D8C8B8;
-    --text-charcoal: #1A1918;
-    --accent-emerald: #1C3026;
-    --accent-oxblood: #3B1C1C;
-    --accent-gold: #C5A059;
-    --accent-bronze: #8C6D46;
+    --bg-ivory: #E9DFD1;
+    --bg-sand: #F0E8DD;
+    --bg-taupe: #8C9A90;
+    --text-charcoal: #0F1714;
+    --accent-emerald: #163129;
+    --accent-oxblood: #163129;
+    --accent-gold: #C9A56A;
+    --accent-bronze: #8C9A90;
+
+    /* Atelier Living Color Swatches */
+    --atelier-forest: #163129;
+    --atelier-dark: #0F1714;
+    --atelier-gold: #C9A56A;
+    --atelier-cream: #E9DFD1;
+    --atelier-sage: #8C9A90;
   }
 
   body {
@@ -32,14 +39,14 @@
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #F5EFE6;
+  background: #E9DFD1;
 }
 ::-webkit-scrollbar-thumb {
-  background: #C5A059;
+  background: #C9A56A;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #8C6D46;
+  background: #163129;
 }
 
 /* Subtle Material Grain Overlay */
@@ -49,32 +56,32 @@
 
 /* Elegant Text Shimmer & Gold Gradient */
 .gold-gradient-text {
-  background: linear-gradient(135deg, #D4AF37 0%, #C5A059 50%, #8C6D46 100%);
+  background: linear-gradient(135deg, #E6C894 0%, #C9A56A 50%, #A6834B 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .gold-gradient-bg {
-  background: linear-gradient(135deg, #C5A059 0%, #8C6D46 100%);
+  background: linear-gradient(135deg, #C9A56A 0%, #A6834B 100%);
 }
 
 .dark-gradient-bg {
-  background: linear-gradient(180deg, #1A1918 0%, #0F0E0E 100%);
+  background: linear-gradient(180deg, #163129 0%, #0F1714 100%);
 }
 
 /* Glassmorphism Soft Overlay */
 .glass-panel {
-  background: rgba(253, 251, 247, 0.75);
+  background: rgba(233, 223, 209, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(197, 160, 89, 0.15);
+  border: 1px solid rgba(201, 165, 106, 0.25);
 }
 
 .glass-panel-dark {
-  background: rgba(26, 25, 24, 0.85);
+  background: rgba(15, 23, 20, 0.88);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(197, 160, 89, 0.2);
+  border: 1px solid rgba(201, 165, 106, 0.3);
 }
 
 /* Parallax float keyframe */

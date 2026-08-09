@@ -49,13 +49,13 @@ export const ContactPage: React.FC = () => {
     <div className="pt-28 sm:pt-36 pb-24 space-y-20 font-sans">
       {/* Header */}
       <section className="max-w-4xl mx-auto px-4 text-center space-y-4">
-        <span className="text-xs uppercase tracking-widest text-[#C5A059] font-medium block">
+        <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-medium block">
           Private Atelier Consultations
         </span>
-        <h1 className="font-serif text-4xl sm:text-6xl text-[#1A1918] font-normal">
+        <h1 className="font-serif text-4xl sm:text-6xl text-[#0F1714] font-normal">
           Connect With Our <span className="italic font-subserif gold-gradient-text">Design Specialists</span>
         </h1>
-        <p className="text-sm sm:text-base text-[#4A4844] font-light leading-relaxed max-w-2xl mx-auto font-subserif text-lg">
+        <p className="text-sm sm:text-base text-[#2C3A33] font-light leading-relaxed max-w-2xl mx-auto font-subserif text-lg">
           Whether commissioning bespoke drapes for a historic manor or selecting acoustic sheers for a commercial penthouse, our Mayfair, Paris, and Milan specialists are at your service.
         </p>
       </section>
@@ -64,24 +64,24 @@ export const ContactPage: React.FC = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           {/* Left Form */}
-          <div className="lg:col-span-7 bg-[#1A1918] rounded-3xl p-8 sm:p-12 border border-[#C5A059]/30 text-[#FDFBF7] shadow-2xl space-y-6">
+          <div className="lg:col-span-7 bg-[#0F1714] rounded-3xl p-8 sm:p-12 border border-[#C9A56A]/30 text-[#E9DFD1] shadow-2xl space-y-6">
             <div>
-              <span className="text-xs uppercase tracking-widest text-[#C5A059] font-medium flex items-center gap-1.5">
+              <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-medium flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4" /> Bespoke Inquiry & Trade Registration
               </span>
-              <h2 className="font-serif text-2xl sm:text-3xl text-[#FDFBF7] mt-1">
+              <h2 className="font-serif text-2xl sm:text-3xl text-[#E9DFD1] mt-1">
                 Schedule a Consultation or Request Quote
               </h2>
             </div>
 
             {submitted ? (
-              <div className="py-12 text-center space-y-4 bg-[#242220] rounded-2xl border border-[#C5A059]/40 p-6 animate-in fade-in">
-                <div className="w-16 h-16 rounded-full bg-[#1C3026] border border-[#C5A059] flex items-center justify-center mx-auto text-[#C5A059]">
+              <div className="py-12 text-center space-y-4 bg-[#163129] rounded-2xl border border-[#C9A56A]/40 p-6 animate-in fade-in">
+                <div className="w-16 h-16 rounded-full bg-[#0F1714] border border-[#C9A56A] flex items-center justify-center mx-auto text-[#C9A56A]">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
-                <h3 className="font-serif text-2xl text-[#FDFBF7]">Inquiry Received & Synced</h3>
-                <p className="text-xs text-[#D8C8B8] max-w-md mx-auto font-light leading-relaxed">
-                  Thank you, <strong className="text-[#FDFBF7]">{formState.fullName}</strong>. Your inquiry has been transmitted directly to our Master Admin portal and senior textile consultants at our {activeShowroom.city} showroom. We will review your project scope within 24 hours.
+                <h3 className="font-serif text-2xl text-[#E9DFD1]">Inquiry Received & Synced</h3>
+                <p className="text-xs text-[#8C9A90] max-w-md mx-auto font-light leading-relaxed">
+                  Thank you, <strong className="text-[#E9DFD1]">{formState.fullName}</strong>. Your inquiry has been transmitted directly to our Master Admin portal and senior textile consultants at our {activeShowroom.city} showroom. We will review your project scope within 24 hours.
                 </p>
                 <button
                   onClick={() => {
@@ -95,7 +95,7 @@ export const ContactPage: React.FC = () => {
                       message: ''
                     });
                   }}
-                  className="mt-4 px-6 py-2.5 rounded-full bg-[#C5A059] text-[#1A1918] text-xs font-bold uppercase tracking-widest hover:bg-[#D4AF37] transition-all cursor-pointer"
+                  className="mt-4 px-6 py-2.5 rounded-full bg-[#C9A56A] text-[#0F1714] text-xs font-bold uppercase tracking-widest hover:bg-[#E6C894] transition-all cursor-pointer"
                 >
                   Submit Another Inquiry
                 </button>
@@ -104,7 +104,7 @@ export const ContactPage: React.FC = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs uppercase tracking-widest text-[#8C7A6B] block mb-1 font-medium">
+                    <label className="text-xs uppercase tracking-widest text-[#8C9A90] block mb-1 font-medium">
                       Full Name *
                     </label>
                     <input
@@ -113,11 +113,11 @@ export const ContactPage: React.FC = () => {
                       placeholder="e.g. Lord Alistair Vance"
                       value={formState.fullName}
                       onChange={(e) => setFormState({ ...formState, fullName: e.target.value })}
-                      className="w-full bg-[#242220] border border-white/15 rounded-xl px-4 py-3 text-xs text-[#FDFBF7] placeholder-[#8C7A6B] focus:outline-none focus:border-[#C5A059]"
+                      className="w-full bg-[#163129] border border-white/15 rounded-xl px-4 py-3 text-xs text-[#E9DFD1] placeholder-[#8C9A90] focus:outline-none focus:border-[#C9A56A]"
                     />
                   </div>
                   <div>
-                    <label className="text-xs uppercase tracking-widest text-[#8C7A6B] block mb-1 font-medium">
+                    <label className="text-xs uppercase tracking-widest text-[#8C9A90] block mb-1 font-medium">
                       Email Address *
                     </label>
                     <input
@@ -126,14 +126,14 @@ export const ContactPage: React.FC = () => {
                       placeholder="e.g. alistair@vanceholdings.com"
                       value={formState.email}
                       onChange={(e) => setFormState({ ...formState, email: e.target.value })}
-                      className="w-full bg-[#242220] border border-white/15 rounded-xl px-4 py-3 text-xs text-[#FDFBF7] placeholder-[#8C7A6B] focus:outline-none focus:border-[#C5A059]"
+                      className="w-full bg-[#163129] border border-white/15 rounded-xl px-4 py-3 text-xs text-[#E9DFD1] placeholder-[#8C9A90] focus:outline-none focus:border-[#C9A56A]"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs uppercase tracking-widest text-[#8C7A6B] block mb-1 font-medium">
+                    <label className="text-xs uppercase tracking-widest text-[#8C9A90] block mb-1 font-medium">
                       Phone Number
                     </label>
                     <input
@@ -141,20 +141,20 @@ export const ContactPage: React.FC = () => {
                       placeholder="+44 7911 123456"
                       value={formState.phone}
                       onChange={(e) => setFormState({ ...formState, phone: e.target.value })}
-                      className="w-full bg-[#242220] border border-white/15 rounded-xl px-4 py-3 text-xs text-[#FDFBF7] placeholder-[#8C7A6B] focus:outline-none focus:border-[#C5A059]"
+                      className="w-full bg-[#163129] border border-white/15 rounded-xl px-4 py-3 text-xs text-[#E9DFD1] placeholder-[#8C9A90] focus:outline-none focus:border-[#C9A56A]"
                     />
                   </div>
                   <div>
-                    <label className="text-xs uppercase tracking-widest text-[#8C7A6B] block mb-1 font-medium">
+                    <label className="text-xs uppercase tracking-widest text-[#8C9A90] block mb-1 font-medium">
                       Product Interest Category
                     </label>
                     <select
                       value={formState.productInterest}
                       onChange={(e) => setFormState({ ...formState, productInterest: e.target.value })}
-                      className="w-full bg-[#242220] border border-white/15 rounded-xl px-4 py-3 text-xs text-[#FDFBF7] focus:outline-none focus:border-[#C5A059] cursor-pointer"
+                      className="w-full bg-[#163129] border border-white/15 rounded-xl px-4 py-3 text-xs text-[#E9DFD1] focus:outline-none focus:border-[#C9A56A] cursor-pointer"
                     >
                       {Object.values(CATEGORIES_DATA).map((c) => (
-                        <option key={c.id} value={c.id} className="bg-[#1A1918]">
+                        <option key={c.id} value={c.id} className="bg-[#0F1714]">
                           {c.title}
                         </option>
                       ))}
@@ -163,7 +163,7 @@ export const ContactPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-xs uppercase tracking-widest text-[#8C7A6B] block mb-1 font-medium">
+                  <label className="text-xs uppercase tracking-widest text-[#8C9A90] block mb-1 font-medium">
                     Project Scope / Requirements
                   </label>
                   <textarea
@@ -171,14 +171,14 @@ export const ContactPage: React.FC = () => {
                     placeholder="Describe your residence, timeline, dimensions, or design vision..."
                     value={formState.message}
                     onChange={(e) => setFormState({ ...formState, message: e.target.value })}
-                    className="w-full bg-[#242220] border border-white/15 rounded-xl p-4 text-xs text-[#FDFBF7] placeholder-[#8C7A6B] focus:outline-none focus:border-[#C5A059]"
+                    className="w-full bg-[#163129] border border-white/15 rounded-xl p-4 text-xs text-[#E9DFD1] placeholder-[#8C9A90] focus:outline-none focus:border-[#C9A56A]"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-4 rounded-full bg-[#C5A059] text-[#1A1918] font-bold uppercase tracking-widest text-xs hover:bg-[#D4AF37] transition-all flex items-center justify-center space-x-2 shadow-xl disabled:opacity-50 cursor-pointer"
+                  className="w-full py-4 rounded-full bg-[#C9A56A] text-[#0F1714] font-bold uppercase tracking-widest text-xs hover:bg-[#E6C894] transition-all flex items-center justify-center space-x-2 shadow-xl disabled:opacity-50 cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
                   <span>{isSubmitting ? 'Transmitting Inquiry...' : 'Request Private Consultation'}</span>
@@ -190,10 +190,10 @@ export const ContactPage: React.FC = () => {
           {/* Right Showrooms Switcher */}
           <div className="lg:col-span-5 space-y-6">
             <div className="space-y-2">
-              <span className="text-xs uppercase tracking-widest text-[#C5A059] font-semibold">
+              <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-semibold">
                 Global Flagships & Design Hubs
               </span>
-              <h2 className="font-serif text-3xl text-[#1A1918] font-normal">Our Showrooms</h2>
+              <h2 className="font-serif text-3xl text-[#0F1714] font-normal">Our Showrooms</h2>
             </div>
 
             <div className="space-y-3">
@@ -203,12 +203,12 @@ export const ContactPage: React.FC = () => {
                   onClick={() => setSelectedShowroomIndex(idx)}
                   className={`p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
                     selectedShowroomIndex === idx
-                      ? 'bg-[#1A1918] text-[#FDFBF7] border-[#C5A059] shadow-xl'
-                      : 'bg-white text-[#1A1918] border-black/10 hover:border-[#C5A059]/50'
+                      ? 'bg-[#0F1714] text-[#E9DFD1] border-[#C9A56A] shadow-xl'
+                      : 'bg-white text-[#0F1714] border-black/10 hover:border-[#C9A56A]/50'
                   }`}
                 >
                   <div className="space-y-1">
-                    <span className="text-[10px] uppercase tracking-widest text-[#C5A059] font-bold">
+                    <span className="text-[10px] uppercase tracking-widest text-[#C9A56A] font-bold">
                       {sr.country}
                     </span>
                     <h3 className="font-serif text-xl font-bold">{sr.city} Showroom</h3>
@@ -216,7 +216,7 @@ export const ContactPage: React.FC = () => {
                   </div>
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
-                      selectedShowroomIndex === idx ? 'bg-[#C5A059] text-[#1A1918]' : 'bg-black/5 text-[#1A1918]'
+                      selectedShowroomIndex === idx ? 'bg-[#C9A56A] text-[#0F1714]' : 'bg-black/5 text-[#0F1714]'
                     }`}
                   >
                     &rarr;
@@ -226,7 +226,7 @@ export const ContactPage: React.FC = () => {
             </div>
 
             {/* Active Showroom Detailed Card */}
-            <div className="bg-[#FAF7F2] rounded-3xl p-6 border border-[#C5A059]/20 space-y-4">
+            <div className="bg-[#E9DFD1] rounded-3xl p-6 border border-[#C9A56A]/20 space-y-4">
               <div className="relative h-44 rounded-2xl overflow-hidden shadow-md">
                 <img
                   src={activeShowroom.image}
@@ -235,7 +235,7 @@ export const ContactPage: React.FC = () => {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-4">
                   <div className="text-white">
-                    <span className="text-[10px] uppercase font-bold tracking-widest text-[#F5D07F]">
+                    <span className="text-[10px] uppercase font-bold tracking-widest text-[#C9A56A]">
                       Private Appointments
                     </span>
                     <h4 className="font-serif text-xl font-bold">{activeShowroom.city} Atelier</h4>
@@ -243,21 +243,21 @@ export const ContactPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-2 text-xs text-[#4A4844]">
+              <div className="space-y-2 text-xs text-[#2C3A33]">
                 <div className="flex items-center space-x-2">
-                  <MapPin className="w-4 h-4 text-[#C5A059] shrink-0" />
+                  <MapPin className="w-4 h-4 text-[#C9A56A] shrink-0" />
                   <span>{activeShowroom.address}</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Phone className="w-4 h-4 text-[#C5A059] shrink-0" />
+                  <Phone className="w-4 h-4 text-[#C9A56A] shrink-0" />
                   <span>{activeShowroom.phone}</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Mail className="w-4 h-4 text-[#C5A059] shrink-0" />
+                  <Mail className="w-4 h-4 text-[#C9A56A] shrink-0" />
                   <span>{activeShowroom.email}</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Clock className="w-4 h-4 text-[#C5A059] shrink-0" />
+                  <Clock className="w-4 h-4 text-[#C9A56A] shrink-0" />
                   <span>{activeShowroom.hours}</span>
                 </div>
               </div>

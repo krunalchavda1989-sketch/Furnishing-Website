@@ -61,8 +61,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? 'bg-[#0D0C0B]/98 backdrop-blur-2xl border-b border-[#C5A059]/50 py-2 sm:py-2.5 shadow-2xl text-white'
-          : 'bg-[#121110]/95 backdrop-blur-xl border-b border-[#C5A059]/35 py-2.5 sm:py-3.5 shadow-xl text-white'
+          ? 'bg-[#0F1714]/98 backdrop-blur-2xl border-b border-[#C9A56A]/50 py-2 sm:py-2.5 shadow-2xl text-white'
+          : 'bg-[#163129]/95 backdrop-blur-xl border-b border-[#C9A56A]/35 py-2.5 sm:py-3.5 shadow-xl text-white'
       }`}
     >
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
@@ -75,16 +75,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             }}
             className="flex items-center space-x-2 sm:space-x-3 group text-left focus:outline-none shrink-0 cursor-pointer"
           >
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-[#C5A059] sm:border-2 flex items-center justify-center bg-[#C5A059]/20 group-hover:bg-[#C5A059] group-hover:shadow-[0_0_15px_rgba(197,160,89,0.5)] transition-all duration-300 shadow-md shrink-0">
-              <span className="font-serif font-bold text-base sm:text-xl text-[#F5D07F] group-hover:text-[#121110] transition-colors">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-[#C9A56A] sm:border-2 flex items-center justify-center bg-[#C9A56A]/20 group-hover:bg-[#C9A56A] group-hover:shadow-[0_0_15px_rgba(201,165,106,0.5)] transition-all duration-300 shadow-md shrink-0">
+              <span className="font-serif font-bold text-base sm:text-xl text-[#C9A56A] group-hover:text-[#0F1714] transition-colors">
                 M
               </span>
             </div>
             <div className="leading-tight">
-              <span className="font-serif tracking-wider sm:tracking-widest text-sm sm:text-xl font-bold uppercase text-white group-hover:text-[#F5D07F] transition-colors block drop-shadow-sm">
+              <span className="font-serif tracking-wider sm:tracking-widest text-sm sm:text-xl font-bold uppercase text-white group-hover:text-[#C9A56A] transition-colors block drop-shadow-sm">
                 Maison & Drape
               </span>
-              <span className="hidden xs:block text-[8px] sm:text-[10px] tracking-[0.18em] sm:tracking-[0.28em] uppercase text-[#D4AF37] font-semibold">
+              <span className="hidden xs:block text-[8px] sm:text-[10px] tracking-[0.18em] sm:tracking-[0.28em] uppercase text-[#C9A56A] font-semibold">
                 Atelier Haute Living
               </span>
             </div>
@@ -109,31 +109,31 @@ export const Navbar: React.FC<NavbarProps> = ({
                       onClick={() => onNavigate('projects')}
                       className={`flex items-center space-x-1.5 text-xs xl:text-sm uppercase tracking-widest font-semibold px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer ${
                         isActive
-                          ? 'text-[#F5D07F] bg-[#C5A059]/25 border border-[#C5A059]/50 shadow-inner'
-                          : 'text-white/90 hover:text-[#F5D07F] hover:bg-white/10'
+                          ? 'text-[#C9A56A] bg-[#C9A56A]/25 border border-[#C9A56A]/50 shadow-inner'
+                          : 'text-white/90 hover:text-[#C9A56A] hover:bg-white/10'
                       }`}
                     >
                       <span>{link.label}</span>
                       <ChevronDown
                         className={`w-4 h-4 transition-transform duration-300 ${
-                          isMegaMenuOpen ? 'rotate-180 text-[#F5D07F]' : ''
+                          isMegaMenuOpen ? 'rotate-180 text-[#C9A56A]' : ''
                         }`}
                       />
                     </button>
 
                     {/* Mega Menu Dropdown */}
                     {isMegaMenuOpen && (
-                      <div className="absolute top-full -left-48 w-[840px] bg-[#121110]/98 backdrop-blur-2xl rounded-2xl p-6 shadow-2xl border border-[#C5A059]/40 grid grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-3 duration-300">
-                        <div className="col-span-4 pb-3 mb-2 border-b border-[#C5A059]/30 flex items-center justify-between">
-                          <span className="text-xs uppercase tracking-widest text-[#F5D07F] font-bold flex items-center gap-1.5">
-                            <Compass className="w-4 h-4 text-[#F5D07F]" /> Explore Furnishing Categories
+                      <div className="absolute top-full -left-48 w-[840px] bg-[#0F1714]/98 backdrop-blur-2xl rounded-2xl p-6 shadow-2xl border border-[#C9A56A]/40 grid grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-3 duration-300">
+                        <div className="col-span-4 pb-3 mb-2 border-b border-[#C9A56A]/30 flex items-center justify-between">
+                          <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-bold flex items-center gap-1.5">
+                            <Compass className="w-4 h-4 text-[#C9A56A]" /> Explore Furnishing Categories
                           </span>
                           <button
                             onClick={() => {
                               setIsMegaMenuOpen(false);
                               onNavigate('projects');
                             }}
-                            className="text-xs text-white hover:text-[#F5D07F] underline tracking-wider font-medium cursor-pointer"
+                            className="text-xs text-white hover:text-[#C9A56A] underline tracking-wider font-medium cursor-pointer"
                           >
                             View All Projects Portfolio &rarr;
                           </button>
@@ -143,7 +143,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <button
                             key={cat.id}
                             onClick={() => handleCategoryClick(cat.id as CategorySlug)}
-                            className="group/card text-left p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-[#C5A059]/20 hover:border-[#C5A059]/50 transition-all flex flex-col justify-between cursor-pointer"
+                            className="group/card text-left p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-[#C9A56A]/20 hover:border-[#C9A56A]/50 transition-all flex flex-col justify-between cursor-pointer"
                           >
                             <div className="relative h-20 w-full rounded-lg overflow-hidden mb-2">
                               <img
@@ -154,10 +154,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                               <div className="absolute inset-0 bg-black/40 group-hover/card:bg-black/20 transition-colors"></div>
                             </div>
                             <div>
-                              <h4 className="font-serif text-sm font-semibold text-white group-hover/card:text-[#F5D07F] transition-colors leading-snug">
+                              <h4 className="font-serif text-sm font-semibold text-white group-hover/card:text-[#C9A56A] transition-colors leading-snug">
                                 {cat.title}
                               </h4>
-                              <p className="text-[11px] text-[#D8C8B8] line-clamp-1 mt-0.5 font-light">
+                              <p className="text-[11px] text-[#8C9A90] line-clamp-1 mt-0.5 font-light">
                                 {cat.subtitle}
                               </p>
                             </div>
@@ -175,8 +175,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onClick={() => onNavigate(link.id)}
                   className={`text-xs xl:text-sm uppercase tracking-widest font-semibold px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer ${
                     isActive
-                      ? 'text-[#F5D07F] bg-[#C5A059]/25 border border-[#C5A059]/50 shadow-inner'
-                      : 'text-white/90 hover:text-[#F5D07F] hover:bg-white/10'
+                      ? 'text-[#C9A56A] bg-[#C9A56A]/25 border border-[#C9A56A]/50 shadow-inner'
+                      : 'text-white/90 hover:text-[#C9A56A] hover:bg-white/10'
                   }`}
                 >
                   {link.label}
@@ -189,9 +189,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="hidden lg:flex items-center space-x-4">
             <button
               onClick={onRequestSwatches}
-              className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#C5A059] via-[#E2C37E] to-[#C5A059] text-[#121110] hover:brightness-110 font-bold text-xs uppercase tracking-widest shadow-lg shadow-[#C5A059]/25 hover:shadow-[#C5A059]/40 hover:scale-[1.03] active:scale-[0.98] transition-all flex items-center space-x-2 border border-[#FFF0C2]/60 cursor-pointer"
+              className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#C9A56A] via-[#E6C894] to-[#C9A56A] text-[#0F1714] hover:brightness-110 font-bold text-xs uppercase tracking-widest shadow-lg shadow-[#C9A56A]/25 hover:shadow-[#C9A56A]/40 hover:scale-[1.03] active:scale-[0.98] transition-all flex items-center space-x-2 border border-[#E9DFD1]/60 cursor-pointer"
             >
-              <PackageCheck className="w-4 h-4 text-[#121110] stroke-[2.5]" />
+              <PackageCheck className="w-4 h-4 text-[#0F1714] stroke-[2.5]" />
               <span>Request Swatches</span>
             </button>
           </div>
@@ -200,7 +200,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex lg:hidden items-center space-x-2">
             <button
               onClick={onRequestSwatches}
-              className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-full bg-gradient-to-r from-[#C5A059] to-[#E2C37E] text-[#121110] text-[10px] sm:text-[11px] font-bold tracking-wider uppercase flex items-center gap-1 shadow-md border border-[#FFF0C2]/50 shrink-0 cursor-pointer"
+              className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-full bg-gradient-to-r from-[#C9A56A] to-[#E6C894] text-[#0F1714] text-[10px] sm:text-[11px] font-bold tracking-wider uppercase flex items-center gap-1 shadow-md border border-[#E9DFD1]/50 shrink-0 cursor-pointer"
             >
               <PackageCheck className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Swatches</span>
@@ -208,7 +208,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => setIsMobileDrawerOpen(!isMobileDrawerOpen)}
-              className="p-1.5 sm:p-2 rounded-xl text-[#F5D07F] bg-white/10 hover:bg-[#C5A059]/25 border border-[#C5A059]/40 focus:outline-none transition-all shrink-0 cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-xl text-[#C9A56A] bg-white/10 hover:bg-[#C9A56A]/25 border border-[#C9A56A]/40 focus:outline-none transition-all shrink-0 cursor-pointer"
               aria-label="Toggle mobile menu"
             >
               {isMobileDrawerOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
@@ -227,7 +227,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           />
 
           {/* Top-Down Dropdown Container - Attached flush under header */}
-          <div className="absolute top-full left-0 right-0 max-h-[calc(100vh-60px)] bg-[#0D0C0B]/98 backdrop-blur-2xl border-b-2 border-[#C5A059]/50 shadow-2xl overflow-y-auto p-4 sm:p-6 z-50 animate-in slide-in-from-top-2 duration-300 text-white">
+          <div className="absolute top-full left-0 right-0 max-h-[calc(100vh-60px)] bg-[#0F1714]/98 backdrop-blur-2xl border-b-2 border-[#C9A56A]/50 shadow-2xl overflow-y-auto p-4 sm:p-6 z-50 animate-in slide-in-from-top-2 duration-300 text-white">
             <div className="space-y-3">
               {navLinks.map((link) => {
                 const isActive =
@@ -244,16 +244,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                             onNavigate('projects');
                           }}
                           className={`text-base sm:text-lg uppercase tracking-wider font-serif font-bold text-left flex items-center gap-2 ${
-                            isActive ? 'text-[#F5D07F]' : 'text-white hover:text-[#F5D07F]'
+                            isActive ? 'text-[#C9A56A]' : 'text-white hover:text-[#C9A56A]'
                           }`}
                         >
                           <span>Our Projects</span>
-                          <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
+                          <Sparkles className="w-3.5 h-3.5 text-[#C9A56A]" />
                         </button>
 
                         <button
                           onClick={() => setMobileCategoriesExpanded(!mobileCategoriesExpanded)}
-                          className="px-2.5 py-1 rounded-lg bg-white/5 border border-[#C5A059]/30 text-xs text-[#F5D07F] flex items-center gap-1 font-semibold cursor-pointer"
+                          className="px-2.5 py-1 rounded-lg bg-white/5 border border-[#C9A56A]/30 text-xs text-[#C9A56A] flex items-center gap-1 font-semibold cursor-pointer"
                         >
                           <span>Categories</span>
                           <ChevronDown
@@ -271,17 +271,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                             <button
                               key={cat.id}
                               onClick={() => handleCategoryClick(cat.id as CategorySlug)}
-                              className="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-[#C5A059]/20 hover:border-[#C5A059]/50 transition-all text-left flex items-center justify-between group cursor-pointer"
+                              className="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-[#C9A56A]/20 hover:border-[#C9A56A]/50 transition-all text-left flex items-center justify-between group cursor-pointer"
                             >
                               <div>
-                                <span className="block text-xs font-semibold text-white group-hover:text-[#F5D07F] leading-tight">
+                                <span className="block text-xs font-semibold text-white group-hover:text-[#C9A56A] leading-tight">
                                   {cat.title}
                                 </span>
-                                <span className="text-[10px] text-[#C5A059] block font-light line-clamp-1 mt-0.5">
+                                <span className="text-[10px] text-[#C9A56A] block font-light line-clamp-1 mt-0.5">
                                   {cat.materialHighlight}
                                 </span>
                               </div>
-                              <ArrowRight className="w-3.5 h-3.5 text-[#C5A059] opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                              <ArrowRight className="w-3.5 h-3.5 text-[#C9A56A] opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
                             </button>
                           ))}
                         </div>
@@ -298,7 +298,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       onNavigate(link.id);
                     }}
                     className={`block w-full text-left text-base sm:text-lg uppercase tracking-wider font-serif font-bold border-b border-white/10 pb-3 transition-colors ${
-                      isActive ? 'text-[#F5D07F]' : 'text-white hover:text-[#F5D07F]'
+                      isActive ? 'text-[#C9A56A]' : 'text-white hover:text-[#C9A56A]'
                     }`}
                   >
                     {link.label}
@@ -308,15 +308,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             {/* Bottom Actions in Dropdown */}
-            <div className="pt-4 border-t border-[#C5A059]/40 space-y-2.5 mt-4">
+            <div className="pt-4 border-t border-[#C9A56A]/40 space-y-2.5 mt-4">
               <button
                 onClick={() => {
                   setIsMobileDrawerOpen(false);
                   onRequestSwatches();
                 }}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#C5A059] via-[#E2C37E] to-[#C5A059] text-[#121110] uppercase tracking-widest text-xs font-bold flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#C9A56A] via-[#E6C894] to-[#C9A56A] text-[#0F1714] uppercase tracking-widest text-xs font-bold flex items-center justify-center gap-2 shadow-lg cursor-pointer"
               >
-                <PackageCheck className="w-4 h-4 text-[#121110] stroke-[2.5]" />
+                <PackageCheck className="w-4 h-4 text-[#0F1714] stroke-[2.5]" />
                 <span>Order Swatch Box</span>
               </button>
 
@@ -327,7 +327,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }}
                 className="w-full py-2.5 rounded-xl bg-white/5 border border-white/15 text-white hover:bg-white/10 text-xs font-bold uppercase tracking-wider flex items-center justify-center space-x-2 cursor-pointer"
               >
-                <PhoneCall className="w-3.5 h-3.5 text-[#F5D07F]" />
+                <PhoneCall className="w-3.5 h-3.5 text-[#C9A56A]" />
                 <span>Private Consultation</span>
               </button>
             </div>

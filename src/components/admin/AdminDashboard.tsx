@@ -696,7 +696,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           label: 'Swatch Orders',
           icon: Layers,
           badge: swatchRequests.filter((s) => s.status === 'Pending').length,
-          badgeColor: 'bg-[#C5A059] text-[#121110]'
+          badgeColor: 'bg-[#C9A56A] text-[#0F1714]'
         },
         { id: 'projects', label: 'Residence Portfolio', icon: Building2 }
       ]
@@ -711,14 +711,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   ];
 
   return (
-    <div className="min-h-screen bg-[#0D0C0B] text-[#FDFBF7] flex flex-col lg:flex-row font-sans selection:bg-[#C5A059]/30">
+    <div className="min-h-screen bg-[#0F1714] text-[#E9DFD1] flex flex-col lg:flex-row font-sans selection:bg-[#C9A56A]/30">
       {/* --- DESKTOP FIXED SIDEBAR MENU --- */}
-      <aside className="hidden lg:flex lg:w-72 bg-[#141312] border-r border-[#C5A059]/30 flex-col justify-between sticky top-0 h-screen z-40 shrink-0 select-none">
+      <aside className="hidden lg:flex lg:w-72 bg-[#163129] border-r border-[#C9A56A]/30 flex-col justify-between sticky top-0 h-screen z-40 shrink-0 select-none">
         <div className="p-6 space-y-6 overflow-y-auto">
           {/* Brand Header */}
           <div className="flex items-center space-x-3.5 pb-4 border-b border-white/10">
-            <div className="w-11 h-11 rounded-2xl border-2 border-[#C5A059] bg-[#C5A059]/20 flex items-center justify-center shadow-lg shrink-0">
-              <span className="font-serif font-bold text-2xl text-[#F5D07F]">M</span>
+            <div className="w-11 h-11 rounded-2xl border-2 border-[#C9A56A] bg-[#C9A56A]/20 flex items-center justify-center shadow-lg shrink-0">
+              <span className="font-serif font-bold text-2xl text-[#C9A56A]">M</span>
             </div>
             <div>
               <div className="flex items-center space-x-1.5">
@@ -726,17 +726,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   MAISON & DRAPE
                 </span>
               </div>
-              <span className="text-[10px] text-[#C5A059] font-semibold uppercase tracking-wider block">
+              <span className="text-[10px] text-[#C9A56A] font-semibold uppercase tracking-wider block">
                 Master Curator Control
               </span>
             </div>
           </div>
 
           {/* Compact Supabase Cloud Pill */}
-          <div className="p-3 rounded-xl bg-white/5 border border-[#C5A059]/30 flex items-center justify-between text-xs">
+          <div className="p-3 rounded-xl bg-white/5 border border-[#C9A56A]/30 flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
-              <Database className="w-3.5 h-3.5 text-[#F5D07F]" />
-              <span className="font-mono text-[11px] text-[#D8C8B8]">ywsmtfhzlhljeqetmvol</span>
+              <Database className="w-3.5 h-3.5 text-[#C9A56A]" />
+              <span className="font-mono text-[11px] text-[#8C9A90]">ywsmtfhzlhljeqetmvol</span>
             </div>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-mono text-[10px] font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>

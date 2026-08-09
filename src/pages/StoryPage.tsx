@@ -82,33 +82,33 @@ export const StoryPage: React.FC = () => {
     <div className="pt-28 sm:pt-36 pb-24 space-y-24">
       {/* Hero Header */}
       <section className="max-w-4xl mx-auto px-4 text-center space-y-6">
-        <span className="text-xs uppercase tracking-widest text-[#C5A059] font-medium block">
+        <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-medium block">
           Our Heritage & Craftsmanship
         </span>
-        <h1 className="font-serif text-4xl sm:text-6xl text-[#1A1918] font-normal leading-tight">
+        <h1 className="font-serif text-4xl sm:text-6xl text-[#0F1714] font-normal leading-tight">
           A Century of <span className="italic font-subserif gold-gradient-text">Tactile Mastery</span> & Spatial Poetry
         </h1>
-        <p className="text-base text-[#4A4844] font-light leading-relaxed max-w-2xl mx-auto font-subserif text-lg">
+        <p className="text-base text-[#2C3A33] font-light leading-relaxed max-w-2xl mx-auto font-subserif text-lg">
           For over 120 years, Maison & Drape has stood at the intersection of artisanal weaving traditions and modern architectural living. We believe that true interior luxury is defined by materials that honor the senses and endure across generations.
         </p>
       </section>
 
       {/* Main Narrative Split */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center bg-[#F5EFE6] rounded-3xl p-8 lg:p-12 border border-[#C5A059]/20 shadow-xl">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center bg-[#E9DFD1] rounded-3xl p-8 lg:p-12 border border-[#C9A56A]/20 shadow-xl">
           <div className="space-y-6">
-            <span className="text-xs uppercase tracking-widest text-[#C5A059] font-semibold">
+            <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-semibold">
               The Founder’s Ethos
             </span>
-            <h2 className="font-serif text-3xl sm:text-4xl text-[#1A1918] font-normal">
+            <h2 className="font-serif text-3xl sm:text-4xl text-[#0F1714] font-normal">
               "We do not decorate rooms. We curate light, acoustic serenity, and human touch."
             </h2>
-            <p className="text-xs sm:text-sm text-[#4A4844] leading-relaxed font-light">
+            <p className="text-xs sm:text-sm text-[#2C3A33] leading-relaxed font-light">
               Founded in Mayfair in 1898, our atelier began as a private commission house for discerning collectors seeking unyielding textile perfection. Today, under the creative direction of Julian & Beatrice Drape, we continue to preserve centuries-old European weaving techniques while engineering modern sustainable textiles.
             </p>
-            <div className="pt-4 border-t border-[#D8C8B8]">
-              <strong className="block font-serif text-base text-[#1A1918]">Beatrice & Julian Drape</strong>
-              <span className="text-xs text-[#8C7A6B]">Fourth-Generation Managing Directors</span>
+            <div className="pt-4 border-t border-[#DFD5C5]">
+              <strong className="block font-serif text-base text-[#0F1714]">Beatrice & Julian Drape</strong>
+              <span className="text-xs text-[#8C9A90]">Fourth-Generation Managing Directors</span>
             </div>
           </div>
 
@@ -125,10 +125,10 @@ export const StoryPage: React.FC = () => {
       {/* Craft Pillars */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-2xl mx-auto mb-16 space-y-2">
-          <span className="text-xs uppercase tracking-widest text-[#C5A059] font-medium">
+          <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-medium">
             Material Integrity
           </span>
-          <h2 className="font-serif text-3xl sm:text-4xl text-[#1A1918]">
+          <h2 className="font-serif text-3xl sm:text-4xl text-[#0F1714]">
             Four Cornerstones of Our Sourcing
           </h2>
         </div>
@@ -139,16 +139,16 @@ export const StoryPage: React.FC = () => {
             return (
               <div
                 key={idx}
-                className="bg-[#1A1918] text-[#FDFBF7] p-6 rounded-3xl border border-[#C5A059]/30 shadow-xl space-y-4 hover:border-[#C5A059] transition-all"
+                className="bg-[#0F1714] text-[#E9DFD1] p-6 rounded-3xl border border-[#C9A56A]/30 shadow-xl space-y-4 hover:border-[#C9A56A] transition-all"
               >
-                <div className="w-10 h-10 rounded-full bg-[#C5A059]/20 border border-[#C5A059] flex items-center justify-center text-[#C5A059]">
+                <div className="w-10 h-10 rounded-full bg-[#C9A56A]/20 border border-[#C9A56A] flex items-center justify-center text-[#C9A56A]">
                   <Icon className="w-5 h-5" />
                 </div>
-                <span className="text-[10px] uppercase tracking-widest text-[#C5A059] font-semibold block">
+                <span className="text-[10px] uppercase tracking-widest text-[#C9A56A] font-semibold block">
                   {pillar.origin}
                 </span>
-                <h3 className="font-serif text-xl text-[#FDFBF7]">{pillar.title}</h3>
-                <p className="text-xs text-[#D8C8B8] font-light leading-relaxed">
+                <h3 className="font-serif text-xl text-[#E9DFD1]">{pillar.title}</h3>
+                <p className="text-xs text-[#8C9A90] font-light leading-relaxed">
                   {pillar.description}
                 </p>
               </div>
@@ -160,31 +160,31 @@ export const StoryPage: React.FC = () => {
       {/* Timeline Section */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <span className="text-xs uppercase tracking-widest text-[#C5A059] font-medium">
+          <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-medium">
             Chronology of Excellence
           </span>
-          <h2 className="font-serif text-3xl sm:text-4xl text-[#1A1918] mt-1">
+          <h2 className="font-serif text-3xl sm:text-4xl text-[#0F1714] mt-1">
             Our Historic Milestones
           </h2>
         </div>
 
-        <div className="relative border-l border-[#C5A059]/40 ml-4 sm:ml-32 space-y-12">
+        <div className="relative border-l border-[#C9A56A]/40 ml-4 sm:ml-32 space-y-12">
           {timelineMilestones.map((m, idx) => (
             <div key={idx} className="relative pl-8 sm:pl-10">
               {/* Dot */}
-              <div className="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-[#1A1918] border-2 border-[#C5A059]" />
+              <div className="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-[#0F1714] border-2 border-[#C9A56A]" />
 
               {/* Year label for desktop */}
               <div className="hidden sm:block absolute -left-32 top-1 w-24 text-right">
-                <span className="font-serif text-2xl text-[#C5A059] font-bold">{m.year}</span>
+                <span className="font-serif text-2xl text-[#C9A56A] font-bold">{m.year}</span>
               </div>
 
-              <div className="bg-[#F5EFE6] p-6 rounded-2xl border border-[#C5A059]/20 shadow-md">
-                <span className="sm:hidden font-serif text-xl text-[#C5A059] font-bold block mb-1">
+              <div className="bg-[#E9DFD1] p-6 rounded-2xl border border-[#C9A56A]/20 shadow-md">
+                <span className="sm:hidden font-serif text-xl text-[#C9A56A] font-bold block mb-1">
                   {m.year}
                 </span>
-                <h3 className="font-serif text-xl text-[#1A1918]">{m.title}</h3>
-                <p className="text-xs text-[#4A4844] mt-2 font-light leading-relaxed">
+                <h3 className="font-serif text-xl text-[#0F1714]">{m.title}</h3>
+                <p className="text-xs text-[#2C3A33] mt-2 font-light leading-relaxed">
                   {m.description}
                 </p>
               </div>
@@ -196,10 +196,10 @@ export const StoryPage: React.FC = () => {
       {/* Workshop Gallery Lightbox */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <span className="text-xs uppercase tracking-widest text-[#C5A059] font-medium">
+          <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-medium">
             Inside The Atelier
           </span>
-          <h2 className="font-serif text-3xl sm:text-4xl text-[#1A1918]">
+          <h2 className="font-serif text-3xl sm:text-4xl text-[#0F1714]">
             Workshop & Mill Imagery
           </h2>
         </div>
@@ -209,7 +209,7 @@ export const StoryPage: React.FC = () => {
             <div
               key={idx}
               onClick={() => setSelectedGalleryImage(img.url)}
-              className="group relative h-64 rounded-2xl overflow-hidden cursor-pointer border border-[#C5A059]/30 shadow-lg"
+              className="group relative h-64 rounded-2xl overflow-hidden cursor-pointer border border-[#C9A56A]/30 shadow-lg"
             >
               <img
                 src={img.url}
@@ -217,8 +217,8 @@ export const StoryPage: React.FC = () => {
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-              <div className="absolute bottom-3 left-3 right-3 text-[#FDFBF7]">
-                <p className="text-[11px] font-medium text-[#EBE5D8] group-hover:text-[#C5A059] transition-colors">
+              <div className="absolute bottom-3 left-3 right-3 text-[#E9DFD1]">
+                <p className="text-[11px] font-medium text-[#E9DFD1] group-hover:text-[#C9A56A] transition-colors">
                   {img.caption}
                 </p>
               </div>
@@ -229,16 +229,16 @@ export const StoryPage: React.FC = () => {
         {/* Modal Lightbox for Gallery */}
         {selectedGalleryImage && (
           <div
-            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-pointer"
             onClick={() => setSelectedGalleryImage(null)}
           >
             <div className="relative max-w-4xl w-full">
               <img
                 src={selectedGalleryImage}
                 alt="Workshop View"
-                className="w-full max-h-[85vh] object-contain rounded-2xl border border-[#C5A059]/40"
+                className="w-full max-h-[85vh] object-contain rounded-2xl border border-[#C9A56A]/40"
               />
-              <p className="text-center text-xs text-[#C5A059] mt-3 font-medium tracking-widest uppercase">
+              <p className="text-center text-xs text-[#C9A56A] mt-3 font-medium tracking-widest uppercase">
                 Click anywhere to close preview
               </p>
             </div>

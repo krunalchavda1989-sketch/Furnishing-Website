@@ -269,7 +269,7 @@ export const fetchProductsFromSupabase = async (): Promise<Product[]> => {
       image: item.image,
       swatchType: item.swatch_type || 'linen',
       galleryImages: [item.image],
-      swatchColors: [{ name: 'Classic Gold', hex: '#C5A059' }],
+      swatchColors: [{ name: 'Classic Gold', hex: '#C9A56A' }],
       tags: ['Bespoke', 'Atelier']
     }));
   } catch (err) {

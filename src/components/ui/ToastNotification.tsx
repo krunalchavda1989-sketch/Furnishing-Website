@@ -56,16 +56,16 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               <div className="mt-0.5 shrink-0">
                 {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-400" />}
                 {toast.type === 'delete' && <Trash2 className="w-5 h-5 text-red-400" />}
-                {toast.type === 'add' && <Plus className="w-5 h-5 text-[#F5D07F]" />}
+                {toast.type === 'add' && <Plus className="w-5 h-5 text-[#C9A56A]" />}
                 {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-red-400" />}
-                {toast.type === 'info' && <Info className="w-5 h-5 text-[#C5A059]" />}
+                {toast.type === 'info' && <Info className="w-5 h-5 text-[#C9A56A]" />}
               </div>
               <div className="space-y-0.5">
                 <h4 className="text-xs font-bold font-serif uppercase tracking-wider text-white">
                   {toast.title}
                 </h4>
                 {toast.message && (
-                  <p className="text-xs text-[#D8C8B8] font-light leading-snug">{toast.message}</p>
+                  <p className="text-xs text-[#8C9A90] font-light leading-snug">{toast.message}</p>
                 )}
               </div>
             </div>
