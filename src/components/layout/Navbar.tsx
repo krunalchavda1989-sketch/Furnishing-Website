@@ -217,121 +217,98 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile Slide-in Side Drawer Overlay */}
+      {/* Mobile Top-Down Dropdown Menu Overlay */}
       {isMobileDrawerOpen && (
-        <div className="fixed inset-0 z-[100] lg:hidden flex justify-end">
-          {/* Full Screen Dark Backdrop */}
+        <div className="lg:hidden">
+          {/* Dimmed Backdrop below Header */}
           <div
-            className="fixed inset-0 bg-black/85 backdrop-blur-md transition-opacity duration-300"
+            className="fixed inset-0 top-[52px] sm:top-[64px] bg-black/75 backdrop-blur-sm z-40 animate-in fade-in duration-200"
             onClick={() => setIsMobileDrawerOpen(false)}
           />
 
-          {/* Slide-in Right Side Panel (Top-to-Bottom full screen drawer) */}
-          <div className="fixed top-0 right-0 bottom-0 h-full h-dvh w-[310px] sm:w-[350px] max-w-[85vw] bg-[#0D0C0B] border-l border-[#C5A059]/40 p-5 sm:p-6 flex flex-col justify-between overflow-y-auto z-[110] shadow-2xl animate-in slide-in-from-right duration-300 text-white">
-            <div className="space-y-6">
-              {/* Drawer Clean Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-[#C5A059]/30">
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-7 h-7 rounded-full border border-[#C5A059] flex items-center justify-center bg-[#C5A059]/20 shadow-md">
-                    <span className="font-serif font-bold text-sm text-[#F5D07F]">M</span>
-                  </div>
-                  <span className="font-serif tracking-widest text-xs font-bold uppercase text-[#F5D07F]">
-                    MAISON & DRAPE
-                  </span>
-                </div>
+          {/* Top-Down Dropdown Container - Attached flush under header */}
+          <div className="absolute top-full left-0 right-0 max-h-[calc(100vh-60px)] bg-[#0D0C0B]/98 backdrop-blur-2xl border-b-2 border-[#C5A059]/50 shadow-2xl overflow-y-auto p-4 sm:p-6 z-50 animate-in slide-in-from-top-2 duration-300 text-white">
+            <div className="space-y-3">
+              {navLinks.map((link) => {
+                const isActive =
+                  activeTab === link.id ||
+                  (link.hasMegaMenu && (activeTab === 'projects' || activeTab === 'category'));
 
-                <button
-                  onClick={() => setIsMobileDrawerOpen(false)}
-                  className="p-1.5 rounded-full bg-white/10 hover:bg-[#C5A059] hover:text-[#121110] text-white transition-all cursor-pointer border border-white/15"
-                  aria-label="Close menu"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Drawer Navigation Links */}
-              <nav className="space-y-3">
-                {navLinks.map((link) => {
-                  const isActive =
-                    activeTab === link.id ||
-                    (link.hasMegaMenu && (activeTab === 'projects' || activeTab === 'category'));
-
-                  if (link.hasMegaMenu) {
-                    return (
-                      <div key={link.id} className="border-b border-white/10 pb-3 space-y-2.5">
-                        <div className="flex items-center justify-between">
-                          <button
-                            onClick={() => {
-                              setIsMobileDrawerOpen(false);
-                              onNavigate('projects');
-                            }}
-                            className={`text-sm sm:text-base font-serif font-bold uppercase tracking-wider text-left flex items-center gap-1.5 ${
-                              isActive ? 'text-[#F5D07F]' : 'text-white hover:text-[#F5D07F]'
-                            }`}
-                          >
-                            <span>Our Projects</span>
-                            <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
-                          </button>
-
-                          <button
-                            onClick={() => setMobileCategoriesExpanded(!mobileCategoriesExpanded)}
-                            className="px-2 py-1 rounded-lg bg-white/5 border border-[#C5A059]/30 text-[10px] text-[#F5D07F] flex items-center gap-1 font-semibold cursor-pointer"
-                          >
-                            <span>Categories</span>
-                            <ChevronDown
-                              className={`w-3.5 h-3.5 transition-transform duration-300 ${
-                                mobileCategoriesExpanded ? 'rotate-180' : ''
-                              }`}
-                            />
-                          </button>
-                        </div>
-
-                        {/* Collapsible Category List */}
-                        {mobileCategoriesExpanded && (
-                          <div className="pt-1 space-y-1.5 pl-2 border-l-2 border-[#C5A059]/30 max-h-[40vh] overflow-y-auto pr-1">
-                            {Object.values(CATEGORIES_DATA).map((cat) => (
-                              <button
-                                key={cat.id}
-                                onClick={() => handleCategoryClick(cat.id as CategorySlug)}
-                                className="w-full p-2.5 rounded-xl bg-white/5 hover:bg-[#C5A059]/20 hover:border-[#C5A059]/50 border border-white/5 transition-all text-left flex items-center justify-between group cursor-pointer"
-                              >
-                                <div>
-                                  <span className="block text-xs font-semibold text-white group-hover:text-[#F5D07F] leading-tight">
-                                    {cat.title}
-                                  </span>
-                                  <span className="text-[9px] text-[#C5A059] block font-light line-clamp-1 mt-0.5">
-                                    {cat.materialHighlight}
-                                  </span>
-                                </div>
-                                <ArrowRight className="w-3.5 h-3.5 text-[#C5A059] opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
-
+                if (link.hasMegaMenu) {
                   return (
-                    <button
-                      key={link.id}
-                      onClick={() => {
-                        setIsMobileDrawerOpen(false);
-                        onNavigate(link.id);
-                      }}
-                      className={`block w-full text-left text-sm sm:text-base font-serif font-bold uppercase tracking-wider border-b border-white/10 pb-3 transition-colors ${
-                        isActive ? 'text-[#F5D07F]' : 'text-white hover:text-[#F5D07F]'
-                      }`}
-                    >
-                      {link.label}
-                    </button>
+                    <div key={link.id} className="border-b border-white/10 pb-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <button
+                          onClick={() => {
+                            setIsMobileDrawerOpen(false);
+                            onNavigate('projects');
+                          }}
+                          className={`text-base sm:text-lg uppercase tracking-wider font-serif font-bold text-left flex items-center gap-2 ${
+                            isActive ? 'text-[#F5D07F]' : 'text-white hover:text-[#F5D07F]'
+                          }`}
+                        >
+                          <span>Our Projects</span>
+                          <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
+                        </button>
+
+                        <button
+                          onClick={() => setMobileCategoriesExpanded(!mobileCategoriesExpanded)}
+                          className="px-2.5 py-1 rounded-lg bg-white/5 border border-[#C5A059]/30 text-xs text-[#F5D07F] flex items-center gap-1 font-semibold cursor-pointer"
+                        >
+                          <span>Categories</span>
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 transition-transform duration-300 ${
+                              mobileCategoriesExpanded ? 'rotate-180' : ''
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Collapsible Category Grid inside Dropdown */}
+                      {mobileCategoriesExpanded && (
+                        <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[45vh] overflow-y-auto pr-1">
+                          {Object.values(CATEGORIES_DATA).map((cat) => (
+                            <button
+                              key={cat.id}
+                              onClick={() => handleCategoryClick(cat.id as CategorySlug)}
+                              className="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-[#C5A059]/20 hover:border-[#C5A059]/50 transition-all text-left flex items-center justify-between group cursor-pointer"
+                            >
+                              <div>
+                                <span className="block text-xs font-semibold text-white group-hover:text-[#F5D07F] leading-tight">
+                                  {cat.title}
+                                </span>
+                                <span className="text-[10px] text-[#C5A059] block font-light line-clamp-1 mt-0.5">
+                                  {cat.materialHighlight}
+                                </span>
+                              </div>
+                              <ArrowRight className="w-3.5 h-3.5 text-[#C5A059] opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   );
-                })}
-              </nav>
+                }
+
+                return (
+                  <button
+                    key={link.id}
+                    onClick={() => {
+                      setIsMobileDrawerOpen(false);
+                      onNavigate(link.id);
+                    }}
+                    className={`block w-full text-left text-base sm:text-lg uppercase tracking-wider font-serif font-bold border-b border-white/10 pb-3 transition-colors ${
+                      isActive ? 'text-[#F5D07F]' : 'text-white hover:text-[#F5D07F]'
+                    }`}
+                  >
+                    {link.label}
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Drawer Bottom Action Footer */}
-            <div className="pt-4 border-t border-[#C5A059]/40 space-y-2.5 mt-4 shrink-0">
+            {/* Bottom Actions in Dropdown */}
+            <div className="pt-4 border-t border-[#C5A059]/40 space-y-2.5 mt-4">
               <button
                 onClick={() => {
                   setIsMobileDrawerOpen(false);
