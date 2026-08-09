@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CATEGORIES_DATA } from '../../data/categoriesData';
 import type { CategorySlug } from '../../types';
-import { Menu, X, ChevronDown, PhoneCall, Compass, PackageCheck } from 'lucide-react';
+import { Menu, X, ChevronDown, PhoneCall, Compass, PackageCheck, ArrowRight, Sparkles } from 'lucide-react';
 
 interface NavbarProps {
   activeTab: string;
@@ -17,11 +17,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [mobileCategoriesExpanded, setMobileCategoriesExpanded] = useState(false);
+  const [mobileCategoriesExpanded, setMobileCategoriesExpanded] = useState(true);
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 40) {
+      if (window.scrollY > 30) {
         setIsScrolled(true);
       } else {
         setIsScrolled(false);
@@ -30,6 +30,18 @@ export const Navbar: React.FC<NavbarProps> = ({
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Prevent background scrolling when mobile menu drawer is open
+  useEffect(() => {
+    if (isMobileDrawerOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileDrawerOpen]);
 
   const handleCategoryClick = (catId: CategorySlug) => {
     setIsMegaMenuOpen(false);
@@ -49,27 +61,30 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? 'bg-[#0D0C0B]/98 backdrop-blur-2xl border-b border-[#C5A059]/50 py-2.5 shadow-2xl text-white'
-          : 'bg-[#121110]/95 backdrop-blur-xl border-b border-[#C5A059]/35 py-3.5 shadow-xl text-white'
+          ? 'bg-[#0D0C0B]/98 backdrop-blur-2xl border-b border-[#C5A059]/50 py-2 sm:py-2.5 shadow-2xl text-white'
+          : 'bg-[#121110]/95 backdrop-blur-xl border-b border-[#C5A059]/35 py-2.5 sm:py-3.5 shadow-xl text-white'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
-          {/* Brand Logo */}
+          {/* Compact Brand Logo Header */}
           <button
-            onClick={() => onNavigate('home')}
-            className="flex items-center space-x-3 group text-left focus:outline-none"
+            onClick={() => {
+              setIsMobileDrawerOpen(false);
+              onNavigate('home');
+            }}
+            className="flex items-center space-x-2 sm:space-x-3 group text-left focus:outline-none shrink-0 cursor-pointer"
           >
-            <div className="w-10 h-10 rounded-full border-2 border-[#C5A059] flex items-center justify-center bg-[#C5A059]/20 group-hover:bg-[#C5A059] group-hover:shadow-[0_0_15px_rgba(197,160,89,0.5)] transition-all duration-300 shadow-md">
-              <span className="font-serif font-bold text-xl text-[#F5D07F] group-hover:text-[#121110] transition-colors">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-[#C5A059] sm:border-2 flex items-center justify-center bg-[#C5A059]/20 group-hover:bg-[#C5A059] group-hover:shadow-[0_0_15px_rgba(197,160,89,0.5)] transition-all duration-300 shadow-md shrink-0">
+              <span className="font-serif font-bold text-base sm:text-xl text-[#F5D07F] group-hover:text-[#121110] transition-colors">
                 M
               </span>
             </div>
-            <div>
-              <span className="font-serif tracking-widest text-lg sm:text-xl font-bold uppercase text-white group-hover:text-[#F5D07F] transition-colors block drop-shadow-sm">
+            <div className="leading-tight">
+              <span className="font-serif tracking-wider sm:tracking-widest text-sm sm:text-xl font-bold uppercase text-white group-hover:text-[#F5D07F] transition-colors block drop-shadow-sm">
                 Maison & Drape
               </span>
-              <span className="text-[10px] tracking-[0.28em] uppercase text-[#D4AF37] font-semibold block">
+              <span className="hidden xs:block text-[8px] sm:text-[10px] tracking-[0.18em] sm:tracking-[0.28em] uppercase text-[#D4AF37] font-semibold">
                 Atelier Haute Living
               </span>
             </div>
@@ -92,7 +107,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <button
                       onClick={() => onNavigate('projects')}
-                      className={`flex items-center space-x-1.5 text-xs xl:text-sm uppercase tracking-widest font-semibold px-3 py-2 rounded-lg transition-all duration-200 ${
+                      className={`flex items-center space-x-1.5 text-xs xl:text-sm uppercase tracking-widest font-semibold px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer ${
                         isActive
                           ? 'text-[#F5D07F] bg-[#C5A059]/25 border border-[#C5A059]/50 shadow-inner'
                           : 'text-white/90 hover:text-[#F5D07F] hover:bg-white/10'
@@ -118,7 +133,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               setIsMegaMenuOpen(false);
                               onNavigate('projects');
                             }}
-                            className="text-xs text-white hover:text-[#F5D07F] underline tracking-wider font-medium"
+                            className="text-xs text-white hover:text-[#F5D07F] underline tracking-wider font-medium cursor-pointer"
                           >
                             View All Projects Portfolio &rarr;
                           </button>
@@ -128,7 +143,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <button
                             key={cat.id}
                             onClick={() => handleCategoryClick(cat.id as CategorySlug)}
-                            className="group/card text-left p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-[#C5A059]/20 hover:border-[#C5A059]/50 transition-all flex flex-col justify-between"
+                            className="group/card text-left p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-[#C5A059]/20 hover:border-[#C5A059]/50 transition-all flex flex-col justify-between cursor-pointer"
                           >
                             <div className="relative h-20 w-full rounded-lg overflow-hidden mb-2">
                               <img
@@ -158,7 +173,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   key={link.id}
                   onClick={() => onNavigate(link.id)}
-                  className={`text-xs xl:text-sm uppercase tracking-widest font-semibold px-3 py-2 rounded-lg transition-all duration-200 ${
+                  className={`text-xs xl:text-sm uppercase tracking-widest font-semibold px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer ${
                     isActive
                       ? 'text-[#F5D07F] bg-[#C5A059]/25 border border-[#C5A059]/50 shadow-inner'
                       : 'text-white/90 hover:text-[#F5D07F] hover:bg-white/10'
@@ -181,11 +196,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          {/* Mobile Menu Toggle Button */}
-          <div className="flex lg:hidden items-center space-x-3">
+          {/* Compact Mobile Controls */}
+          <div className="flex lg:hidden items-center space-x-2">
             <button
               onClick={onRequestSwatches}
-              className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#C5A059] to-[#E2C37E] text-[#121110] text-[11px] font-bold tracking-wider uppercase flex items-center gap-1.5 shadow-md border border-[#FFF0C2]/50"
+              className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-full bg-gradient-to-r from-[#C5A059] to-[#E2C37E] text-[#121110] text-[10px] sm:text-[11px] font-bold tracking-wider uppercase flex items-center gap-1 shadow-md border border-[#FFF0C2]/50 shrink-0 cursor-pointer"
             >
               <PackageCheck className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Swatches</span>
@@ -193,19 +208,20 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => setIsMobileDrawerOpen(!isMobileDrawerOpen)}
-              className="p-2 rounded-lg text-white bg-white/10 hover:bg-[#C5A059]/20 hover:text-[#F5D07F] border border-white/15 focus:outline-none transition-colors"
+              className="p-1.5 sm:p-2 rounded-xl text-[#F5D07F] bg-white/10 hover:bg-[#C5A059]/25 border border-[#C5A059]/40 focus:outline-none transition-all shrink-0 cursor-pointer"
               aria-label="Toggle mobile menu"
             >
-              {isMobileDrawerOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {isMobileDrawerOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile Slide-in Drawer */}
+      {/* Mobile Slide-down Overlay Drawer */}
       {isMobileDrawerOpen && (
-        <div className="fixed inset-0 top-[70px] z-40 bg-[#121110]/98 backdrop-blur-2xl border-t border-[#C5A059]/30 p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300">
-          <div className="space-y-4">
+        <div className="fixed inset-x-0 top-full h-[calc(100vh-100%)] bg-[#0D0C0B]/98 backdrop-blur-2xl border-t border-[#C5A059]/40 p-4 sm:p-6 flex flex-col justify-between overflow-y-auto z-[100] shadow-2xl animate-in slide-in-from-top-2 duration-300">
+          <div className="space-y-3">
+            {/* Main Navigation Links */}
             {navLinks.map((link) => {
               const isActive =
                 activeTab === link.id ||
@@ -213,40 +229,52 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               if (link.hasMegaMenu) {
                 return (
-                  <div key={link.id} className="border-b border-white/10 pb-3">
+                  <div key={link.id} className="border-b border-white/10 pb-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <button
                         onClick={() => {
                           setIsMobileDrawerOpen(false);
                           onNavigate('projects');
                         }}
-                        className={`text-lg uppercase tracking-widest font-serif font-bold ${
+                        className={`text-base sm:text-lg uppercase tracking-wider font-serif font-bold text-left flex items-center gap-2 ${
                           isActive ? 'text-[#F5D07F]' : 'text-white'
                         }`}
                       >
-                        Our Projects
+                        <span>Our Projects</span>
+                        <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
                       </button>
+
                       <button
                         onClick={() => setMobileCategoriesExpanded(!mobileCategoriesExpanded)}
-                        className="p-2 text-[#F5D07F]"
+                        className="px-2.5 py-1 rounded-lg bg-white/5 border border-[#C5A059]/30 text-xs text-[#F5D07F] flex items-center gap-1 font-semibold"
                       >
+                        <span>Categories</span>
                         <ChevronDown
-                          className={`w-5 h-5 transition-transform ${
+                          className={`w-4 h-4 transition-transform duration-300 ${
                             mobileCategoriesExpanded ? 'rotate-180' : ''
                           }`}
                         />
                       </button>
                     </div>
 
+                    {/* Collapsible Category Grid in Mobile Drawer */}
                     {mobileCategoriesExpanded && (
-                      <div className="mt-3 pl-4 space-y-2.5 border-l border-[#C5A059]/40">
+                      <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[45vh] overflow-y-auto pr-1">
                         {Object.values(CATEGORIES_DATA).map((cat) => (
                           <button
                             key={cat.id}
                             onClick={() => handleCategoryClick(cat.id as CategorySlug)}
-                            className="block w-full text-left text-sm text-[#EBE5D8] hover:text-[#F5D07F] py-1 font-medium"
+                            className="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-[#C5A059]/20 hover:border-[#C5A059]/50 transition-all text-left flex items-center justify-between group cursor-pointer"
                           >
-                            {cat.title}
+                            <div>
+                              <span className="block text-xs font-semibold text-white group-hover:text-[#F5D07F] leading-tight">
+                                {cat.title}
+                              </span>
+                              <span className="text-[10px] text-[#C5A059] block font-light line-clamp-1">
+                                {cat.materialHighlight}
+                              </span>
+                            </div>
+                            <ArrowRight className="w-3.5 h-3.5 text-[#C5A059] opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
                           </button>
                         ))}
                       </div>
@@ -262,8 +290,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                     setIsMobileDrawerOpen(false);
                     onNavigate(link.id);
                   }}
-                  className={`block w-full text-left text-lg uppercase tracking-widest font-serif font-bold border-b border-white/10 pb-3 transition-colors ${
-                    isActive ? 'text-[#F5D07F]' : 'text-white'
+                  className={`block w-full text-left text-base sm:text-lg uppercase tracking-wider font-serif font-bold border-b border-white/10 pb-3 transition-colors ${
+                    isActive ? 'text-[#F5D07F]' : 'text-white hover:text-[#F5D07F]'
                   }`}
                 >
                   {link.label}
@@ -272,24 +300,33 @@ export const Navbar: React.FC<NavbarProps> = ({
             })}
           </div>
 
-          <div className="pt-6 border-t border-[#C5A059]/30 space-y-4">
+          {/* Bottom Action Footer in Mobile Drawer */}
+          <div className="pt-4 border-t border-[#C5A059]/40 space-y-3 mt-4">
             <button
               onClick={() => {
                 setIsMobileDrawerOpen(false);
                 onRequestSwatches();
               }}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#C5A059] via-[#E2C37E] to-[#C5A059] text-[#121110] uppercase tracking-widest text-xs font-bold flex items-center justify-center gap-2 shadow-lg"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#C5A059] via-[#E2C37E] to-[#C5A059] text-[#121110] uppercase tracking-widest text-xs font-bold flex items-center justify-center gap-2 shadow-lg cursor-pointer"
             >
               <PackageCheck className="w-4 h-4 text-[#121110] stroke-[2.5]" />
               <span>Order Complimentary Swatches</span>
             </button>
-            <div className="flex items-center justify-center space-x-2 text-xs text-[#EBE5D8] font-medium">
+
+            <button
+              onClick={() => {
+                setIsMobileDrawerOpen(false);
+                onNavigate('contact');
+              }}
+              className="w-full py-2.5 rounded-xl bg-white/5 border border-white/15 text-white hover:bg-white/10 text-xs font-bold uppercase tracking-wider flex items-center justify-center space-x-2 cursor-pointer"
+            >
               <PhoneCall className="w-3.5 h-3.5 text-[#F5D07F]" />
-              <span>Mayfair Showroom: +44 20 7946 0188</span>
-            </div>
+              <span>Private Consultation</span>
+            </button>
           </div>
         </div>
       )}
     </header>
   );
 };
+
