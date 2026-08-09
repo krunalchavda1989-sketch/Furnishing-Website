@@ -3,6 +3,7 @@ import { CATEGORIES_DATA } from '../../data/categoriesData';
 import type { CategorySlug } from '../../types';
 import { Mail, CheckCircle2, ArrowRight, MapPin, Phone, Globe, Share2, Compass } from 'lucide-react';
 import { subscribeNewsletterInSupabase } from '../../lib/supabase';
+import { useToast } from '../ui/ToastNotification';
 
 interface FooterProps {
   onNavigate: (tab: string, categorySlug?: CategorySlug) => void;
@@ -13,13 +14,15 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onRequestSwatches })
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showToast } = useToast();
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || isSubmitting) return;
     setIsSubmitting(true);
     await subscribeNewsletterInSupabase(email, 'Footer Gazette');
     setSubscribed(true);
+    showToast('Subscribed to Gazette', `Lookbook sent to ${email}`, 'success');
     setEmail('');
     setIsSubmitting(false);
     setTimeout(() => setSubscribed(false), 5000);

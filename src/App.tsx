@@ -12,6 +12,7 @@ import { ProjectModal } from './components/ui/ProjectModal';
 import { SampleRequestModal } from './components/ui/SampleRequestModal';
 import { AdminLoginPage } from './components/admin/AdminLoginPage';
 import { AdminDashboard } from './components/admin/AdminDashboard';
+import { ToastProvider } from './components/ui/ToastNotification';
 import type { CategorySlug, Project } from './types';
 import type { AdminUser } from './types/adminTypes';
 
@@ -87,88 +88,85 @@ export function App() {
     localStorage.removeItem('maison_admin_session');
   };
 
-  // Render Admin View if activeTab is 'admin' or path is /admin
-  if (activeTab === 'admin') {
-    if (!adminUser) {
-      return (
-        <AdminLoginPage
-          onLoginSuccess={handleAdminLoginSuccess}
-          onReturnToSite={() => handleNavigate('home')}
-        />
-      );
-    }
-
-    return (
-      <AdminDashboard
-        user={adminUser}
-        onLogout={handleAdminLogout}
-        onReturnToSite={() => handleNavigate('home')}
-      />
-    );
-  }
-
   return (
-    <SmoothScrollProvider>
-      <div className="min-h-screen bg-[#FDFBF7] text-[#1A1918] flex flex-col font-sans selection:bg-[#C5A059]/30">
-        {/* Sticky Header Navigation */}
-        <Navbar
-          activeTab={activeTab}
-          onNavigate={handleNavigate}
-          onRequestSwatches={() => setIsSampleModalOpen(true)}
-        />
-
-        {/* Main Content Area */}
-        <main className="grow">
-          {activeTab === 'home' && (
-            <HomePage
+    <ToastProvider>
+      {activeTab === 'admin' ? (
+        !adminUser ? (
+          <AdminLoginPage
+            onLoginSuccess={handleAdminLoginSuccess}
+            onReturnToSite={() => handleNavigate('home')}
+          />
+        ) : (
+          <AdminDashboard
+            user={adminUser}
+            onLogout={handleAdminLogout}
+            onReturnToSite={() => handleNavigate('home')}
+          />
+        )
+      ) : (
+        <SmoothScrollProvider>
+          <div className="min-h-screen bg-[#FDFBF7] text-[#1A1918] flex flex-col font-sans selection:bg-[#C5A059]/30">
+            {/* Sticky Header Navigation */}
+            <Navbar
+              activeTab={activeTab}
               onNavigate={handleNavigate}
-              onOpenProject={(prj) => setSelectedProjectModal(prj)}
               onRequestSwatches={() => setIsSampleModalOpen(true)}
             />
-          )}
 
-          {activeTab === 'story' && <StoryPage />}
+            {/* Main Content Area */}
+            <main className="grow">
+              {activeTab === 'home' && (
+                <HomePage
+                  onNavigate={handleNavigate}
+                  onOpenProject={(prj) => setSelectedProjectModal(prj)}
+                  onRequestSwatches={() => setIsSampleModalOpen(true)}
+                />
+              )}
 
-          {activeTab === 'projects' && (
-            <ProjectsPage
-              onOpenProject={(prj) => setSelectedProjectModal(prj)}
+              {activeTab === 'story' && <StoryPage />}
+
+              {activeTab === 'projects' && (
+                <ProjectsPage
+                  onOpenProject={(prj) => setSelectedProjectModal(prj)}
+                  onNavigateToCategory={handleNavigateToCategory}
+                />
+              )}
+
+              {activeTab === 'category' && (
+                <CategoryPage
+                  categorySlug={activeCategorySlug}
+                  onNavigate={handleNavigate}
+                  onRequestSwatches={() => setIsSampleModalOpen(true)}
+                />
+              )}
+
+              {activeTab === 'brands' && <BrandsPage />}
+
+              {activeTab === 'contact' && <ContactPage />}
+            </main>
+
+            {/* Global Footer */}
+            <Footer
+              onNavigate={handleNavigate}
+              onRequestSwatches={() => setIsSampleModalOpen(true)}
+            />
+
+            {/* Interactive Lightbox & Request Modals */}
+            <ProjectModal
+              project={selectedProjectModal}
+              onClose={() => setSelectedProjectModal(null)}
               onNavigateToCategory={handleNavigateToCategory}
             />
-          )}
 
-          {activeTab === 'category' && (
-            <CategoryPage
-              categorySlug={activeCategorySlug}
-              onNavigate={handleNavigate}
-              onRequestSwatches={() => setIsSampleModalOpen(true)}
+            <SampleRequestModal
+              isOpen={isSampleModalOpen}
+              onClose={() => setIsSampleModalOpen(false)}
+              defaultCategory={activeCategorySlug}
             />
-          )}
-
-          {activeTab === 'brands' && <BrandsPage />}
-
-          {activeTab === 'contact' && <ContactPage />}
-        </main>
-
-        {/* Global Footer */}
-        <Footer
-          onNavigate={handleNavigate}
-          onRequestSwatches={() => setIsSampleModalOpen(true)}
-        />
-
-        {/* Interactive Lightbox & Request Modals */}
-        <ProjectModal
-          project={selectedProjectModal}
-          onClose={() => setSelectedProjectModal(null)}
-          onNavigateToCategory={handleNavigateToCategory}
-        />
-
-        <SampleRequestModal
-          isOpen={isSampleModalOpen}
-          onClose={() => setIsSampleModalOpen(false)}
-          defaultCategory={activeCategorySlug}
-        />
-      </div>
-    </SmoothScrollProvider>
+          </div>
+        </SmoothScrollProvider>
+      )}
+    </ToastProvider>
   );
 }
 

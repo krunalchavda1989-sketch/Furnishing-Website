@@ -47,6 +47,8 @@ import {
   updateNewsletterSubscriberStatusInSupabase,
   deleteNewsletterSubscriberInSupabase
 } from '../../lib/supabase';
+import { useToast } from '../ui/ToastNotification';
+import { ConfirmDeleteModal } from '../ui/ConfirmDeleteModal';
 
 // Persistent LocalStorage Deleted Keys Tracking Helpers
 const getDeletedKeys = (key: string): string[] => {
@@ -198,6 +200,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   ]);
 
+  const { showToast } = useToast();
+
+  // Delete Confirmation Modal State
+  const [deleteModalState, setDeleteModalState] = useState<{
+    isOpen: boolean;
+    title: string;
+    itemName: string;
+    itemType: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    itemName: '',
+    itemType: 'record',
+    onConfirm: () => {}
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('All');
   const [inquiryStatusFilter, setInquiryStatusFilter] = useState('All');
@@ -250,6 +269,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       message: res.message,
       isTesting: false
     });
+    if (res.message) {
+      showToast(res.success ? 'Supabase Connected' : 'Cloud Sync Offline', res.message, res.success ? 'success' : 'error');
+    }
   };
 
   const fetchLiveSupabaseData = async () => {
@@ -299,6 +321,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setNewsletterSubscribers((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
     );
+    showToast('Status Updated', `Subscriber tier updated to "${newStatus}"`, 'success');
 
     if (isSupabaseConfigured) {
       await updateNewsletterSubscriberStatusInSupabase(id, newStatus, user.email);
@@ -307,19 +330,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  // Delete Newsletter Subscriber
-  const handleDeleteSubscriber = async (id: string, email: string) => {
-    if (!window.confirm(`Are you sure you want to remove "${email}" from newsletter subscribers?`)) return;
+  // Delete Newsletter Subscriber with Custom Alert Dialog
+  const handleDeleteSubscriber = (id: string, email: string) => {
+    setDeleteModalState({
+      isOpen: true,
+      title: 'Remove Newsletter Subscriber',
+      itemName: email,
+      itemType: 'subscriber email',
+      onConfirm: async () => {
+        setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+        recordDeletedKey('maison_deleted_subscribers', id);
+        recordDeletedKey('maison_deleted_subscribers', email);
+        setNewsletterSubscribers((prev) => prev.filter((s) => s.id !== id && s.email !== email));
 
-    recordDeletedKey('maison_deleted_subscribers', id);
-    recordDeletedKey('maison_deleted_subscribers', email);
-    setNewsletterSubscribers((prev) => prev.filter((s) => s.id !== id && s.email !== email));
-
-    if (isSupabaseConfigured) {
-      await deleteNewsletterSubscriberInSupabase(id, user.email, email);
-      const updatedLogs = await fetchAdminAuditLogsFromSupabase();
-      setAuditLogs(updatedLogs);
-    }
+        if (isSupabaseConfigured) {
+          await deleteNewsletterSubscriberInSupabase(id, user.email, email);
+          const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+          setAuditLogs(updatedLogs);
+        }
+        showToast('Subscriber Deleted', `"${email}" removed from newsletter database.`, 'delete');
+      }
+    });
   };
 
   // Manual Subscribe Handler
@@ -327,9 +358,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     e.preventDefault();
     if (!newSubscriberEmail) return;
 
+    const emailClean = newSubscriberEmail.trim().toLowerCase();
     const newSub: NewsletterSubscriberItem = {
       id: `sub-${Date.now().toString().slice(-4)}`,
-      email: newSubscriberEmail.trim().toLowerCase(),
+      email: emailClean,
       source: newSubscriberSource || 'Master Admin',
       status: 'Subscribed',
       createdAt: 'Just now'
@@ -337,9 +369,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     setNewsletterSubscribers((prev) => [newSub, ...prev]);
     setShowAddSubscriberModal(false);
+    showToast('Subscriber Added', `${emailClean} added to newsletter database.`, 'add');
 
     if (isSupabaseConfigured) {
-      await subscribeNewsletterInSupabase(newSubscriberEmail, newSubscriberSource || 'Master Admin');
+      await subscribeNewsletterInSupabase(emailClean, newSubscriberSource || 'Master Admin');
       const updatedLogs = await fetchAdminAuditLogsFromSupabase();
       setAuditLogs(updatedLogs);
     }
@@ -362,6 +395,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    showToast('Export Complete', 'Newsletter subscribers CSV downloaded.', 'info');
   };
 
   const fetchSupabaseSwatchRequests = async () => {
@@ -406,6 +441,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setContactInquiries((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
     );
+    showToast('Status Updated', `Inquiry status changed to "${newStatus}"`, 'success');
 
     if (isSupabaseConfigured) {
       await updateContactInquiryStatusInSupabase(id, newStatus, user.email);
@@ -414,34 +450,50 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  // Delete Contact Inquiry
-  const handleDeleteInquiry = async (id: string, clientName: string, email?: string) => {
-    if (!window.confirm(`Are you sure you want to delete inquiry from "${clientName}"?`)) return;
+  // Delete Contact Inquiry with Custom Alert Dialog
+  const handleDeleteInquiry = (id: string, clientName: string, email?: string) => {
+    setDeleteModalState({
+      isOpen: true,
+      title: 'Delete Contact Inquiry',
+      itemName: `${clientName} (${email || 'Inquiry'})`,
+      itemType: 'client inquiry',
+      onConfirm: async () => {
+        setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+        recordDeletedKey('maison_deleted_inquiries', id);
+        if (email) recordDeletedKey('maison_deleted_inquiries', email);
+        setContactInquiries((prev) => prev.filter((i) => i.id !== id));
 
-    recordDeletedKey('maison_deleted_inquiries', id);
-    if (email) recordDeletedKey('maison_deleted_inquiries', email);
-    setContactInquiries((prev) => prev.filter((i) => i.id !== id));
-
-    if (isSupabaseConfigured) {
-      await deleteContactInquiryInSupabase(id, user.email, email);
-      const updatedLogs = await fetchAdminAuditLogsFromSupabase();
-      setAuditLogs(updatedLogs);
-    }
+        if (isSupabaseConfigured) {
+          await deleteContactInquiryInSupabase(id, user.email, email);
+          const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+          setAuditLogs(updatedLogs);
+        }
+        showToast('Inquiry Deleted', `Consultation request for "${clientName}" deleted.`, 'delete');
+      }
+    });
   };
 
-  // Delete Swatch Request
-  const handleDeleteSwatch = async (id: string, clientName: string, email?: string) => {
-    if (!window.confirm(`Are you sure you want to delete swatch request for "${clientName}"?`)) return;
+  // Delete Swatch Request with Custom Alert Dialog
+  const handleDeleteSwatch = (id: string, clientName: string, email?: string) => {
+    setDeleteModalState({
+      isOpen: true,
+      title: 'Delete Swatch Request',
+      itemName: `${clientName} (${id.substring(0, 8).toUpperCase()})`,
+      itemType: 'swatch request',
+      onConfirm: async () => {
+        setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+        recordDeletedKey('maison_deleted_swatches', id);
+        if (email) recordDeletedKey('maison_deleted_swatches', email);
+        setSwatchRequests((prev) => prev.filter((s) => s.id !== id));
 
-    recordDeletedKey('maison_deleted_swatches', id);
-    if (email) recordDeletedKey('maison_deleted_swatches', email);
-    setSwatchRequests((prev) => prev.filter((s) => s.id !== id));
-
-    if (isSupabaseConfigured) {
-      await deleteSwatchRequestInSupabase(id, user.email, email);
-      const updatedLogs = await fetchAdminAuditLogsFromSupabase();
-      setAuditLogs(updatedLogs);
-    }
+        if (isSupabaseConfigured) {
+          await deleteSwatchRequestInSupabase(id, user.email, email);
+          const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+          setAuditLogs(updatedLogs);
+        }
+        showToast('Swatch Order Deleted', `Swatch request for "${clientName}" deleted.`, 'delete');
+      }
+    });
   };
 
   // Status Change Handler for Swatch Requests
@@ -449,6 +501,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setSwatchRequests((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
     );
+    showToast('Status Updated', `Swatch request status updated to "${newStatus}"`, 'success');
 
     if (isSupabaseConfigured) {
       try {
@@ -498,6 +551,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     setProductsList((prev) => [newProd, ...prev]);
     setShowAddProductModal(false);
+    showToast('Product Created', `"${newProd.name}" added to catalog archives.`, 'add');
 
     if (isSupabaseConfigured) {
       await createProductInSupabase(newProd, user.email);
@@ -517,17 +571,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     });
   };
 
-  // Delete Product Handler
-  const handleDeleteProduct = async (id: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to remove "${name}" from the active catalog?`)) return;
+  // Delete Product Handler with Custom Alert Dialog
+  const handleDeleteProduct = (id: string, name: string) => {
+    setDeleteModalState({
+      isOpen: true,
+      title: 'Remove Product from Catalog',
+      itemName: name,
+      itemType: 'catalog product',
+      onConfirm: async () => {
+        setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+        recordDeletedKey('maison_deleted_products', id);
+        setProductsList((prev) => prev.filter((p) => p.id !== id));
 
-    setProductsList((prev) => prev.filter((p) => p.id !== id));
-
-    if (isSupabaseConfigured) {
-      await deleteProductInSupabase(id, user.email);
-      const updatedLogs = await fetchAdminAuditLogsFromSupabase();
-      setAuditLogs(updatedLogs);
-    }
+        if (isSupabaseConfigured) {
+          await deleteProductInSupabase(id, user.email);
+          const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+          setAuditLogs(updatedLogs);
+        }
+        showToast('Product Removed', `"${name}" removed from public catalog.`, 'delete');
+      }
+    });
   };
 
   const filteredProducts = productsList.filter((p) => {
@@ -1866,6 +1929,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
       )}
+
+      {/* --- CONFIRM DELETE ALERT DIALOG --- */}
+      <ConfirmDeleteModal
+        isOpen={deleteModalState.isOpen}
+        title={deleteModalState.title}
+        itemName={deleteModalState.itemName}
+        itemType={deleteModalState.itemType}
+        onConfirm={deleteModalState.onConfirm}
+        onCancel={() => setDeleteModalState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

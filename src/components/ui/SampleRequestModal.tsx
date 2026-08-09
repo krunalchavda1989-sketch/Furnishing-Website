@@ -3,6 +3,7 @@ import { CATEGORIES_DATA } from '../../data/categoriesData';
 import type { CategorySlug } from '../../types';
 import { X, CheckCircle2, PackageCheck, Send, Sparkles } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { useToast } from './ToastNotification';
 
 interface SampleRequestModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export const SampleRequestModal: React.FC<SampleRequestModalProps> = ({
   const [step, setStep] = useState(1);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([defaultCategory]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -66,6 +68,7 @@ export const SampleRequestModal: React.FC<SampleRequestModalProps> = ({
     }
 
     setIsSubmitting(false);
+    showToast('Swatch Request Sent', 'Luxury swatch box dispatched to Mayfair team.', 'success');
     setStep(2);
   };
 

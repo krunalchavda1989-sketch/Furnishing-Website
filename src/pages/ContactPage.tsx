@@ -3,11 +3,13 @@ import { SHOWROOMS_DATA } from '../data/brandsData';
 import { CATEGORIES_DATA } from '../data/categoriesData';
 import { MapPin, Phone, Mail, Clock, Send, CheckCircle2, Sparkles } from 'lucide-react';
 import { submitContactInquiryInSupabase } from '../lib/supabase';
+import { useToast } from '../components/ui/ToastNotification';
 
 export const ContactPage: React.FC = () => {
   const [selectedShowroomIndex, setSelectedShowroomIndex] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showToast } = useToast();
   const [formState, setFormState] = useState({
     fullName: '',
     email: '',
@@ -39,6 +41,7 @@ export const ContactPage: React.FC = () => {
     });
 
     setIsSubmitting(false);
+    showToast('Inquiry Submitted', 'Our head drapery specialist will contact you within 24 hours.', 'success');
     setSubmitted(true);
   };
 
