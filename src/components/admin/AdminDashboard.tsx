@@ -212,7 +212,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       if (!error && data && data.length > 0) {
         const formatted: SwatchRequestItem[] = data.map((item) => ({
-          id: item.id.substring(0, 8).toUpperCase(),
+          id: item.id,
           clientName: item.client_name,
           email: item.email,
           phone: item.phone || '',
@@ -604,7 +604,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div className="space-y-1">
                       <div className="flex items-center space-x-2">
                         <span className="text-xs font-mono font-bold text-[#F5D07F] bg-[#C5A059]/20 px-2 py-0.5 rounded border border-[#C5A059]/40">
-                          {inq.id}
+                          {inq.id.substring(0, 8).toUpperCase()}
                         </span>
                         <span className="text-sm font-semibold text-white">{inq.clientName}</span>
                         <span className="text-[11px] text-[#8C7A6B]">({inq.requestDate})</span>
@@ -712,7 +712,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-white/10 gap-2">
                       <div className="flex items-center space-x-3">
                         <span className="font-mono text-xs font-bold text-[#F5D07F] bg-[#C5A059]/20 px-2.5 py-1 rounded-md border border-[#C5A059]/40">
-                          {inq.id}
+                          {inq.id.substring(0, 8).toUpperCase()}
                         </span>
                         <h4 className="font-serif text-lg font-bold text-white">{inq.clientName}</h4>
                       </div>
@@ -951,7 +951,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-white/10 gap-2">
                     <div className="flex items-center space-x-3">
                       <span className="font-mono text-xs font-bold text-[#F5D07F] bg-[#C5A059]/20 px-2.5 py-1 rounded-md border border-[#C5A059]/40">
-                        {req.id}
+                        {req.id.substring(0, 8).toUpperCase()}
                       </span>
                       <h4 className="font-serif text-lg font-bold text-white">{req.clientName}</h4>
                     </div>

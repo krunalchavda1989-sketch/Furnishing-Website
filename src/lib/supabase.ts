@@ -365,7 +365,7 @@ export const fetchContactInquiriesFromSupabase = async (): Promise<ContactInquir
     if (error || !data) return [];
 
     return data.map((item) => ({
-      id: item.id.substring(0, 8).toUpperCase(),
+      id: item.id, // Store exact full UUID string
       clientName: item.client_name,
       email: item.email,
       phone: item.phone || '',
@@ -400,7 +400,7 @@ export const updateContactInquiryStatusInSupabase = async (
     const { error } = await supabase
       .from('contact_inquiries')
       .update({ status: newStatus })
-      .ilike('id', `${id}%`);
+      .eq('id', id);
 
     if (error) {
       console.warn('Error updating inquiry status in Supabase:', error);
@@ -410,7 +410,7 @@ export const updateContactInquiryStatusInSupabase = async (
     await logAdminActivityInSupabase(
       adminEmail,
       'INQUIRY_STATUS_UPDATED',
-      `Updated contact inquiry #${id} status to ${newStatus}`
+      `Updated contact inquiry #${id.substring(0, 8).toUpperCase()} status to ${newStatus}`
     );
     return true;
   } catch (err) {
@@ -425,10 +425,17 @@ export const updateContactInquiryStatusInSupabase = async (
 export const deleteContactInquiryInSupabase = async (id: string, adminEmail: string): Promise<boolean> => {
   if (!isSupabaseConfigured) return false;
   try {
-    const { error } = await supabase.from('contact_inquiries').delete().ilike('id', `${id}%`);
-    if (error) return false;
+    const { error } = await supabase.from('contact_inquiries').delete().eq('id', id);
+    if (error) {
+      console.warn('Error deleting inquiry in Supabase:', error);
+      return false;
+    }
 
-    await logAdminActivityInSupabase(adminEmail, 'INQUIRY_DELETED', `Deleted contact inquiry ID: ${id}`);
+    await logAdminActivityInSupabase(
+      adminEmail,
+      'INQUIRY_DELETED',
+      `Deleted contact inquiry ID: ${id.substring(0, 8).toUpperCase()}`
+    );
     return true;
   } catch (err) {
     console.warn('Exception deleting contact inquiry in Supabase:', err);
