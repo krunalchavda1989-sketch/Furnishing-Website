@@ -1,0 +1,12 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  
+  # Do not rewrite existing files, directories, or symlinks
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME} !-l
+  
+  # Route all other URLs (e.g. /admin, /category/fabrics) to root index.html for React SPA routing
+  RewriteRule ^ index.html [QSA,L]
+</IfModule>
