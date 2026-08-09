@@ -206,6 +206,43 @@ export const fetchAdminAuditLogsFromSupabase = async (): Promise<AuditLogItem[]>
 };
 
 /**
+ * Delete Single Audit Log Entry from Supabase
+ */
+export const deleteAdminAuditLogInSupabase = async (id: string, adminEmail?: string): Promise<boolean> => {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (isUuid) {
+      await supabase.from('admin_audit_logs').delete().eq('id', id);
+    }
+    if (adminEmail) {
+      await logAdminActivityInSupabase(adminEmail, 'AUDIT_LOG_DELETED', `Deleted security audit log entry ${id}`);
+    }
+    return true;
+  } catch (err) {
+    console.warn('Error deleting audit log from Supabase:', err);
+    return false;
+  }
+};
+
+/**
+ * Clear All Audit Logs from Supabase
+ */
+export const clearAllAdminAuditLogsInSupabase = async (adminEmail?: string): Promise<boolean> => {
+  if (!isSupabaseConfigured) return false;
+  try {
+    await supabase.from('admin_audit_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (adminEmail) {
+      await logAdminActivityInSupabase(adminEmail, 'AUDIT_LOGS_CLEARED', 'Cleared all security audit log history');
+    }
+    return true;
+  } catch (err) {
+    console.warn('Error clearing audit logs from Supabase:', err);
+    return false;
+  }
+};
+
+/**
  * Fetch Products from Supabase
  */
 export const fetchProductsFromSupabase = async (): Promise<Product[]> => {

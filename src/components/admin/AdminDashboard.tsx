@@ -45,7 +45,9 @@ import {
   fetchNewsletterSubscribersFromSupabase,
   subscribeNewsletterInSupabase,
   updateNewsletterSubscriberStatusInSupabase,
-  deleteNewsletterSubscriberInSupabase
+  deleteNewsletterSubscriberInSupabase,
+  deleteAdminAuditLogInSupabase,
+  clearAllAdminAuditLogsInSupabase
 } from '../../lib/supabase';
 import { useToast } from '../ui/ToastNotification';
 import { ConfirmDeleteModal } from '../ui/ConfirmDeleteModal';
@@ -298,7 +300,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     // 4. Fetch Audit Logs
     const logs = await fetchAdminAuditLogsFromSupabase();
-    setAuditLogs(logs);
+    const deletedLogs = getDeletedKeys('maison_deleted_audit_logs');
+    setAuditLogs(logs.filter((l) => !deletedLogs.includes(l.id)));
 
     // 5. Fetch Admin Users
     const admins = await fetchAdminUsersFromSupabase();
@@ -314,6 +317,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     } else {
       setNewsletterSubscribers((prev) => prev.filter((s) => !deletedSubs.includes(s.id) && !deletedSubs.includes(s.email)));
     }
+  };
+
+  // Delete Single Security Audit Log Entry with Confirmation
+  const handleDeleteAuditLog = (id: string, action: string) => {
+    setDeleteModalState({
+      isOpen: true,
+      title: 'Remove Security Audit Log Entry',
+      itemName: `Event: ${action} (${id.substring(0, 8)})`,
+      itemType: 'security log',
+      onConfirm: async () => {
+        setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+        recordDeletedKey('maison_deleted_audit_logs', id);
+        setAuditLogs((prev) => prev.filter((l) => l.id !== id));
+
+        if (isSupabaseConfigured) {
+          await deleteAdminAuditLogInSupabase(id, user.email);
+        }
+        showToast('Audit Log Entry Removed', `Security event ${action} deleted.`, 'delete');
+      }
+    });
+  };
+
+  // Clear All Security Audit Logs with Confirmation
+  const handleClearAllAuditLogs = () => {
+    if (auditLogs.length === 0) {
+      showToast('No Audit Logs', 'There are no security activity records to clear.', 'info');
+      return;
+    }
+
+    setDeleteModalState({
+      isOpen: true,
+      title: 'Clear All Security Audit Logs',
+      itemName: `All ${auditLogs.length} Security Activity Records`,
+      itemType: 'all audit logs',
+      onConfirm: async () => {
+        setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+        auditLogs.forEach((log) => recordDeletedKey('maison_deleted_audit_logs', log.id));
+        setAuditLogs([]);
+
+        if (isSupabaseConfigured) {
+          await clearAllAdminAuditLogsInSupabase(user.email);
+        }
+        showToast('Audit Log History Cleared', 'All security log history has been deleted.', 'delete');
+      }
+    });
   };
 
   // Status Change Handler for Newsletter Subscribers
@@ -1615,16 +1663,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   Real-time security event tracking persisted inside Supabase `admin_audit_logs` table.
                 </p>
               </div>
-              <button
-                onClick={async () => {
-                  const logs = await fetchAdminAuditLogsFromSupabase();
-                  setAuditLogs(logs);
-                }}
-                className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs text-white font-semibold flex items-center gap-2 cursor-pointer shrink-0"
-              >
-                <RefreshCw className="w-3.5 h-3.5 text-[#C5A059]" />
-                <span>Refresh Logs</span>
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={async () => {
+                    const logs = await fetchAdminAuditLogsFromSupabase();
+                    const deletedLogs = getDeletedKeys('maison_deleted_audit_logs');
+                    setAuditLogs(logs.filter((l) => !deletedLogs.includes(l.id)));
+                    showToast('Logs Refreshed', 'Latest security audit entries loaded.', 'info');
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs text-white font-semibold flex items-center gap-2 cursor-pointer shrink-0"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-[#C5A059]" />
+                  <span>Refresh Logs</span>
+                </button>
+
+                <button
+                  onClick={handleClearAllAuditLogs}
+                  className="px-3.5 py-2 rounded-xl bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shrink-0 transition-all"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Clear All Logs</span>
+                </button>
+              </div>
             </div>
 
             <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl overflow-hidden shadow-xl">
@@ -1634,10 +1694,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
               <div className="divide-y divide-white/5 text-xs">
                 {auditLogs.length === 0 ? (
-                  <div className="p-8 text-center text-[#8C7A6B]">No security logs recorded yet.</div>
+                  <div className="p-8 text-center text-[#8C7A6B]">No security logs recorded.</div>
                 ) : (
                   auditLogs.map((log) => (
-                    <div key={log.id} className="p-4 hover:bg-white/5 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div key={log.id} className="p-4 hover:bg-white/5 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center space-x-2">
                           <span className="px-2 py-0.5 rounded bg-[#C5A059]/20 text-[#F5D07F] font-mono text-[10px] font-bold border border-[#C5A059]/30">
@@ -1647,7 +1707,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </div>
                         <p className="text-xs text-[#D8C8B8]">{log.details}</p>
                       </div>
-                      <span className="text-[11px] font-mono text-[#8C7A6B] shrink-0">{log.createdAt}</span>
+
+                      <div className="flex items-center space-x-3 shrink-0 self-end sm:self-auto">
+                        <span className="text-[11px] font-mono text-[#8C7A6B]">{log.createdAt}</span>
+                        <button
+                          onClick={() => handleDeleteAuditLog(log.id, log.action)}
+                          className="p-1.5 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 transition-all border border-red-500/30 cursor-pointer"
+                          title="Remove Audit Log Entry"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}
