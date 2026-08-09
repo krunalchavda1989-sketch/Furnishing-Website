@@ -8,7 +8,6 @@ import {
   Search,
   Plus,
   TrendingUp,
-  Shield,
   Settings,
   Building2,
   Trash2,
@@ -20,9 +19,11 @@ import {
   PhoneCall,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  Send,
+  Download
 } from 'lucide-react';
-import type { AdminUser, SwatchRequestItem, AuditLogItem, ContactInquiryItem } from '../../types/adminTypes';
+import type { AdminUser, SwatchRequestItem, AuditLogItem, ContactInquiryItem, NewsletterSubscriberItem } from '../../types/adminTypes';
 import type { Product, CategorySlug } from '../../types';
 import { CATEGORIES_DATA } from '../../data/categoriesData';
 import { PRODUCTS_DATA } from '../../data/productsData';
@@ -39,7 +40,11 @@ import {
   fetchAdminUsersFromSupabase,
   fetchContactInquiriesFromSupabase,
   updateContactInquiryStatusInSupabase,
-  deleteContactInquiryInSupabase
+  deleteContactInquiryInSupabase,
+  fetchNewsletterSubscribersFromSupabase,
+  subscribeNewsletterInSupabase,
+  updateNewsletterSubscriberStatusInSupabase,
+  deleteNewsletterSubscriberInSupabase
 } from '../../lib/supabase';
 
 interface AdminDashboardProps {
@@ -103,18 +108,43 @@ const INITIAL_CONTACT_INQUIRIES: ContactInquiryItem[] = [
   }
 ];
 
+const INITIAL_NEWSLETTER_SUBSCRIBERS: NewsletterSubscriberItem[] = [
+  {
+    id: 'sub-001',
+    email: 'crawford.estates@mayfair-estates.co.uk',
+    source: 'Footer Gazette',
+    status: 'VIP Privé',
+    createdAt: 'Today at 09:14'
+  },
+  {
+    id: 'sub-002',
+    email: 'g.laurent@laurent-interiors.fr',
+    source: 'Exhibition Banner',
+    status: 'Subscribed',
+    createdAt: 'Yesterday'
+  },
+  {
+    id: 'sub-003',
+    email: 'harrison.thorne@kensington-residences.com',
+    source: 'Footer Gazette',
+    status: 'Subscribed',
+    createdAt: '3 days ago'
+  }
+];
+
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   user,
   onLogout,
   onReturnToSite
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'inquiries' | 'products' | 'swatches' | 'audit-logs' | 'projects' | 'settings'
+    'overview' | 'inquiries' | 'products' | 'swatches' | 'audit-logs' | 'projects' | 'settings' | 'newsletter'
   >('overview');
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [swatchRequests, setSwatchRequests] = useState<SwatchRequestItem[]>(INITIAL_SWATCH_REQUESTS);
   const [contactInquiries, setContactInquiries] = useState<ContactInquiryItem[]>(INITIAL_CONTACT_INQUIRIES);
+  const [newsletterSubscribers, setNewsletterSubscribers] = useState<NewsletterSubscriberItem[]>(INITIAL_NEWSLETTER_SUBSCRIBERS);
   const [productsList, setProductsList] = useState<Product[]>(PRODUCTS_DATA);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   const [adminUsersList, setAdminUsersList] = useState<AdminUser[]>([
@@ -131,7 +161,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('All');
   const [inquiryStatusFilter, setInquiryStatusFilter] = useState('All');
+  const [newsletterStatusFilter, setNewsletterStatusFilter] = useState('All');
   const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [showAddSubscriberModal, setShowAddSubscriberModal] = useState(false);
+  const [newSubscriberEmail, setNewSubscriberEmail] = useState('');
+  const [newSubscriberSource, setNewSubscriberSource] = useState('Master Admin');
 
   // Supabase Database Connection & Ping Metrics
   const [dbMetrics, setDbMetrics] = useState<{
@@ -205,6 +239,80 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (admins && admins.length > 0) {
       setAdminUsersList(admins);
     }
+
+    // 6. Fetch Newsletter Subscribers
+    const subs = await fetchNewsletterSubscribersFromSupabase();
+    if (subs && subs.length > 0) {
+      setNewsletterSubscribers(subs);
+    }
+  };
+
+  // Status Change Handler for Newsletter Subscribers
+  const handleUpdateNewsletterStatus = async (id: string, newStatus: NewsletterSubscriberItem['status']) => {
+    setNewsletterSubscribers((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
+    );
+
+    if (isSupabaseConfigured) {
+      await updateNewsletterSubscriberStatusInSupabase(id, newStatus, user.email);
+      const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+      setAuditLogs(updatedLogs);
+    }
+  };
+
+  // Delete Newsletter Subscriber
+  const handleDeleteSubscriber = async (id: string, email: string) => {
+    if (!window.confirm(`Are you sure you want to remove "${email}" from newsletter subscribers?`)) return;
+
+    setNewsletterSubscribers((prev) => prev.filter((s) => s.id !== id));
+
+    if (isSupabaseConfigured) {
+      await deleteNewsletterSubscriberInSupabase(id, user.email);
+      const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+      setAuditLogs(updatedLogs);
+    }
+  };
+
+  // Manual Subscribe Handler
+  const handleCreateSubscriber = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSubscriberEmail) return;
+
+    const newSub: NewsletterSubscriberItem = {
+      id: `sub-${Date.now().toString().slice(-4)}`,
+      email: newSubscriberEmail.trim().toLowerCase(),
+      source: newSubscriberSource || 'Master Admin',
+      status: 'Subscribed',
+      createdAt: 'Just now'
+    };
+
+    setNewsletterSubscribers((prev) => [newSub, ...prev]);
+    setShowAddSubscriberModal(false);
+
+    if (isSupabaseConfigured) {
+      await subscribeNewsletterInSupabase(newSubscriberEmail, newSubscriberSource || 'Master Admin');
+      const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+      setAuditLogs(updatedLogs);
+    }
+
+    setNewSubscriberEmail('');
+  };
+
+  // Export Subscribers CSV Handler
+  const handleExportSubscribersCSV = () => {
+    const headers = ['ID', 'Email', 'Source', 'Status', 'Date Subscribed'];
+    const rows = newsletterSubscribers.map((s) => [s.id, s.email, s.source, s.status, s.createdAt]);
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `maison_newsletter_subscribers_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const fetchSupabaseSwatchRequests = async () => {
@@ -368,6 +476,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return matchesSearch && matchesStatus;
   });
 
+  const filteredSubscribers = newsletterSubscribers.filter((sub) => {
+    const matchesSearch =
+      sub.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sub.source.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = newsletterStatusFilter === 'All' || sub.status === newsletterStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   const navigationItems = [
     {
       category: 'MAIN NAVIGATION',
@@ -379,6 +495,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           icon: Mail,
           badge: contactInquiries.filter((i) => i.status === 'New').length,
           badgeColor: 'bg-amber-500 text-black'
+        },
+        {
+          id: 'newsletter',
+          label: 'Newsletter Gazette',
+          icon: Send,
+          badge: newsletterSubscribers.length,
+          badgeColor: 'bg-emerald-500 text-black'
         }
       ]
     },
@@ -731,14 +854,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-5 shadow-xl space-y-3">
                 <div className="flex items-center justify-between text-xs text-[#D4AF37] uppercase tracking-wider font-semibold">
-                  <span>Security Audit Logs</span>
-                  <Shield className="w-4 h-4 text-[#C5A059]" />
+                  <span>Gazette Subscribers</span>
+                  <Send className="w-4 h-4 text-[#C5A059]" />
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="font-serif text-3xl font-bold text-emerald-400">{auditLogs.length}</span>
-                  <span className="text-xs text-[#D8C8B8]">Recorded Events</span>
+                  <span className="font-serif text-3xl font-bold text-[#F5D07F]">{newsletterSubscribers.length}</span>
+                  <span className="text-xs text-emerald-400 font-semibold">
+                    {newsletterSubscribers.filter((s) => s.status === 'VIP Privé').length} VIP Privé
+                  </span>
                 </div>
-                <span className="text-[11px] text-[#8C7A6B] block">Logged to admin_audit_logs</span>
+                <span className="text-[11px] text-[#8C7A6B] block">Synced with newsletter_subscribers</span>
               </div>
             </div>
 
@@ -804,6 +929,151 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= NEWSLETTER TAB ================= */}
+        {activeTab === 'newsletter' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="pb-4 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="font-serif text-2xl font-bold text-white">Maison Gazette & Newsletter Subscribers</h2>
+                <p className="text-xs text-[#D8C8B8]">
+                  Manage private lookbook subscribers, trade exhibition invitees, and VIP Privé clients.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={handleExportSubscribersCSV}
+                  className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs text-white font-semibold flex items-center gap-2 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5 text-[#C5A059]" />
+                  <span>Export CSV</span>
+                </button>
+                <button
+                  onClick={() => setShowAddSubscriberModal(true)}
+                  className="px-3.5 py-2 rounded-xl bg-[#C5A059] text-[#121110] font-bold text-xs uppercase tracking-widest hover:bg-[#D4AF37] transition-all flex items-center gap-2 shadow-lg cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Subscriber</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Bar */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+              <div className="md:col-span-8 relative">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search subscribers by email address or acquisition source..."
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/15 focus:border-[#C5A059] focus:outline-none text-xs text-white placeholder-white/40"
+                />
+                <Search className="w-4 h-4 text-[#C5A059] absolute left-3.5 top-3" />
+              </div>
+
+              <div className="md:col-span-4">
+                <select
+                  value={newsletterStatusFilter}
+                  onChange={(e) => setNewsletterStatusFilter(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none cursor-pointer"
+                >
+                  <option value="All" className="bg-[#141312]">All Statuses ({newsletterSubscribers.length})</option>
+                  <option value="Subscribed" className="bg-[#141312]">Subscribed</option>
+                  <option value="VIP Privé" className="bg-[#141312]">VIP Privé</option>
+                  <option value="Unsubscribed" className="bg-[#141312]">Unsubscribed</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Subscribers Table */}
+            <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl overflow-hidden shadow-xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-white/5 text-[#D4AF37] uppercase tracking-wider text-[10px] font-bold border-b border-white/10">
+                    <tr>
+                      <th className="p-4">Subscriber Email</th>
+                      <th className="p-4">Acquisition Source</th>
+                      <th className="p-4">Status Tier</th>
+                      <th className="p-4">Date Joined</th>
+                      <th className="p-4 text-right">Status Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 text-[#D8C8B8]">
+                    {filteredSubscribers.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-[#8C7A6B]">
+                          No matching subscribers found.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredSubscribers.map((sub) => (
+                        <tr key={sub.id} className="hover:bg-white/5 transition-colors">
+                          <td className="p-4 font-semibold text-white flex items-center space-x-3">
+                            <div className="w-8 h-8 rounded-full bg-[#C5A059]/20 border border-[#C5A059]/40 flex items-center justify-center text-[#F5D07F] font-bold">
+                              {sub.email[0].toUpperCase()}
+                            </div>
+                            <div>
+                              <span className="block font-medium text-white">{sub.email}</span>
+                              <span className="text-[10px] font-mono text-[#8C7A6B]">ID: {sub.id.substring(0, 8)}</span>
+                            </div>
+                          </td>
+                          <td className="p-4 font-medium text-[#C5A059]">{sub.source}</td>
+                          <td className="p-4">
+                            <span
+                              className={`px-2.5 py-1 rounded-full font-bold text-[10px] border uppercase ${
+                                sub.status === 'VIP Privé'
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                  : sub.status === 'Subscribed'
+                                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                  : 'bg-white/10 text-gray-400 border-white/20'
+                              }`}
+                            >
+                              {sub.status}
+                            </span>
+                          </td>
+                          <td className="p-4 font-mono text-[11px] text-[#8C7A6B]">{sub.createdAt}</td>
+                          <td className="p-4 text-right space-x-2">
+                            <button
+                              onClick={() => handleUpdateNewsletterStatus(sub.id, 'Subscribed')}
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                                sub.status === 'Subscribed' ? 'bg-emerald-600 text-white' : 'bg-white/5 text-white hover:bg-white/10'
+                              }`}
+                            >
+                              Subscribed
+                            </button>
+                            <button
+                              onClick={() => handleUpdateNewsletterStatus(sub.id, 'VIP Privé')}
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                                sub.status === 'VIP Privé' ? 'bg-[#C5A059] text-[#121110]' : 'bg-white/5 text-white hover:bg-white/10'
+                              }`}
+                            >
+                              VIP Privé
+                            </button>
+                            <button
+                              onClick={() => handleUpdateNewsletterStatus(sub.id, 'Unsubscribed')}
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                                sub.status === 'Unsubscribed' ? 'bg-gray-700 text-white' : 'bg-white/5 text-white hover:bg-white/10'
+                              }`}
+                            >
+                              Unsubscribe
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSubscriber(sub.id, sub.email)}
+                              className="p-1.5 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 transition-all border border-red-500/30 cursor-pointer ml-1"
+                              title="Delete Subscriber"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -1457,6 +1727,61 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   className="px-5 py-2.5 rounded-xl bg-[#C5A059] text-[#121110] text-xs font-bold uppercase tracking-wider hover:bg-[#D4AF37] transition-all shadow-lg cursor-pointer"
                 >
                   Save Product to Supabase
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- ADD SUBSCRIBER MODAL --- */}
+      {showAddSubscriberModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+          <div className="bg-[#141312] border border-[#C5A059]/40 rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-5 text-white shadow-2xl">
+            <div>
+              <h3 className="font-serif text-2xl font-bold text-white">Add Newsletter Subscriber</h3>
+              <p className="text-xs text-[#D8C8B8]">
+                Manually add a VIP client or trade email to the Maison Gazette distribution list.
+              </p>
+            </div>
+
+            <form onSubmit={handleCreateSubscriber} className="space-y-4 text-xs">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Subscriber Email</label>
+                <input
+                  type="email"
+                  required
+                  value={newSubscriberEmail}
+                  onChange={(e) => setNewSubscriberEmail(e.target.value)}
+                  placeholder="e.g. client@mayfair-estates.co.uk"
+                  className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Acquisition Source</label>
+                <input
+                  type="text"
+                  value={newSubscriberSource}
+                  onChange={(e) => setNewSubscriberSource(e.target.value)}
+                  placeholder="e.g. Master Admin, Showroom Invitation, Trade Event"
+                  className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowAddSubscriberModal(false)}
+                  className="px-4 py-2.5 rounded-xl bg-white/10 text-xs font-bold hover:bg-white/20 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-[#C5A059] text-[#121110] text-xs font-bold uppercase tracking-wider hover:bg-[#D4AF37] transition-all shadow-lg cursor-pointer"
+                >
+                  Add Subscriber
                 </button>
               </div>
             </form>

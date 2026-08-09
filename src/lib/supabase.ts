@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import type { AdminUser, AuditLogItem, ContactInquiryItem } from '../types/adminTypes';
+import type { AdminUser, AuditLogItem, ContactInquiryItem, NewsletterSubscriberItem } from '../types/adminTypes';
 import type { Product } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
@@ -442,3 +442,131 @@ export const deleteContactInquiryInSupabase = async (id: string, adminEmail: str
     return false;
   }
 };
+
+/**
+ * Fetch Newsletter Subscribers from Supabase
+ */
+export const fetchNewsletterSubscribersFromSupabase = async (): Promise<NewsletterSubscriberItem[]> => {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const { data, error } = await supabase
+      .from('newsletter_subscribers')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error || !data) {
+      console.warn('Error fetching newsletter subscribers from Supabase:', error);
+      return [];
+    }
+
+    return data.map((item) => ({
+      id: item.id,
+      email: item.email,
+      source: item.source || 'Footer Gazette',
+      status: item.status || 'Subscribed',
+      createdAt: new Date(item.created_at).toLocaleDateString([], {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }));
+  } catch (err) {
+    console.warn('Exception fetching newsletter subscribers from Supabase:', err);
+    return [];
+  }
+};
+
+/**
+ * Subscribe email to Newsletter in Supabase
+ */
+export const subscribeNewsletterInSupabase = async (
+  email: string,
+  source: string = 'Footer Gazette'
+): Promise<{ success: boolean; message: string }> => {
+  const cleanEmail = email.trim().toLowerCase();
+  if (!cleanEmail) return { success: false, message: 'Valid email required' };
+
+  if (isSupabaseConfigured) {
+    try {
+      const { error } = await supabase
+        .from('newsletter_subscribers')
+        .upsert({ email: cleanEmail, source, status: 'Subscribed' }, { onConflict: 'email' });
+
+      if (error) {
+        console.warn('Supabase newsletter upsert error:', error);
+      } else {
+        await logAdminActivityInSupabase(
+          'system',
+          'NEWSLETTER_SUBSCRIBED',
+          `New subscriber added: ${cleanEmail} via ${source}`
+        );
+      }
+    } catch (err) {
+      console.warn('Exception subscribing newsletter in Supabase:', err);
+    }
+  }
+
+  return { success: true, message: 'Welcome to The Atelier Circle.' };
+};
+
+/**
+ * Update Newsletter Subscriber Status in Supabase
+ */
+export const updateNewsletterSubscriberStatusInSupabase = async (
+  id: string,
+  newStatus: NewsletterSubscriberItem['status'],
+  adminEmail: string
+): Promise<boolean> => {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase
+      .from('newsletter_subscribers')
+      .update({ status: newStatus })
+      .eq('id', id);
+
+    if (error) {
+      console.warn('Error updating newsletter subscriber status in Supabase:', error);
+      return false;
+    }
+
+    await logAdminActivityInSupabase(
+      adminEmail,
+      'NEWSLETTER_STATUS_UPDATED',
+      `Updated subscriber ID ${id.substring(0, 8)} status to ${newStatus}`
+    );
+    return true;
+  } catch (err) {
+    console.warn('Exception updating subscriber status in Supabase:', err);
+    return false;
+  }
+};
+
+/**
+ * Delete Newsletter Subscriber in Supabase
+ */
+export const deleteNewsletterSubscriberInSupabase = async (
+  id: string,
+  adminEmail: string
+): Promise<boolean> => {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase.from('newsletter_subscribers').delete().eq('id', id);
+    if (error) {
+      console.warn('Error deleting subscriber in Supabase:', error);
+      return false;
+    }
+
+    await logAdminActivityInSupabase(
+      adminEmail,
+      'NEWSLETTER_SUBSCRIBER_DELETED',
+      `Deleted subscriber ID: ${id.substring(0, 8)}`
+    );
+    return true;
+  } catch (err) {
+    console.warn('Exception deleting subscriber in Supabase:', err);
+    return false;
+  }
+};
+

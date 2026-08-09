@@ -67,7 +67,7 @@ async function main() {
 
   // 3. Inspect Table Statuses & Seed via Supabase REST API
   console.log('\n--- Checking Table Statuses in Supabase Cloud DB ---');
-  const tables = ['swatch_requests', 'products', 'admin_users', 'admin_audit_logs', 'contact_inquiries'];
+  const tables = ['swatch_requests', 'products', 'admin_users', 'admin_audit_logs', 'contact_inquiries', 'newsletter_subscribers'];
 
   for (const table of tables) {
     const { data, error } = await adminSupabase.from(table).select('count', { count: 'exact', head: true });
@@ -152,6 +152,15 @@ async function main() {
   });
   if (auditErr) console.log('Audit log seed status:', auditErr.message);
   else console.log('✅ Audit log seed: SUCCESS');
+
+  // Seed Newsletter Subscribers
+  const { error: subErr } = await adminSupabase.from('newsletter_subscribers').upsert([
+    { email: 'crawford.estates@mayfair-estates.co.uk', source: 'Footer Gazette', status: 'VIP Privé' },
+    { email: 'g.laurent@laurent-interiors.fr', source: 'Exhibition Banner', status: 'Subscribed' },
+    { email: 'harrison.thorne@kensington-residences.com', source: 'Footer Gazette', status: 'Subscribed' }
+  ], { onConflict: 'email' });
+  if (subErr) console.log('Newsletter subscribers seed status:', subErr.message);
+  else console.log('✅ Newsletter subscribers seed: SUCCESS');
 }
 
 main();

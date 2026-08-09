@@ -133,6 +133,30 @@ DROP POLICY IF EXISTS "Admin modify contact_inquiries" ON public.contact_inquiri
 CREATE POLICY "Admin modify contact_inquiries" ON public.contact_inquiries
   FOR ALL USING (true);
 
+-- 6. Create Newsletter Subscribers Table
+CREATE TABLE IF NOT EXISTS public.newsletter_subscribers (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  source TEXT DEFAULT 'Footer Gazette',
+  status TEXT DEFAULT 'Subscribed' CHECK (status IN ('Subscribed', 'VIP Privé', 'Unsubscribed')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable RLS for Newsletter Subscribers
+ALTER TABLE public.newsletter_subscribers ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public insert newsletter_subscribers" ON public.newsletter_subscribers;
+CREATE POLICY "Public insert newsletter_subscribers" ON public.newsletter_subscribers
+  FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Admin select newsletter_subscribers" ON public.newsletter_subscribers;
+CREATE POLICY "Admin select newsletter_subscribers" ON public.newsletter_subscribers
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Admin modify newsletter_subscribers" ON public.newsletter_subscribers;
+CREATE POLICY "Admin modify newsletter_subscribers" ON public.newsletter_subscribers
+  FOR ALL USING (true);
+
 -- =======================================================
 -- SEED INITIAL DATA
 -- =======================================================
@@ -157,7 +181,16 @@ VALUES
   ('Viscount Harrison Thorne', 'h.thorne@kensington-residences.com', '+44 20 7946 0722', 'Curtains & Upholstery', 'Drawing Room Upholstery', 'Paris Avenue Montaigne Showroom', 'Interested in velvet upholstery for historical drawing room chairs.', 'Contacted')
 ON CONFLICT DO NOTHING;
 
+-- Seed Initial Newsletter Subscribers
+INSERT INTO public.newsletter_subscribers (email, source, status)
+VALUES
+  ('crawford.estates@mayfair-estates.co.uk', 'Footer Gazette', 'VIP Privé'),
+  ('g.laurent@laurent-interiors.fr', 'Exhibition Banner', 'Subscribed'),
+  ('harrison.thorne@kensington-residences.com', 'Footer Gazette', 'Subscribed')
+ON CONFLICT (email) DO NOTHING;
+
 -- Seed Initial Audit Log
 INSERT INTO public.admin_audit_logs (admin_email, action, details)
 VALUES ('admin@maison-drape.com', 'SYSTEM_INITIALIZATION', 'Master Admin Gateway linked with Supabase Cloud Database')
 ON CONFLICT DO NOTHING;
+

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CATEGORIES_DATA } from '../../data/categoriesData';
 import type { CategorySlug } from '../../types';
 import { Mail, CheckCircle2, ArrowRight, MapPin, Phone, Globe, Share2, Compass } from 'lucide-react';
+import { subscribeNewsletterInSupabase } from '../../lib/supabase';
 
 interface FooterProps {
   onNavigate: (tab: string, categorySlug?: CategorySlug) => void;
@@ -11,14 +12,17 @@ interface FooterProps {
 export const Footer: React.FC<FooterProps> = ({ onNavigate, onRequestSwatches }) => {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
-      setSubscribed(true);
-      setEmail('');
-      setTimeout(() => setSubscribed(false), 5000);
-    }
+    if (!email) return;
+    setIsSubmitting(true);
+    await subscribeNewsletterInSupabase(email, 'Footer Gazette');
+    setSubscribed(true);
+    setEmail('');
+    setIsSubmitting(false);
+    setTimeout(() => setSubscribed(false), 5000);
   };
 
   return (
@@ -63,9 +67,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onRequestSwatches })
                   />
                   <button
                     type="submit"
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-[#C5A059] text-[#1A1918] px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider hover:bg-[#D4AF37] transition-all flex items-center space-x-1"
+                    disabled={isSubmitting}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-[#C5A059] text-[#1A1918] px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider hover:bg-[#D4AF37] transition-all flex items-center space-x-1 disabled:opacity-50"
                   >
-                    <span>Join</span>
+                    <span>{isSubmitting ? 'Joining...' : 'Join'}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>

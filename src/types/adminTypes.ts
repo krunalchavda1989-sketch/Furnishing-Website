@@ -48,3 +48,12 @@ export interface SystemStat {
   change: string;
   isPositive: boolean;
 }
+
+export interface NewsletterSubscriberItem {
+  id: string;
+  email: string;
+  source: string;
+  status: 'Subscribed' | 'VIP Privé' | 'Unsubscribed';
+  createdAt: string;
+}
+
