@@ -422,23 +422,63 @@ export const updateContactInquiryStatusInSupabase = async (
 /**
  * Delete Contact Inquiry in Supabase
  */
-export const deleteContactInquiryInSupabase = async (id: string, adminEmail: string): Promise<boolean> => {
+export const deleteContactInquiryInSupabase = async (
+  id: string,
+  adminEmail: string,
+  email?: string
+): Promise<boolean> => {
   if (!isSupabaseConfigured) return false;
   try {
-    const { error } = await supabase.from('contact_inquiries').delete().eq('id', id);
-    if (error) {
-      console.warn('Error deleting inquiry in Supabase:', error);
-      return false;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    let error;
+    if (isUuid) {
+      const res = await supabase.from('contact_inquiries').delete().eq('id', id);
+      error = res.error;
+    } else if (email) {
+      const res = await supabase.from('contact_inquiries').delete().eq('email', email);
+      error = res.error;
     }
 
     await logAdminActivityInSupabase(
       adminEmail,
       'INQUIRY_DELETED',
-      `Deleted contact inquiry ID: ${id.substring(0, 8).toUpperCase()}`
+      `Deleted contact inquiry: ${id}`
     );
-    return true;
+    return !error;
   } catch (err) {
     console.warn('Exception deleting contact inquiry in Supabase:', err);
+    return false;
+  }
+};
+
+/**
+ * Delete Swatch Request in Supabase
+ */
+export const deleteSwatchRequestInSupabase = async (
+  id: string,
+  adminEmail: string,
+  email?: string
+): Promise<boolean> => {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    let error;
+    if (isUuid) {
+      const res = await supabase.from('swatch_requests').delete().eq('id', id);
+      error = res.error;
+    } else if (email) {
+      const res = await supabase.from('swatch_requests').delete().eq('email', email);
+      error = res.error;
+    }
+
+    await logAdminActivityInSupabase(
+      adminEmail,
+      'SWATCH_DELETED',
+      `Deleted swatch request: ${id}`
+    );
+    return !error;
+  } catch (err) {
+    console.warn('Exception deleting swatch request in Supabase:', err);
     return false;
   }
 };
@@ -521,10 +561,15 @@ export const updateNewsletterSubscriberStatusInSupabase = async (
 ): Promise<boolean> => {
   if (!isSupabaseConfigured) return false;
   try {
-    const { error } = await supabase
-      .from('newsletter_subscribers')
-      .update({ status: newStatus })
-      .eq('id', id);
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    let error;
+    if (isUuid) {
+      const res = await supabase
+        .from('newsletter_subscribers')
+        .update({ status: newStatus })
+        .eq('id', id);
+      error = res.error;
+    }
 
     if (error) {
       console.warn('Error updating newsletter subscriber status in Supabase:', error);
@@ -534,7 +579,7 @@ export const updateNewsletterSubscriberStatusInSupabase = async (
     await logAdminActivityInSupabase(
       adminEmail,
       'NEWSLETTER_STATUS_UPDATED',
-      `Updated subscriber ID ${id.substring(0, 8)} status to ${newStatus}`
+      `Updated subscriber status to ${newStatus}`
     );
     return true;
   } catch (err) {
@@ -548,22 +593,30 @@ export const updateNewsletterSubscriberStatusInSupabase = async (
  */
 export const deleteNewsletterSubscriberInSupabase = async (
   id: string,
-  adminEmail: string
+  adminEmail: string,
+  email?: string
 ): Promise<boolean> => {
   if (!isSupabaseConfigured) return false;
   try {
-    const { error } = await supabase.from('newsletter_subscribers').delete().eq('id', id);
-    if (error) {
-      console.warn('Error deleting subscriber in Supabase:', error);
-      return false;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    let error;
+    if (isUuid) {
+      const res = await supabase.from('newsletter_subscribers').delete().eq('id', id);
+      error = res.error;
+    } else {
+      const targetEmail = email || (id.includes('@') ? id : '');
+      if (targetEmail) {
+        const res = await supabase.from('newsletter_subscribers').delete().eq('email', targetEmail);
+        error = res.error;
+      }
     }
 
     await logAdminActivityInSupabase(
       adminEmail,
       'NEWSLETTER_SUBSCRIBER_DELETED',
-      `Deleted subscriber ID: ${id.substring(0, 8)}`
+      `Deleted subscriber: ${email || id}`
     );
-    return true;
+    return !error;
   } catch (err) {
     console.warn('Exception deleting subscriber in Supabase:', err);
     return false;

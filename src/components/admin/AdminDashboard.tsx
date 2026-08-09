@@ -41,11 +41,34 @@ import {
   fetchContactInquiriesFromSupabase,
   updateContactInquiryStatusInSupabase,
   deleteContactInquiryInSupabase,
+  deleteSwatchRequestInSupabase,
   fetchNewsletterSubscribersFromSupabase,
   subscribeNewsletterInSupabase,
   updateNewsletterSubscriberStatusInSupabase,
   deleteNewsletterSubscriberInSupabase
 } from '../../lib/supabase';
+
+// Persistent LocalStorage Deleted Keys Tracking Helpers
+const getDeletedKeys = (key: string): string[] => {
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+};
+
+const recordDeletedKey = (key: string, val: string) => {
+  try {
+    const list = getDeletedKeys(key);
+    if (val && !list.includes(val)) {
+      list.push(val);
+      localStorage.setItem(key, JSON.stringify(list));
+    }
+  } catch (e) {
+    console.warn(e);
+  }
+};
 
 interface AdminDashboardProps {
   user: AdminUser;
@@ -142,10 +165,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   >('overview');
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [swatchRequests, setSwatchRequests] = useState<SwatchRequestItem[]>(INITIAL_SWATCH_REQUESTS);
-  const [contactInquiries, setContactInquiries] = useState<ContactInquiryItem[]>(INITIAL_CONTACT_INQUIRIES);
-  const [newsletterSubscribers, setNewsletterSubscribers] = useState<NewsletterSubscriberItem[]>(INITIAL_NEWSLETTER_SUBSCRIBERS);
-  const [productsList, setProductsList] = useState<Product[]>(PRODUCTS_DATA);
+
+  const [swatchRequests, setSwatchRequests] = useState<SwatchRequestItem[]>(() => {
+    const deleted = getDeletedKeys('maison_deleted_swatches');
+    return INITIAL_SWATCH_REQUESTS.filter((s) => !deleted.includes(s.id) && !deleted.includes(s.email));
+  });
+
+  const [contactInquiries, setContactInquiries] = useState<ContactInquiryItem[]>(() => {
+    const deleted = getDeletedKeys('maison_deleted_inquiries');
+    return INITIAL_CONTACT_INQUIRIES.filter((i) => !deleted.includes(i.id) && !deleted.includes(i.email));
+  });
+
+  const [newsletterSubscribers, setNewsletterSubscribers] = useState<NewsletterSubscriberItem[]>(() => {
+    const deleted = getDeletedKeys('maison_deleted_subscribers');
+    return INITIAL_NEWSLETTER_SUBSCRIBERS.filter((s) => !deleted.includes(s.id) && !deleted.includes(s.email));
+  });
+
+  const [productsList, setProductsList] = useState<Product[]>(() => {
+    const deleted = getDeletedKeys('maison_deleted_products');
+    return PRODUCTS_DATA.filter((p) => !deleted.includes(p.id));
+  });
+
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   const [adminUsersList, setAdminUsersList] = useState<AdminUser[]>([
     {
@@ -213,12 +253,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const fetchLiveSupabaseData = async () => {
-    if (!isSupabaseConfigured) return;
-
     // 1. Fetch Contact Inquiries
     const inqs = await fetchContactInquiriesFromSupabase();
+    const deletedInqs = getDeletedKeys('maison_deleted_inquiries');
     if (inqs && inqs.length > 0) {
-      setContactInquiries(inqs);
+      setContactInquiries(inqs.filter((i) => !deletedInqs.includes(i.id) && !deletedInqs.includes(i.email)));
+    } else {
+      setContactInquiries((prev) => prev.filter((i) => !deletedInqs.includes(i.id) && !deletedInqs.includes(i.email)));
     }
 
     // 2. Fetch Swatch Requests
@@ -226,8 +267,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     // 3. Fetch Products
     const dbProds = await fetchProductsFromSupabase();
+    const deletedProds = getDeletedKeys('maison_deleted_products');
     if (dbProds && dbProds.length > 0) {
-      setProductsList(dbProds);
+      setProductsList(dbProds.filter((p) => !deletedProds.includes(p.id)));
+    } else {
+      setProductsList((prev) => prev.filter((p) => !deletedProds.includes(p.id)));
     }
 
     // 4. Fetch Audit Logs
@@ -242,8 +286,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     // 6. Fetch Newsletter Subscribers
     const subs = await fetchNewsletterSubscribersFromSupabase();
+    const deletedSubs = getDeletedKeys('maison_deleted_subscribers');
     if (subs && subs.length > 0) {
-      setNewsletterSubscribers(subs);
+      setNewsletterSubscribers(subs.filter((s) => !deletedSubs.includes(s.id) && !deletedSubs.includes(s.email)));
+    } else {
+      setNewsletterSubscribers((prev) => prev.filter((s) => !deletedSubs.includes(s.id) && !deletedSubs.includes(s.email)));
     }
   };
 
@@ -264,10 +311,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleDeleteSubscriber = async (id: string, email: string) => {
     if (!window.confirm(`Are you sure you want to remove "${email}" from newsletter subscribers?`)) return;
 
-    setNewsletterSubscribers((prev) => prev.filter((s) => s.id !== id));
+    recordDeletedKey('maison_deleted_subscribers', id);
+    recordDeletedKey('maison_deleted_subscribers', email);
+    setNewsletterSubscribers((prev) => prev.filter((s) => s.id !== id && s.email !== email));
 
     if (isSupabaseConfigured) {
-      await deleteNewsletterSubscriberInSupabase(id, user.email);
+      await deleteNewsletterSubscriberInSupabase(id, user.email, email);
       const updatedLogs = await fetchAdminAuditLogsFromSupabase();
       setAuditLogs(updatedLogs);
     }
@@ -322,25 +371,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         .select('*')
         .order('created_at', { ascending: false });
 
+      const deletedSwatches = getDeletedKeys('maison_deleted_swatches');
       if (!error && data && data.length > 0) {
-        const formatted: SwatchRequestItem[] = data.map((item) => ({
-          id: item.id,
-          clientName: item.client_name,
-          email: item.email,
-          phone: item.phone || '',
-          address: item.address,
-          categoryTitle: item.category_title,
-          categorySlug: item.category_slug,
-          swatchesRequested: item.swatches_requested || [],
-          status: item.status || 'Pending',
-          requestDate: new Date(item.created_at).toLocaleDateString([], {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          })
-        }));
+        const formatted: SwatchRequestItem[] = data
+          .map((item) => ({
+            id: item.id,
+            clientName: item.client_name,
+            email: item.email,
+            phone: item.phone || '',
+            address: item.address,
+            categoryTitle: item.category_title,
+            categorySlug: item.category_slug,
+            swatchesRequested: item.swatches_requested || [],
+            status: item.status || 'Pending',
+            requestDate: new Date(item.created_at).toLocaleDateString([], {
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+          }))
+          .filter((s) => !deletedSwatches.includes(s.id) && !deletedSwatches.includes(s.email));
         setSwatchRequests(formatted);
+      } else {
+        setSwatchRequests((prev) => prev.filter((s) => !deletedSwatches.includes(s.id) && !deletedSwatches.includes(s.email)));
       }
     } catch (err) {
       console.warn('Supabase swatch fetch exception:', err);
@@ -361,13 +415,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   // Delete Contact Inquiry
-  const handleDeleteInquiry = async (id: string, clientName: string) => {
+  const handleDeleteInquiry = async (id: string, clientName: string, email?: string) => {
     if (!window.confirm(`Are you sure you want to delete inquiry from "${clientName}"?`)) return;
 
+    recordDeletedKey('maison_deleted_inquiries', id);
+    if (email) recordDeletedKey('maison_deleted_inquiries', email);
     setContactInquiries((prev) => prev.filter((i) => i.id !== id));
 
     if (isSupabaseConfigured) {
-      await deleteContactInquiryInSupabase(id, user.email);
+      await deleteContactInquiryInSupabase(id, user.email, email);
+      const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+      setAuditLogs(updatedLogs);
+    }
+  };
+
+  // Delete Swatch Request
+  const handleDeleteSwatch = async (id: string, clientName: string, email?: string) => {
+    if (!window.confirm(`Are you sure you want to delete swatch request for "${clientName}"?`)) return;
+
+    recordDeletedKey('maison_deleted_swatches', id);
+    if (email) recordDeletedKey('maison_deleted_swatches', email);
+    setSwatchRequests((prev) => prev.filter((s) => s.id !== id));
+
+    if (isSupabaseConfigured) {
+      await deleteSwatchRequestInSupabase(id, user.email, email);
       const updatedLogs = await fetchAdminAuditLogsFromSupabase();
       setAuditLogs(updatedLogs);
     }
@@ -1247,7 +1318,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           Archive
                         </button>
                         <button
-                          onClick={() => handleDeleteInquiry(inq.id, inq.clientName)}
+                          onClick={() => handleDeleteInquiry(inq.id, inq.clientName, inq.email)}
                           className="p-1.5 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 transition-all border border-red-500/30 cursor-pointer ml-2"
                           title="Delete Inquiry"
                         >
@@ -1455,6 +1526,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         }`}
                       >
                         Delivered
+                      </button>
+                      <button
+                        onClick={() => handleDeleteSwatch(req.id, req.clientName, req.email)}
+                        className="p-1.5 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 transition-all border border-red-500/30 cursor-pointer ml-1"
+                        title="Delete Swatch Request"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
