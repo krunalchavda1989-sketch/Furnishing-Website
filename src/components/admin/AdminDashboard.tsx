@@ -17,7 +17,11 @@ import {
   ShieldCheck,
   UserCheck,
   Mail,
-  PhoneCall
+  PhoneCall,
+  Menu,
+  X,
+  ChevronRight,
+  Sparkles
 } from 'lucide-react';
 import type { AdminUser, SwatchRequestItem, AuditLogItem, ContactInquiryItem } from '../../types/adminTypes';
 import type { Product, CategorySlug } from '../../types';
@@ -109,6 +113,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     'overview' | 'inquiries' | 'products' | 'swatches' | 'audit-logs' | 'projects' | 'settings'
   >('overview');
 
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [swatchRequests, setSwatchRequests] = useState<SwatchRequestItem[]>(INITIAL_SWATCH_REQUESTS);
   const [contactInquiries, setContactInquiries] = useState<ContactInquiryItem[]>(INITIAL_CONTACT_INQUIRIES);
   const [productsList, setProductsList] = useState<Product[]>(PRODUCTS_DATA);
@@ -277,7 +282,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         await logAdminActivityInSupabase(
           user.email,
           'SWATCH_STATUS_UPDATED',
-          `Updated swatch request #${id} status to ${newStatus}`
+          `Updated swatch request #${id.substring(0, 8).toUpperCase()} status to ${newStatus}`
         );
 
         const updatedLogs = await fetchAdminAuditLogsFromSupabase();
@@ -364,114 +369,286 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return matchesSearch && matchesStatus;
   });
 
+  const navigationItems = [
+    {
+      category: 'MAIN NAVIGATION',
+      items: [
+        { id: 'overview', label: 'Overview & Sync', icon: LayoutDashboard },
+        {
+          id: 'inquiries',
+          label: 'Client Inquiries',
+          icon: Mail,
+          badge: contactInquiries.filter((i) => i.status === 'New').length,
+          badgeColor: 'bg-amber-500 text-black'
+        }
+      ]
+    },
+    {
+      category: 'ATELIER CATALOG & ORDERS',
+      items: [
+        { id: 'products', label: 'Product Catalog', icon: Package, badge: productsList.length },
+        {
+          id: 'swatches',
+          label: 'Swatch Orders',
+          icon: Layers,
+          badge: swatchRequests.filter((s) => s.status === 'Pending').length,
+          badgeColor: 'bg-[#C5A059] text-[#121110]'
+        },
+        { id: 'projects', label: 'Residence Portfolio', icon: Building2 }
+      ]
+    },
+    {
+      category: 'SECURITY & STAFF',
+      items: [
+        { id: 'audit-logs', label: 'Security Audit Logs', icon: ShieldCheck, badge: auditLogs.length },
+        { id: 'settings', label: 'Curator Staff', icon: Settings }
+      ]
+    }
+  ];
+
   return (
-    <div className="min-h-screen bg-[#0D0C0B] text-[#FDFBF7] flex flex-col font-sans selection:bg-[#C5A059]/30">
-      {/* --- MASTER ADMIN HEADER BAR --- */}
-      <header className="bg-[#141312] border-b border-[#C5A059]/30 py-3.5 px-4 sm:px-8 sticky top-0 z-40 shadow-xl">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="w-10 h-10 rounded-full border-2 border-[#C5A059] bg-[#C5A059]/20 flex items-center justify-center shadow-md">
-              <span className="font-serif font-bold text-xl text-[#F5D07F]">M</span>
+    <div className="min-h-screen bg-[#0D0C0B] text-[#FDFBF7] flex flex-col lg:flex-row font-sans selection:bg-[#C5A059]/30">
+      {/* --- DESKTOP FIXED SIDEBAR MENU --- */}
+      <aside className="hidden lg:flex lg:w-72 bg-[#141312] border-r border-[#C5A059]/30 flex-col justify-between sticky top-0 h-screen z-40 shrink-0 select-none">
+        <div className="p-6 space-y-6 overflow-y-auto">
+          {/* Brand Header */}
+          <div className="flex items-center space-x-3.5 pb-4 border-b border-white/10">
+            <div className="w-11 h-11 rounded-2xl border-2 border-[#C5A059] bg-[#C5A059]/20 flex items-center justify-center shadow-lg shrink-0">
+              <span className="font-serif font-bold text-2xl text-[#F5D07F]">M</span>
             </div>
             <div>
-              <div className="flex items-center space-x-2">
-                <span className="font-serif text-lg font-bold tracking-widest text-white uppercase">
+              <div className="flex items-center space-x-1.5">
+                <span className="font-serif text-base font-bold tracking-widest text-white uppercase">
                   MAISON & DRAPE
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-[#C5A059]/20 border border-[#C5A059]/40 text-[10px] font-bold text-[#F5D07F] uppercase tracking-wider">
-                  Master Control
-                </span>
               </div>
-              <span className="text-[11px] text-[#D4AF37] font-medium block">
-                Atelier Curator Administration & Supabase Sync
+              <span className="text-[10px] text-[#C5A059] font-semibold uppercase tracking-wider block">
+                Master Curator Control
               </span>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 sm:space-x-5">
-            {/* User Profile Badge */}
-            <div className="hidden sm:flex items-center space-x-2.5 bg-white/5 border border-white/10 px-3.5 py-1.5 rounded-full">
-              <div className="w-7 h-7 rounded-full bg-[#C5A059] text-[#121110] font-bold text-xs flex items-center justify-center">
+          {/* Compact Supabase Cloud Pill */}
+          <div className="p-3 rounded-xl bg-white/5 border border-[#C5A059]/30 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <Database className="w-3.5 h-3.5 text-[#F5D07F]" />
+              <span className="font-mono text-[11px] text-[#D8C8B8]">ywsmtfhzlhljeqetmvol</span>
+            </div>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-mono text-[10px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              {dbMetrics.latencyMs ? `${dbMetrics.latencyMs}ms` : 'Live'}
+            </span>
+          </div>
+
+          {/* Navigation Menu Groups */}
+          <nav className="space-y-6">
+            {navigationItems.map((group, idx) => (
+              <div key={idx} className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#8C7A6B] block px-3">
+                  {group.category}
+                </span>
+                <div className="space-y-1">
+                  {group.items.map((tab) => {
+                    const Icon = tab.icon;
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as any)}
+                        className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs uppercase tracking-wider font-semibold transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-[#C5A059] text-[#121110] font-bold shadow-lg shadow-[#C5A059]/20'
+                            : 'text-[#D8C8B8] hover:text-[#F5D07F] hover:bg-white/5'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <Icon className={`w-4 h-4 ${isActive ? 'text-[#121110]' : 'text-[#C5A059]'}`} />
+                          <span>{tab.label}</span>
+                        </div>
+                        {tab.badge !== undefined && tab.badge > 0 && (
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              isActive
+                                ? 'bg-[#121110] text-[#F5D07F]'
+                                : tab.badgeColor || 'bg-white/10 text-white'
+                            }`}
+                          >
+                            {tab.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </nav>
+        </div>
+
+        {/* Sidebar Footer User Profile */}
+        <div className="p-4 border-t border-white/10 bg-[#121110] space-y-3">
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-full bg-[#C5A059] text-[#121110] font-bold text-xs flex items-center justify-center">
                 {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
               </div>
               <div className="text-left leading-tight">
-                <span className="block text-xs font-bold text-white">{user.name}</span>
+                <span className="block text-xs font-bold text-white truncate max-w-[120px]">{user.name}</span>
                 <span className="text-[10px] text-[#C5A059] font-medium">{user.role}</span>
               </div>
             </div>
+          </div>
 
+          <div className="grid grid-cols-2 gap-2 pt-1">
             <button
               onClick={onReturnToSite}
-              className="px-3.5 py-1.5 rounded-full border border-white/15 bg-white/5 text-white hover:bg-white/10 text-xs font-semibold uppercase tracking-wider transition-all flex items-center space-x-1.5 cursor-pointer"
+              className="px-2.5 py-1.5 rounded-lg border border-white/15 bg-white/5 text-white hover:bg-white/10 text-[11px] font-semibold uppercase tracking-wider transition-all flex items-center justify-center space-x-1 cursor-pointer"
             >
-              <ExternalLink className="w-3.5 h-3.5 text-[#C5A059]" />
-              <span className="hidden md:inline">Live Site</span>
+              <ExternalLink className="w-3 h-3 text-[#C5A059]" />
+              <span>Live Site</span>
             </button>
-
             <button
               onClick={onLogout}
-              className="px-3.5 py-1.5 rounded-full bg-red-950/60 border border-red-500/30 text-red-200 hover:bg-red-900/60 text-xs font-semibold uppercase tracking-wider transition-all flex items-center space-x-1.5 cursor-pointer"
+              className="px-2.5 py-1.5 rounded-lg bg-red-950/60 border border-red-500/30 text-red-200 hover:bg-red-900/60 text-[11px] font-semibold uppercase tracking-wider transition-all flex items-center justify-center space-x-1 cursor-pointer"
             >
-              <LogOut className="w-3.5 h-3.5 text-red-400" />
+              <LogOut className="w-3 h-3 text-red-400" />
               <span>Logout</span>
             </button>
           </div>
         </div>
+      </aside>
+
+      {/* --- MOBILE TOP NAVIGATION BAR --- */}
+      <header className="lg:hidden bg-[#141312] border-b border-[#C5A059]/30 py-3.5 px-4 sticky top-0 z-40 flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setIsMobileSidebarOpen(true)}
+            className="p-2 rounded-xl bg-white/5 border border-white/10 text-[#F5D07F]"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-lg border border-[#C5A059] bg-[#C5A059]/20 flex items-center justify-center">
+              <span className="font-serif font-bold text-lg text-[#F5D07F]">M</span>
+            </div>
+            <span className="font-serif text-sm font-bold tracking-widest text-white uppercase">
+              MAISON & DRAPE
+            </span>
+          </div>
+        </div>
+
+        <button
+          onClick={onReturnToSite}
+          className="p-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold flex items-center gap-1"
+        >
+          <ExternalLink className="w-4 h-4 text-[#C5A059]" />
+        </button>
       </header>
 
-      {/* --- DASHBOARD NAVIGATION TABS BAR --- */}
-      <div className="bg-[#121110] border-b border-white/10 px-4 sm:px-8">
-        <div className="max-w-7xl mx-auto flex items-center space-x-2 sm:space-x-4 overflow-x-auto py-2">
-          {[
-            { id: 'overview', label: 'Overview & Sync', icon: LayoutDashboard },
-            {
-              id: 'inquiries',
-              label: 'Client Inquiries',
-              icon: Mail,
-              badge: contactInquiries.filter((i) => i.status === 'New').length
-            },
-            { id: 'products', label: 'Product Catalog', icon: Package, badge: productsList.length },
-            {
-              id: 'swatches',
-              label: 'Swatch Orders',
-              icon: Layers,
-              badge: swatchRequests.filter((s) => s.status === 'Pending').length
-            },
-            { id: 'audit-logs', label: 'Security Audit Logs', icon: ShieldCheck, badge: auditLogs.length },
-            { id: 'projects', label: 'Residence Portfolio', icon: Building2 },
-            { id: 'settings', label: 'Curator Staff', icon: Settings }
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                  isActive
-                    ? 'bg-[#C5A059] text-[#121110] shadow-lg font-bold'
-                    : 'text-[#D8C8B8] hover:text-[#F5D07F] hover:bg-white/5'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-                {tab.badge !== undefined && tab.badge > 0 && (
-                  <span
-                    className={`ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      isActive ? 'bg-[#121110] text-[#F5D07F]' : 'bg-[#C5A059] text-[#121110]'
-                    }`}
-                  >
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {/* --- MOBILE SIDEBAR DRAWER OVERLAY --- */}
+      {isMobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md lg:hidden flex">
+          <div className="w-80 bg-[#141312] border-r border-[#C5A059]/30 h-full flex flex-col justify-between p-6 space-y-6 animate-in slide-in-from-left duration-300">
+            <div className="space-y-6 overflow-y-auto">
+              <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                <div className="flex items-center space-x-3">
+                  <div className="w-9 h-9 rounded-xl border border-[#C5A059] bg-[#C5A059]/20 flex items-center justify-center">
+                    <span className="font-serif font-bold text-xl text-[#F5D07F]">M</span>
+                  </div>
+                  <span className="font-serif text-base font-bold text-white">MAISON & DRAPE</span>
+                </div>
+                <button
+                  onClick={() => setIsMobileSidebarOpen(false)}
+                  className="p-2 rounded-full bg-white/5 text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-      {/* --- MAIN ADMIN CONTENT AREA --- */}
+              <nav className="space-y-6">
+                {navigationItems.map((group, idx) => (
+                  <div key={idx} className="space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#8C7A6B] block">
+                      {group.category}
+                    </span>
+                    <div className="space-y-1">
+                      {group.items.map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => {
+                              setActiveTab(tab.id as any);
+                              setIsMobileSidebarOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs uppercase tracking-wider font-semibold transition-all ${
+                              isActive
+                                ? 'bg-[#C5A059] text-[#121110] font-bold'
+                                : 'text-[#D8C8B8] hover:bg-white/5'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <Icon className="w-4 h-4" />
+                              <span>{tab.label}</span>
+                            </div>
+                            {tab.badge !== undefined && tab.badge > 0 && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#121110] text-[#F5D07F]">
+                                {tab.badge}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </nav>
+            </div>
+
+            <div className="pt-4 border-t border-white/10 flex items-center justify-between">
+              <span className="text-xs text-white font-bold">{user.name}</span>
+              <button
+                onClick={onLogout}
+                className="px-3 py-1.5 rounded-lg bg-red-950/60 text-red-200 text-xs font-semibold"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- RIGHT MAIN CONTENT AREA --- */}
       <main className="grow max-w-7xl w-full mx-auto p-4 sm:p-8 space-y-8">
+        {/* Top Header Title & Quick Actions */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+          <div>
+            <div className="flex items-center space-x-2 text-xs uppercase tracking-widest text-[#C5A059] font-semibold">
+              <span>Master Admin Panel</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+              <span className="text-white capitalize">{activeTab.replace('-', ' ')}</span>
+            </div>
+            <h1 className="font-serif text-3xl font-bold text-white capitalize mt-1">
+              {activeTab.replace('-', ' ')} Control Center
+            </h1>
+          </div>
+
+          <div className="flex items-center space-x-3 shrink-0">
+            <button
+              onClick={() => {
+                runDatabaseCheck();
+                fetchLiveSupabaseData();
+              }}
+              disabled={dbMetrics.isTesting}
+              className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs text-white font-semibold flex items-center gap-2 cursor-pointer shadow-md"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-[#C5A059] ${dbMetrics.isTesting ? 'animate-spin' : ''}`} />
+              <span>Sync Supabase Cloud</span>
+            </button>
+          </div>
+        </div>
+
         {/* ================= OVERVIEW TAB ================= */}
         {activeTab === 'overview' && (
           <div className="space-y-8 animate-in fade-in duration-300">
@@ -506,18 +683,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {dbMetrics.latencyMs ? `${dbMetrics.latencyMs} ms` : 'Live'}
                   </span>
                 </div>
-                <button
-                  onClick={() => {
-                    runDatabaseCheck();
-                    fetchLiveSupabaseData();
-                  }}
-                  disabled={dbMetrics.isTesting}
-                  className="p-3 rounded-xl bg-[#C5A059] text-[#121110] font-bold hover:bg-[#D4AF37] transition-all shadow-md flex items-center gap-2 cursor-pointer"
-                  title="Re-test Supabase Connection"
-                >
-                  <RefreshCw className={`w-4 h-4 ${dbMetrics.isTesting ? 'animate-spin' : ''}`} />
-                  <span className="text-xs uppercase tracking-wider">Sync Now</span>
-                </button>
               </div>
             </div>
 
