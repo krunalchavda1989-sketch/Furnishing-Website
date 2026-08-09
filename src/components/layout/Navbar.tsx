@@ -217,112 +217,148 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile Slide-down Overlay Drawer */}
+      {/* Mobile Slide-in Side Drawer Overlay */}
       {isMobileDrawerOpen && (
-        <div className="fixed inset-x-0 top-full h-[calc(100vh-100%)] bg-[#0D0C0B]/98 backdrop-blur-2xl border-t border-[#C5A059]/40 p-4 sm:p-6 flex flex-col justify-between overflow-y-auto z-[100] shadow-2xl animate-in slide-in-from-top-2 duration-300">
-          <div className="space-y-3">
-            {/* Main Navigation Links */}
-            {navLinks.map((link) => {
-              const isActive =
-                activeTab === link.id ||
-                (link.hasMegaMenu && (activeTab === 'projects' || activeTab === 'category'));
+        <div className="fixed inset-0 z-[100] lg:hidden flex justify-end">
+          {/* Dark Backdrop Overlay */}
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-300"
+            onClick={() => setIsMobileDrawerOpen(false)}
+          />
 
-              if (link.hasMegaMenu) {
-                return (
-                  <div key={link.id} className="border-b border-white/10 pb-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <button
-                        onClick={() => {
-                          setIsMobileDrawerOpen(false);
-                          onNavigate('projects');
-                        }}
-                        className={`text-base sm:text-lg uppercase tracking-wider font-serif font-bold text-left flex items-center gap-2 ${
-                          isActive ? 'text-[#F5D07F]' : 'text-white'
-                        }`}
-                      >
-                        <span>Our Projects</span>
-                        <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
-                      </button>
-
-                      <button
-                        onClick={() => setMobileCategoriesExpanded(!mobileCategoriesExpanded)}
-                        className="px-2.5 py-1 rounded-lg bg-white/5 border border-[#C5A059]/30 text-xs text-[#F5D07F] flex items-center gap-1 font-semibold"
-                      >
-                        <span>Categories</span>
-                        <ChevronDown
-                          className={`w-4 h-4 transition-transform duration-300 ${
-                            mobileCategoriesExpanded ? 'rotate-180' : ''
-                          }`}
-                        />
-                      </button>
-                    </div>
-
-                    {/* Collapsible Category Grid in Mobile Drawer */}
-                    {mobileCategoriesExpanded && (
-                      <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[45vh] overflow-y-auto pr-1">
-                        {Object.values(CATEGORIES_DATA).map((cat) => (
-                          <button
-                            key={cat.id}
-                            onClick={() => handleCategoryClick(cat.id as CategorySlug)}
-                            className="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-[#C5A059]/20 hover:border-[#C5A059]/50 transition-all text-left flex items-center justify-between group cursor-pointer"
-                          >
-                            <div>
-                              <span className="block text-xs font-semibold text-white group-hover:text-[#F5D07F] leading-tight">
-                                {cat.title}
-                              </span>
-                              <span className="text-[10px] text-[#C5A059] block font-light line-clamp-1">
-                                {cat.materialHighlight}
-                              </span>
-                            </div>
-                            <ArrowRight className="w-3.5 h-3.5 text-[#C5A059] opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
-                          </button>
-                        ))}
-                      </div>
-                    )}
+          {/* Slide-in Right Side Drawer Panel */}
+          <div className="relative w-[85vw] max-w-sm h-full bg-[#0D0C0B] border-l border-[#C5A059]/40 p-5 sm:p-6 flex flex-col justify-between overflow-y-auto z-10 shadow-2xl animate-in slide-in-from-right duration-300 text-white">
+            <div className="space-y-5">
+              {/* Drawer Header: Logo + Close Button */}
+              <div className="flex items-center justify-between pb-4 border-b border-[#C5A059]/30">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-8 h-8 rounded-full border border-[#C5A059] flex items-center justify-center bg-[#C5A059]/20 shadow-md">
+                    <span className="font-serif font-bold text-base text-[#F5D07F]">M</span>
                   </div>
-                );
-              }
+                  <div>
+                    <span className="font-serif tracking-widest text-sm font-bold uppercase text-white block">
+                      MAISON & DRAPE
+                    </span>
+                    <span className="text-[9px] tracking-[0.2em] text-[#D4AF37] uppercase font-semibold block">
+                      Haute Atelier
+                    </span>
+                  </div>
+                </div>
 
-              return (
                 <button
-                  key={link.id}
-                  onClick={() => {
-                    setIsMobileDrawerOpen(false);
-                    onNavigate(link.id);
-                  }}
-                  className={`block w-full text-left text-base sm:text-lg uppercase tracking-wider font-serif font-bold border-b border-white/10 pb-3 transition-colors ${
-                    isActive ? 'text-[#F5D07F]' : 'text-white hover:text-[#F5D07F]'
-                  }`}
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="p-2 rounded-full bg-white/5 border border-white/15 text-white hover:bg-[#C5A059] hover:text-[#121110] transition-all cursor-pointer"
+                  aria-label="Close menu"
                 >
-                  {link.label}
+                  <X className="w-5 h-5" />
                 </button>
-              );
-            })}
-          </div>
+              </div>
 
-          {/* Bottom Action Footer in Mobile Drawer */}
-          <div className="pt-4 border-t border-[#C5A059]/40 space-y-3 mt-4">
-            <button
-              onClick={() => {
-                setIsMobileDrawerOpen(false);
-                onRequestSwatches();
-              }}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#C5A059] via-[#E2C37E] to-[#C5A059] text-[#121110] uppercase tracking-widest text-xs font-bold flex items-center justify-center gap-2 shadow-lg cursor-pointer"
-            >
-              <PackageCheck className="w-4 h-4 text-[#121110] stroke-[2.5]" />
-              <span>Order Complimentary Swatches</span>
-            </button>
+              {/* Drawer Navigation Links */}
+              <nav className="space-y-3">
+                {navLinks.map((link) => {
+                  const isActive =
+                    activeTab === link.id ||
+                    (link.hasMegaMenu && (activeTab === 'projects' || activeTab === 'category'));
 
-            <button
-              onClick={() => {
-                setIsMobileDrawerOpen(false);
-                onNavigate('contact');
-              }}
-              className="w-full py-2.5 rounded-xl bg-white/5 border border-white/15 text-white hover:bg-white/10 text-xs font-bold uppercase tracking-wider flex items-center justify-center space-x-2 cursor-pointer"
-            >
-              <PhoneCall className="w-3.5 h-3.5 text-[#F5D07F]" />
-              <span>Private Consultation</span>
-            </button>
+                  if (link.hasMegaMenu) {
+                    return (
+                      <div key={link.id} className="border-b border-white/10 pb-3 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <button
+                            onClick={() => {
+                              setIsMobileDrawerOpen(false);
+                              onNavigate('projects');
+                            }}
+                            className={`text-base font-serif font-bold uppercase tracking-wider text-left flex items-center gap-2 ${
+                              isActive ? 'text-[#F5D07F]' : 'text-white hover:text-[#F5D07F]'
+                            }`}
+                          >
+                            <span>Our Projects</span>
+                            <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
+                          </button>
+
+                          <button
+                            onClick={() => setMobileCategoriesExpanded(!mobileCategoriesExpanded)}
+                            className="px-2 py-1 rounded-lg bg-white/5 border border-[#C5A059]/30 text-[11px] text-[#F5D07F] flex items-center gap-1 font-semibold cursor-pointer"
+                          >
+                            <span>Categories</span>
+                            <ChevronDown
+                              className={`w-3.5 h-3.5 transition-transform duration-300 ${
+                                mobileCategoriesExpanded ? 'rotate-180' : ''
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        {/* Collapsible Category List */}
+                        {mobileCategoriesExpanded && (
+                          <div className="pt-1 space-y-1.5 pl-2 border-l-2 border-[#C5A059]/30">
+                            {Object.values(CATEGORIES_DATA).map((cat) => (
+                              <button
+                                key={cat.id}
+                                onClick={() => handleCategoryClick(cat.id as CategorySlug)}
+                                className="w-full p-2 rounded-xl bg-white/5 hover:bg-[#C5A059]/20 hover:border-[#C5A059]/50 border border-transparent transition-all text-left flex items-center justify-between group cursor-pointer"
+                              >
+                                <div>
+                                  <span className="block text-xs font-semibold text-white group-hover:text-[#F5D07F]">
+                                    {cat.title}
+                                  </span>
+                                  <span className="text-[9px] text-[#C5A059] block font-light line-clamp-1">
+                                    {cat.materialHighlight}
+                                  </span>
+                                </div>
+                                <ArrowRight className="w-3 h-3 text-[#C5A059] opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={link.id}
+                      onClick={() => {
+                        setIsMobileDrawerOpen(false);
+                        onNavigate(link.id);
+                      }}
+                      className={`block w-full text-left text-base font-serif font-bold uppercase tracking-wider border-b border-white/10 pb-3 transition-colors ${
+                        isActive ? 'text-[#F5D07F]' : 'text-white hover:text-[#F5D07F]'
+                      }`}
+                    >
+                      {link.label}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Drawer Bottom CTA Actions */}
+            <div className="pt-4 border-t border-[#C5A059]/40 space-y-2.5 mt-6">
+              <button
+                onClick={() => {
+                  setIsMobileDrawerOpen(false);
+                  onRequestSwatches();
+                }}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#C5A059] via-[#E2C37E] to-[#C5A059] text-[#121110] uppercase tracking-widest text-xs font-bold flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+              >
+                <PackageCheck className="w-4 h-4 text-[#121110] stroke-[2.5]" />
+                <span>Order Swatch Box</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsMobileDrawerOpen(false);
+                  onNavigate('contact');
+                }}
+                className="w-full py-2.5 rounded-xl bg-white/5 border border-white/15 text-white hover:bg-white/10 text-xs font-bold uppercase tracking-wider flex items-center justify-center space-x-2 cursor-pointer"
+              >
+                <PhoneCall className="w-3.5 h-3.5 text-[#F5D07F]" />
+                <span>Private Consultation</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
