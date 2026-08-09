@@ -33,7 +33,7 @@ export function App() {
     if (savedSession) {
       try {
         setAdminUser(JSON.parse(savedSession));
-      } catch (err) {
+      } catch {
         localStorage.removeItem('maison_admin_session');
       }
     }

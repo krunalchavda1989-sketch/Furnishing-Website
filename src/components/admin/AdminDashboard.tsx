@@ -20,8 +20,7 @@ import {
   PhoneCall,
   Menu,
   X,
-  ChevronRight,
-  Sparkles
+  ChevronRight
 } from 'lucide-react';
 import type { AdminUser, SwatchRequestItem, AuditLogItem, ContactInquiryItem } from '../../types/adminTypes';
 import type { Product, CategorySlug } from '../../types';

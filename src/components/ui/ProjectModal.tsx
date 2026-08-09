@@ -13,9 +13,9 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   onClose,
   onNavigateToCategory
 }) => {
-  if (!project) return null;
-
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  if (!project) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">

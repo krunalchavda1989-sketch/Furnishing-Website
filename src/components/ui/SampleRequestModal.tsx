@@ -15,8 +15,6 @@ export const SampleRequestModal: React.FC<SampleRequestModalProps> = ({
   onClose,
   defaultCategory = 'fabrics'
 }) => {
-  if (!isOpen) return null;
-
   const [step, setStep] = useState(1);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([defaultCategory]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,6 +28,8 @@ export const SampleRequestModal: React.FC<SampleRequestModalProps> = ({
     projectType: 'Residential Master Residence',
     notes: ''
   });
+
+  if (!isOpen) return null;
 
   const toggleCategory = (catId: string) => {
     if (selectedCategories.includes(catId)) {
