@@ -790,32 +790,39 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
 
         {/* Sidebar Footer User Profile */}
-        <div className="p-4 border-t border-white/10 bg-[#121110] space-y-3">
-          <div className="flex items-center justify-between px-2">
-            <div className="flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-full bg-[#C5A059] text-[#121110] font-bold text-xs flex items-center justify-center">
-                {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+        <div className="p-4 border-t border-[#C9A56A]/25 bg-[#0F1714]/90 backdrop-blur-xl space-y-3.5">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center space-x-3">
+              <div className="relative">
+                <div className="w-9 h-9 rounded-full bg-[#C9A56A]/20 border border-[#C9A56A]/50 text-[#C9A56A] font-bold text-xs flex items-center justify-center shadow-md">
+                  {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                </div>
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-[#0F1714]" />
               </div>
-              <div className="text-left leading-tight">
-                <span className="block text-xs font-bold text-white truncate max-w-[120px]">{user.name}</span>
-                <span className="text-[10px] text-[#C5A059] font-medium">{user.role}</span>
+              <div className="text-left leading-tight min-w-0">
+                <span className="block text-xs font-serif font-bold text-white tracking-wide truncate max-w-[130px]" title={user.name}>
+                  {user.name}
+                </span>
+                <span className="text-[10px] text-[#C9A56A] font-semibold uppercase tracking-widest block mt-0.5">
+                  {user.role}
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-1">
+          <div className="grid grid-cols-2 gap-2 pt-0.5">
             <button
               onClick={onReturnToSite}
-              className="px-2.5 py-1.5 rounded-lg border border-white/15 bg-white/5 text-white hover:bg-white/10 text-[11px] font-semibold uppercase tracking-wider transition-all flex items-center justify-center space-x-1 cursor-pointer"
+              className="px-2.5 py-2 rounded-xl border border-[#C9A56A]/30 bg-[#163129] text-white hover:bg-[#C9A56A] hover:text-[#0F1714] text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center space-x-1.5 cursor-pointer shadow-md group"
             >
-              <ExternalLink className="w-3 h-3 text-[#C5A059]" />
+              <ExternalLink className="w-3.5 h-3.5 text-[#C9A56A] group-hover:text-[#0F1714] transition-colors" />
               <span>Live Site</span>
             </button>
             <button
               onClick={onLogout}
-              className="px-2.5 py-1.5 rounded-lg bg-red-950/60 border border-red-500/30 text-red-200 hover:bg-red-900/60 text-[11px] font-semibold uppercase tracking-wider transition-all flex items-center justify-center space-x-1 cursor-pointer"
+              className="px-2.5 py-2 rounded-xl border border-red-500/30 bg-[#163129] text-red-300 hover:bg-red-950/60 text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center space-x-1.5 cursor-pointer shadow-md"
             >
-              <LogOut className="w-3 h-3 text-red-400" />
+              <LogOut className="w-3.5 h-3.5 text-red-400" />
               <span>Logout</span>
             </button>
           </div>
@@ -910,13 +917,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </nav>
             </div>
 
-            <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-              <span className="text-xs text-white font-bold">{user.name}</span>
+            <div className="pt-4 border-t border-[#C9A56A]/25 flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-full bg-[#C9A56A]/20 border border-[#C9A56A]/50 text-[#C9A56A] font-bold text-xs flex items-center justify-center">
+                  {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                </div>
+                <div>
+                  <span className="text-xs font-serif font-bold text-white block">{user.name}</span>
+                  <span className="text-[10px] text-[#C9A56A] font-medium block">{user.role}</span>
+                </div>
+              </div>
+
               <button
                 onClick={onLogout}
-                className="px-3 py-1.5 rounded-lg bg-red-950/60 text-red-200 text-xs font-semibold"
+                className="px-3 py-1.5 rounded-xl border border-red-500/30 bg-[#163129] text-red-300 hover:bg-red-950/60 text-xs font-bold uppercase tracking-wider transition-all flex items-center space-x-1 cursor-pointer"
               >
-                Logout
+                <LogOut className="w-3.5 h-3.5 text-red-400" />
+                <span>Logout</span>
               </button>
             </div>
           </div>
