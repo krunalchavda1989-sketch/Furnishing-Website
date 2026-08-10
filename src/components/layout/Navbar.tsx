@@ -77,15 +77,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-[#C9A56A] sm:border-2 flex items-center justify-center bg-[#C9A56A]/20 group-hover:bg-[#C9A56A] group-hover:shadow-[0_0_15px_rgba(201,165,106,0.5)] transition-all duration-300 shadow-md shrink-0">
               <span className="font-serif font-bold text-base sm:text-xl text-[#C9A56A] group-hover:text-[#0F1714] transition-colors">
-                M
+                A
               </span>
             </div>
             <div className="leading-tight">
               <span className="font-serif tracking-wider sm:tracking-widest text-sm sm:text-xl font-bold uppercase text-white group-hover:text-[#C9A56A] transition-colors block drop-shadow-sm">
-                Maison & Drape
+                Atelier Living
               </span>
               <span className="hidden xs:block text-[8px] sm:text-[10px] tracking-[0.18em] sm:tracking-[0.28em] uppercase text-[#C9A56A] font-semibold">
-                Atelier Haute Living
+                Designed For Inspired Living
               </span>
             </div>
           </button>

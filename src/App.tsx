@@ -30,11 +30,12 @@ export function App() {
       setActiveTab('admin');
     }
 
-    const savedSession = localStorage.getItem('maison_admin_session');
+    const savedSession = localStorage.getItem('atelier_admin_session') || localStorage.getItem('maison_admin_session');
     if (savedSession) {
       try {
         setAdminUser(JSON.parse(savedSession));
       } catch {
+        localStorage.removeItem('atelier_admin_session');
         localStorage.removeItem('maison_admin_session');
       }
     }
@@ -85,6 +86,7 @@ export function App() {
 
   const handleAdminLogout = () => {
     setAdminUser(null);
+    localStorage.removeItem('atelier_admin_session');
     localStorage.removeItem('maison_admin_session');
   };
 

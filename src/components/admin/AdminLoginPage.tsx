@@ -34,8 +34,8 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
     message: 'Testing connection...'
   });
 
-  const DEMO_EMAIL = 'admin@maison-drape.com';
-  const DEMO_PASSWORD = 'MaisonAdmin2026!';
+  const DEMO_EMAIL = 'admin@atelier-living.com';
+  const DEMO_PASSWORD = 'AtelierAdmin2026!';
 
   useEffect(() => {
     const checkConnection = async () => {
@@ -66,7 +66,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
 
     if (user) {
       if (rememberMe) {
-        localStorage.setItem('maison_admin_session', JSON.stringify(user));
+        localStorage.setItem('atelier_admin_session', JSON.stringify(user));
       }
       onLoginSuccess(user);
     } else {
@@ -97,11 +97,11 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
         {/* Brand Header */}
         <div className="text-center space-y-3">
           <div className="w-16 h-16 rounded-full border-2 border-[#C9A56A] bg-[#C9A56A]/20 flex items-center justify-center mx-auto shadow-[0_0_25px_rgba(201,165,106,0.4)]">
-            <span className="font-serif font-bold text-3xl text-[#C9A56A]">M</span>
+            <span className="font-serif font-bold text-3xl text-[#C9A56A]">A</span>
           </div>
           <div>
             <h1 className="font-serif text-3xl sm:text-4xl text-white font-bold tracking-wider">
-              MAISON & DRAPE
+              ATELIER LIVING
             </h1>
             <p className="text-xs uppercase tracking-[0.3em] text-[#C9A56A] font-semibold mt-1">
               Master Admin & Curator Portal
@@ -142,7 +142,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
             <div>
               <strong className="block text-white">Demo Credentials Ready:</strong>
               <span className="font-mono text-[11px] text-[#E9DFD1]">
-                admin@maison-drape.com • MaisonAdmin2026!
+                admin@atelier-living.com • AtelierAdmin2026!
               </span>
             </div>
           </div>
@@ -175,7 +175,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white/5 border border-white/15 focus:border-[#C9A56A] focus:bg-white/10 focus:outline-none text-sm text-white placeholder-white/30 transition-all"
-                  placeholder="admin@maison-drape.com"
+                  placeholder="admin@atelier-living.com"
                   required
                 />
                 <Mail className="w-4 h-4 text-[#C9A56A] absolute left-3.5 top-4" />
@@ -244,7 +244,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
 
         {/* Footer Security Badge */}
         <div className="text-center space-y-1 text-[11px] text-[#8C9A90]">
-          <p>Maison & Drape • Atelier Haute Living Security System v3.6</p>
+          <p>Atelier Living • Haute Living Security System v3.6</p>
           <p>Connected to Supabase Cloud Instance • ywsmtfhzlhljeqetmvol</p>
         </div>
       </div>

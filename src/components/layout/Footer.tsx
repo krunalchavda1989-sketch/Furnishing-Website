@@ -38,7 +38,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onRequestSwatches })
         <div className="bg-[#163129] rounded-3xl p-8 lg:p-12 border border-[#C9A56A]/20 mb-16 flex flex-col lg:flex-row items-center justify-between gap-8 shadow-2xl">
           <div className="max-w-xl">
             <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-medium block mb-2">
-              The Maison Gazette
+              The Atelier Gazette
             </span>
             <h3 className="font-serif text-2xl sm:text-3xl text-[#E9DFD1] leading-tight">
               Receive Curated Textile Archives & Private Exhibition Invitations
@@ -88,14 +88,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onRequestSwatches })
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center space-x-3">
               <div className="w-9 h-9 rounded-full border border-[#C9A56A] flex items-center justify-center bg-[#C9A56A]/10">
-                <span className="font-serif font-bold text-base text-[#C9A56A]">M</span>
+                <span className="font-serif font-bold text-base text-[#C9A56A]">A</span>
               </div>
               <span className="font-serif tracking-widest text-xl font-semibold uppercase text-[#E9DFD1]">
-                Maison & Drape
+                Atelier Living
               </span>
             </div>
             <p className="text-xs text-[#8C9A90] leading-relaxed font-light pr-6">
-              Maison & Drape is an international interior design house crafting bespoke textiles, architectural drapes, structural upholstery, hand-knotted rugs, and limited-edition atelier artifacts for fine private residences, superyachts, and boutique luxury hotels.
+              Atelier Living is an international interior design house crafting bespoke textiles, architectural drapes, structural upholstery, hand-knotted rugs, and limited-edition atelier artifacts for fine private residences, superyachts, and boutique luxury hotels.
             </p>
             <div className="pt-2 flex items-center space-x-4">
               <a href="#globe" aria-label="Global Showrooms" className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-[#8C9A90] hover:text-[#C9A56A] hover:border-[#C9A56A] transition-all">
@@ -173,7 +173,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onRequestSwatches })
 
         {/* Bottom Copyright */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#8C9A90] gap-4">
-          <p>© {new Date().getFullYear()} Maison & Drape Atelier Ltd. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Atelier Living Ltd. All rights reserved.</p>
           <div className="flex items-center space-x-6">
             <button onClick={() => onNavigate('story')} className="hover:text-[#C9A56A]">
               Craft Philosophy

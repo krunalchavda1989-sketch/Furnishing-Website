@@ -89,7 +89,7 @@ export const StoryPage: React.FC = () => {
           A Century of <span className="italic font-subserif gold-gradient-text">Tactile Mastery</span> & Spatial Poetry
         </h1>
         <p className="text-base text-[#2C3A33] font-light leading-relaxed max-w-2xl mx-auto font-subserif text-lg">
-          For over 120 years, Maison & Drape has stood at the intersection of artisanal weaving traditions and modern architectural living. We believe that true interior luxury is defined by materials that honor the senses and endure across generations.
+          For over 120 years, Atelier Living has stood at the intersection of artisanal weaving traditions and modern architectural living. We believe that true interior luxury is defined by materials that honor the senses and endure across generations.
         </p>
       </section>
 

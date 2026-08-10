@@ -70,8 +70,8 @@ export const loginAdminWithSupabase = async (
   email: string,
   pass: string
 ): Promise<{ user: AdminUser | null; error: string | null }> => {
-  const defaultAdminEmail = (import.meta.env.VITE_ADMIN_DEFAULT_EMAIL || 'admin@maison-drape.com').toLowerCase();
-  const defaultAdminPass = import.meta.env.VITE_ADMIN_DEFAULT_PASSWORD || 'MaisonAdmin2026!';
+  const defaultAdminEmail = (import.meta.env.VITE_ADMIN_DEFAULT_EMAIL || 'admin@atelier-living.com').toLowerCase();
+  const defaultAdminPass = import.meta.env.VITE_ADMIN_DEFAULT_PASSWORD || 'AtelierAdmin2026!';
 
   const cleanEmail = email.trim().toLowerCase();
 

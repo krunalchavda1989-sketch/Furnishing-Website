@@ -13,7 +13,7 @@ export const AdminForgotPasswordModal: React.FC<AdminForgotPasswordModalProps> =
   onSuccess
 }) => {
   const [step, setStep] = useState<'email' | 'code' | 'success'>('email');
-  const [email, setEmail] = useState('admin@maison-drape.com');
+  const [email, setEmail] = useState('admin@atelier-living.com');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -104,7 +104,7 @@ export const AdminForgotPasswordModal: React.FC<AdminForgotPasswordModalProps> =
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/15 focus:border-[#C9A56A] focus:outline-none text-sm text-white placeholder-white/40"
-                  placeholder="admin@maison-drape.com"
+                  placeholder="admin@atelier-living.com"
                   required
                 />
                 <Mail className="w-4 h-4 text-[#C9A56A] absolute left-3.5 top-3.5" />

@@ -171,22 +171,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const [swatchRequests, setSwatchRequests] = useState<SwatchRequestItem[]>(() => {
-    const deleted = getDeletedKeys('maison_deleted_swatches');
+    const deleted = getDeletedKeys('atelier_deleted_swatches').concat(getDeletedKeys('maison_deleted_swatches'));
     return INITIAL_SWATCH_REQUESTS.filter((s) => !deleted.includes(s.id) && !deleted.includes(s.email));
   });
 
   const [contactInquiries, setContactInquiries] = useState<ContactInquiryItem[]>(() => {
-    const deleted = getDeletedKeys('maison_deleted_inquiries');
+    const deleted = getDeletedKeys('atelier_deleted_inquiries').concat(getDeletedKeys('maison_deleted_inquiries'));
     return INITIAL_CONTACT_INQUIRIES.filter((i) => !deleted.includes(i.id) && !deleted.includes(i.email));
   });
 
   const [newsletterSubscribers, setNewsletterSubscribers] = useState<NewsletterSubscriberItem[]>(() => {
-    const deleted = getDeletedKeys('maison_deleted_subscribers');
+    const deleted = getDeletedKeys('atelier_deleted_subscribers').concat(getDeletedKeys('maison_deleted_subscribers'));
     return INITIAL_NEWSLETTER_SUBSCRIBERS.filter((s) => !deleted.includes(s.id) && !deleted.includes(s.email));
   });
 
   const [productsList, setProductsList] = useState<Product[]>(() => {
-    const deleted = getDeletedKeys('maison_deleted_products');
+    const deleted = getDeletedKeys('atelier_deleted_products').concat(getDeletedKeys('maison_deleted_products'));
     return PRODUCTS_DATA.filter((p) => !deleted.includes(p.id));
   });
 
@@ -195,7 +195,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     {
       id: 'adm-001',
       name: 'Lady Vivienne Sterling',
-      email: 'admin@maison-drape.com',
+      email: 'admin@atelier-living.com',
       role: 'Master Curator',
       status: 'Active',
       lastLogin: 'Today'
@@ -718,12 +718,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* Brand Header */}
           <div className="flex items-center space-x-3.5 pb-4 border-b border-white/10">
             <div className="w-11 h-11 rounded-2xl border-2 border-[#C9A56A] bg-[#C9A56A]/20 flex items-center justify-center shadow-lg shrink-0">
-              <span className="font-serif font-bold text-2xl text-[#C9A56A]">M</span>
+              <span className="font-serif font-bold text-2xl text-[#C9A56A]">A</span>
             </div>
             <div>
               <div className="flex items-center space-x-1.5">
                 <span className="font-serif text-base font-bold tracking-widest text-white uppercase">
-                  MAISON & DRAPE
+                  ATELIER LIVING
                 </span>
               </div>
               <span className="text-[10px] text-[#C9A56A] font-semibold uppercase tracking-wider block">
@@ -832,11 +832,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg border border-[#C5A059] bg-[#C5A059]/20 flex items-center justify-center">
-              <span className="font-serif font-bold text-lg text-[#F5D07F]">M</span>
+            <div className="w-8 h-8 rounded-lg border border-[#C9A56A] bg-[#C9A56A]/20 flex items-center justify-center">
+              <span className="font-serif font-bold text-lg text-[#C9A56A]">A</span>
             </div>
             <span className="font-serif text-sm font-bold tracking-widest text-white uppercase">
-              MAISON & DRAPE
+              ATELIER LIVING
             </span>
           </div>
         </div>
@@ -845,21 +845,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onClick={onReturnToSite}
           className="p-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold flex items-center gap-1"
         >
-          <ExternalLink className="w-4 h-4 text-[#C5A059]" />
+          <ExternalLink className="w-4 h-4 text-[#C9A56A]" />
         </button>
       </header>
 
       {/* --- MOBILE SIDEBAR DRAWER OVERLAY --- */}
       {isMobileSidebarOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md lg:hidden flex">
-          <div className="w-80 bg-[#141312] border-r border-[#C5A059]/30 h-full flex flex-col justify-between p-6 space-y-6 animate-in slide-in-from-left duration-300">
+          <div className="w-80 bg-[#163129] border-r border-[#C9A56A]/30 h-full flex flex-col justify-between p-6 space-y-6 animate-in slide-in-from-left duration-300">
             <div className="space-y-6 overflow-y-auto">
               <div className="flex items-center justify-between pb-4 border-b border-white/10">
                 <div className="flex items-center space-x-3">
-                  <div className="w-9 h-9 rounded-xl border border-[#C5A059] bg-[#C5A059]/20 flex items-center justify-center">
-                    <span className="font-serif font-bold text-xl text-[#F5D07F]">M</span>
+                  <div className="w-9 h-9 rounded-xl border border-[#C9A56A] bg-[#C9A56A]/20 flex items-center justify-center">
+                    <span className="font-serif font-bold text-xl text-[#C9A56A]">A</span>
                   </div>
-                  <span className="font-serif text-base font-bold text-white">MAISON & DRAPE</span>
+                  <span className="font-serif text-base font-bold text-white">ATELIER LIVING</span>
                 </div>
                 <button
                   onClick={() => setIsMobileSidebarOpen(false)}
@@ -1121,7 +1121,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="pb-4 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="font-serif text-2xl font-bold text-white">Maison Gazette & Newsletter Subscribers</h2>
+                <h2 className="font-serif text-2xl font-bold text-white">Atelier Gazette & Newsletter Subscribers</h2>
                 <p className="text-xs text-[#D8C8B8]">
                   Manage private lookbook subscribers, trade exhibition invitees, and VIP Privé clients.
                 </p>
@@ -1952,7 +1952,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div>
               <h3 className="font-serif text-2xl font-bold text-white">Add Newsletter Subscriber</h3>
               <p className="text-xs text-[#D8C8B8]">
-                Manually add a VIP client or trade email to the Maison Gazette distribution list.
+                Manually add a VIP client or trade email to the Atelier Gazette distribution list.
               </p>
             </div>
 

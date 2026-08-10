@@ -35,7 +35,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             </h1>
 
             <p className="text-sm sm:text-base text-[#2C3A33] font-light leading-relaxed max-w-lg">
-              Maison & Drape curates rare woven silks, Belgian flax drapes, hand-knotted Himalayan rugs, and bespoke wallcoverings for grand residences, yachts, and private sanctuaries worldwide.
+              Atelier Living curates rare woven silks, Belgian flax drapes, hand-knotted Himalayan rugs, and bespoke wallcoverings for grand residences, yachts, and private sanctuaries worldwide.
             </p>
 
             <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
@@ -85,7 +85,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/10 h-[400px]">
             <img
               src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1400&q=85"
-              alt="Maison Craftsmen"
+              alt="Atelier Living Craftsmen"
               className="w-full h-full object-cover filter brightness-90"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
@@ -93,27 +93,26 @@ export const HomePage: React.FC<HomePageProps> = ({
               <span className="text-xs uppercase tracking-widest text-[#C9A56A] block mb-1 font-medium">
                 The Heritage Philosophy
               </span>
-              <p className="text-xs text-[#E9DFD1] italic">
-                "True luxury in interior design is not merely visual — it is acoustic, tactile, and light-responsive."
-              </p>
+              <h3 className="font-serif text-xl sm:text-2xl text-white">Bespoke Architectural Weaving</h3>
             </div>
           </div>
 
           <div className="space-y-6">
-            <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-medium block">
-              Atelier Craftsmanship
+            <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-semibold">
+              Centuries of Textile Mastery
             </span>
-            <h2 className="font-serif text-3xl sm:text-5xl text-[#E9DFD1] font-normal leading-tight">
-              Woven from Heritage River Basins & Historic Looms
+            <h2 className="font-serif text-3xl sm:text-5xl text-white font-normal leading-tight">
+              Woven for Generations. <br />
+              <span className="italic font-subserif gold-gradient-text">Designed to Endure.</span>
             </h2>
-            <p className="text-sm text-[#8C9A90] leading-relaxed font-light font-subserif text-lg">
-              Every drape, cushion, and carpet in our archives is rooted in historical craftsmanship — from organic flax harvested along the Lys river in Flanders to raw silks spun in the hills of Como and hand-dyed Angora mohair velvets from Florence.
+            <p className="text-sm sm:text-base text-[#8C9A90] font-light leading-relaxed">
+              From historic Como silk looms to hand-loomed Belgian flax fields, each material in our repository undergoes rigorous martindale testing, acoustic calibration, and lightfastness grading.
             </p>
             <button
               onClick={() => onNavigate('story')}
-              className="inline-flex items-center space-x-2 text-xs uppercase tracking-widest font-bold text-[#C9A56A] hover:text-[#E6C894] transition-colors cursor-pointer"
+              className="px-8 py-3.5 rounded-full border border-[#C9A56A] text-[#C9A56A] hover:bg-[#C9A56A] hover:text-[#0F1714] transition-all text-xs font-bold uppercase tracking-widest inline-flex items-center space-x-2 cursor-pointer"
             >
-              <span>Discover Our Heritage Story</span>
+              <span>Explore Our Heritage & Story</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -243,7 +242,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           <Star className="w-5 h-5 fill-[#C9A56A]" />
         </div>
         <blockquote className="font-serif text-2xl sm:text-4xl text-[#0F1714] italic leading-relaxed font-subserif">
-          "Working with Maison & Drape on our Belgravia townhouse was transformative. Their acoustic sheer drapes and hand-knotted Himalayan rugs brought an understated quiet luxury that defines our home."
+          "Working with Atelier Living on our Belgravia townhouse was transformative. Their acoustic sheer drapes and hand-knotted Himalayan rugs brought an understated quiet luxury that defines our home."
         </blockquote>
         <div>
           <cite className="not-italic text-xs font-bold uppercase tracking-widest text-[#0F1714] block">

@@ -82,7 +82,7 @@ async function main() {
   const { error: adminErr } = await adminSupabase.from('admin_users').upsert({
     id: 'adm-001',
     name: 'Lady Vivienne Sterling',
-    email: 'admin@maison-drape.com',
+    email: 'admin@atelier-living.com',
     role: 'Master Curator',
     status: 'Active'
   }, { onConflict: 'email' });

@@ -82,7 +82,7 @@ export const SHOWROOMS_DATA: Showroom[] = [
     country: 'United Kingdom',
     address: '42 Mayfair Square, London W1K 2PB',
     phone: '+44 (0)20 7946 0188',
-    email: 'mayfair@maison-drape.com',
+    email: 'mayfair@atelier-living.com',
     hours: 'Mon - Sat: 10:00 - 18:30 | Sun: By Private Appointment',
     image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=85',
     coordinates: { lat: 51.509865, lng: -0.118092 }
@@ -93,7 +93,7 @@ export const SHOWROOMS_DATA: Showroom[] = [
     country: 'France',
     address: '18 Rue du Faubourg Saint-Honoré, 75008 Paris',
     phone: '+33 1 42 68 55 00',
-    email: 'paris@maison-drape.com',
+    email: 'paris@atelier-living.com',
     hours: 'Mon - Fri: 09:30 - 18:00 | Sat: 10:00 - 17:00',
     image: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1000&q=85',
     coordinates: { lat: 48.866667, lng: 2.333333 }
@@ -104,7 +104,7 @@ export const SHOWROOMS_DATA: Showroom[] = [
     country: 'Italy',
     address: 'Via Montenapoleone 12, 20121 Milano',
     phone: '+39 02 7600 4411',
-    email: 'milano@maison-drape.com',
+    email: 'milano@atelier-living.com',
     hours: 'Mon - Sat: 10:00 - 19:00',
     image: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1000&q=85',
     coordinates: { lat: 45.464204, lng: 9.190032 }
@@ -115,7 +115,7 @@ export const SHOWROOMS_DATA: Showroom[] = [
     country: 'United States',
     address: '884 Madison Avenue, New York, NY 10021',
     phone: '+1 212 555 0192',
-    email: 'madison@maison-drape.com',
+    email: 'madison@atelier-living.com',
     hours: 'Mon - Sat: 10:00 - 18:00',
     image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1000&q=85',
     coordinates: { lat: 40.7736, lng: -73.964 }

@@ -87,7 +87,7 @@ export const SampleRequestModal: React.FC<SampleRequestModalProps> = ({
           <div>
             <div className="mb-6">
               <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-medium flex items-center gap-1.5">
-                <PackageCheck className="w-4 h-4" /> Maison Sample Atelier
+                <PackageCheck className="w-4 h-4" /> Atelier Living Sample Atelier
               </span>
               <h3 className="font-serif text-2xl sm:text-3xl text-[#E9DFD1] mt-1">
                 Order Complimentary Material Swatches

@@ -1,5 +1,5 @@
 -- =======================================================
--- MAISON & DRAPE - SUPABASE DATABASE SCHEMA SETUP
+-- ATELIER LIVING - SUPABASE DATABASE SCHEMA SETUP
 -- Run this in your Supabase SQL Editor (https://supabase.com/dashboard/project/ywsmtfhzlhljeqetmvol/sql)
 -- =======================================================
 
