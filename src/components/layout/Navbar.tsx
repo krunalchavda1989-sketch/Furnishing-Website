@@ -107,18 +107,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <button
                       onClick={() => onNavigate('projects')}
-                      className={`flex items-center space-x-1.5 text-xs xl:text-sm uppercase tracking-widest font-semibold px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer ${
+                      className={`relative flex items-center space-x-1.5 text-xs xl:text-sm uppercase tracking-widest font-semibold px-3 py-2 transition-all duration-200 cursor-pointer ${
                         isActive
-                          ? 'text-[#C9A56A] bg-[#C9A56A]/25 border border-[#C9A56A]/50 shadow-inner'
-                          : 'text-white/90 hover:text-[#C9A56A] hover:bg-white/10'
+                          ? 'text-[#C9A56A] font-bold'
+                          : 'text-white/90 hover:text-[#C9A56A]'
                       }`}
                     >
                       <span>{link.label}</span>
                       <ChevronDown
                         className={`w-4 h-4 transition-transform duration-300 ${
-                          isMegaMenuOpen ? 'rotate-180 text-[#C9A56A]' : ''
+                          isMegaMenuOpen ? 'rotate-180 text-[#C9A56A]' : isActive ? 'text-[#C9A56A]' : ''
                         }`}
                       />
+                      {isActive && (
+                        <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-[#C9A56A] rounded-full shadow-[0_0_8px_rgba(201,165,106,0.8)]" />
+                      )}
                     </button>
 
                     {/* Mega Menu Dropdown */}
@@ -173,13 +176,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   key={link.id}
                   onClick={() => onNavigate(link.id)}
-                  className={`text-xs xl:text-sm uppercase tracking-widest font-semibold px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer ${
+                  className={`relative text-xs xl:text-sm uppercase tracking-widest font-semibold px-3 py-2 transition-all duration-200 cursor-pointer ${
                     isActive
-                      ? 'text-[#C9A56A] bg-[#C9A56A]/25 border border-[#C9A56A]/50 shadow-inner'
-                      : 'text-white/90 hover:text-[#C9A56A] hover:bg-white/10'
+                      ? 'text-[#C9A56A] font-bold'
+                      : 'text-white/90 hover:text-[#C9A56A]'
                   }`}
                 >
-                  {link.label}
+                  <span>{link.label}</span>
+                  {isActive && (
+                    <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-[#C9A56A] rounded-full shadow-[0_0_8px_rgba(201,165,106,0.8)]" />
+                  )}
                 </button>
               );
             })}
