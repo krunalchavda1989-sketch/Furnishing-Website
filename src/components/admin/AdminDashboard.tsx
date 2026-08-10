@@ -761,19 +761,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         onClick={() => setActiveTab(tab.id as any)}
                         className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs uppercase tracking-wider font-semibold transition-all cursor-pointer ${
                           isActive
-                            ? 'bg-[#C5A059] text-[#121110] font-bold shadow-lg shadow-[#C5A059]/20'
-                            : 'text-[#D8C8B8] hover:text-[#F5D07F] hover:bg-white/5'
+                            ? 'bg-[#C9A56A]/20 text-[#C9A56A] border border-[#C9A56A]/40 font-bold shadow-md'
+                            : 'text-[#8C9A90] hover:text-[#C9A56A] hover:bg-white/5'
                         }`}
                       >
                         <div className="flex items-center space-x-3">
-                          <Icon className={`w-4 h-4 ${isActive ? 'text-[#121110]' : 'text-[#C5A059]'}`} />
+                          <Icon className={`w-4 h-4 ${isActive ? 'text-[#C9A56A]' : 'text-[#C9A56A]/70'}`} />
                           <span>{tab.label}</span>
                         </div>
                         {tab.badge !== undefined && tab.badge > 0 && (
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                               isActive
-                                ? 'bg-[#121110] text-[#F5D07F]'
+                                ? 'bg-[#0F1714] text-[#C9A56A] border border-[#C9A56A]/30'
                                 : tab.badgeColor || 'bg-white/10 text-white'
                             }`}
                           >
@@ -957,21 +957,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {activeTab === 'overview' && (
           <div className="space-y-8 animate-in fade-in duration-300">
             {/* Live Supabase Connection & Latency Banner */}
-            <div className="bg-[#141312] border border-[#C5A059]/40 rounded-3xl p-6 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-80 h-80 bg-[#C5A059]/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/30 rounded-3xl p-6 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-[#C9A56A]/10 rounded-full blur-3xl pointer-events-none"></div>
 
               <div className="space-y-2 relative z-10">
                 <div className="flex items-center space-x-2.5">
-                  <Database className="w-5 h-5 text-[#F5D07F]" />
+                  <Database className="w-5 h-5 text-[#C9A56A]" />
                   <h3 className="font-serif text-xl font-bold text-white">Supabase Cloud Database Status</h3>
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#C5A059]/20 text-[#F5D07F] text-[10px] font-mono font-bold uppercase border border-[#C5A059]/40">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#C9A56A]/20 text-[#C9A56A] text-[10px] font-mono font-bold uppercase border border-[#C9A56A]/40">
                     ywsmtfhzlhljeqetmvol
                   </span>
                 </div>
-                <p className="text-xs text-[#D8C8B8]">
+                <p className="text-xs text-[#E9DFD1]">
                   Real-time database synchronization active for Contact Inquiries, Swatch Requests, Catalog Products, and Security Audit Logs.
                 </p>
-                <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-[#8C7A6B] pt-1">
+                <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-[#8C9A90] pt-1">
                   <span>SSL Connection: 256-bit TLS</span>
                   <span>•</span>
                   <span>Tables Synced: contact_inquiries, swatch_requests, products, admin_users, admin_audit_logs</span>
@@ -980,7 +980,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               <div className="flex items-center space-x-4 shrink-0 relative z-10">
                 <div className="text-right">
-                  <span className="block text-[11px] uppercase tracking-wider text-[#D4AF37] font-semibold">
+                  <span className="block text-[11px] uppercase tracking-wider text-[#C9A56A] font-semibold">
                     Ping Latency
                   </span>
                   <span className="font-mono text-2xl font-bold text-emerald-400">
@@ -992,10 +992,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             {/* KPI Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-5 shadow-xl space-y-3">
-                <div className="flex items-center justify-between text-xs text-[#D4AF37] uppercase tracking-wider font-semibold">
+              <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-5 shadow-xl space-y-3">
+                <div className="flex items-center justify-between text-xs text-[#C9A56A] uppercase tracking-wider font-semibold">
                   <span>Client Inquiries</span>
-                  <Mail className="w-4 h-4 text-[#C5A059]" />
+                  <Mail className="w-4 h-4 text-[#C9A56A]" />
                 </div>
                 <div className="flex items-baseline justify-between">
                   <span className="font-serif text-3xl font-bold text-white">{contactInquiries.length}</span>
@@ -1003,13 +1003,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {contactInquiries.filter((i) => i.status === 'New').length} New Action Required
                   </span>
                 </div>
-                <span className="text-[11px] text-[#8C7A6B] block">Synced with contact_inquiries</span>
+                <span className="text-[11px] text-[#8C9A90] block">Synced with contact_inquiries</span>
               </div>
 
-              <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-5 shadow-xl space-y-3">
-                <div className="flex items-center justify-between text-xs text-[#D4AF37] uppercase tracking-wider font-semibold">
+              <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-5 shadow-xl space-y-3">
+                <div className="flex items-center justify-between text-xs text-[#C9A56A] uppercase tracking-wider font-semibold">
                   <span>Swatch Requests</span>
-                  <Layers className="w-4 h-4 text-[#C5A059]" />
+                  <Layers className="w-4 h-4 text-[#C9A56A]" />
                 </div>
                 <div className="flex items-baseline justify-between">
                   <span className="font-serif text-3xl font-bold text-white">{swatchRequests.length}</span>
@@ -1017,40 +1017,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <TrendingUp className="w-3.5 h-3.5" /> +14% this week
                   </span>
                 </div>
-                <span className="text-[11px] text-[#8C7A6B] block">
+                <span className="text-[11px] text-[#8C9A90] block">
                   {swatchRequests.filter((s) => s.status === 'Pending').length} Pending dispatch
                 </span>
               </div>
 
-              <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-5 shadow-xl space-y-3">
-                <div className="flex items-center justify-between text-xs text-[#D4AF37] uppercase tracking-wider font-semibold">
+              <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-5 shadow-xl space-y-3">
+                <div className="flex items-center justify-between text-xs text-[#C9A56A] uppercase tracking-wider font-semibold">
                   <span>Active Catalog Items</span>
-                  <Package className="w-4 h-4 text-[#C5A059]" />
+                  <Package className="w-4 h-4 text-[#C9A56A]" />
                 </div>
                 <div className="flex items-baseline justify-between">
                   <span className="font-serif text-3xl font-bold text-white">{productsList.length}</span>
                   <span className="text-xs text-emerald-400 font-semibold">8 Categories</span>
                 </div>
-                <span className="text-[11px] text-[#8C7A6B] block">Synced with products table</span>
+                <span className="text-[11px] text-[#8C9A90] block">Synced with products table</span>
               </div>
 
-              <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-5 shadow-xl space-y-3">
-                <div className="flex items-center justify-between text-xs text-[#D4AF37] uppercase tracking-wider font-semibold">
+              <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-5 shadow-xl space-y-3">
+                <div className="flex items-center justify-between text-xs text-[#C9A56A] uppercase tracking-wider font-semibold">
                   <span>Gazette Subscribers</span>
-                  <Send className="w-4 h-4 text-[#C5A059]" />
+                  <Send className="w-4 h-4 text-[#C9A56A]" />
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="font-serif text-3xl font-bold text-[#F5D07F]">{newsletterSubscribers.length}</span>
+                  <span className="font-serif text-3xl font-bold text-[#C9A56A]">{newsletterSubscribers.length}</span>
                   <span className="text-xs text-emerald-400 font-semibold">
                     {newsletterSubscribers.filter((s) => s.status === 'VIP Privé').length} VIP Privé
                   </span>
                 </div>
-                <span className="text-[11px] text-[#8C7A6B] block">Synced with newsletter_subscribers</span>
+                <span className="text-[11px] text-[#8C9A90] block">Synced with newsletter_subscribers</span>
               </div>
             </div>
 
             {/* Recent Contact Inquiries Preview */}
-            <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-6 shadow-xl space-y-4">
+            <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
                 <div>
                   <h3 className="font-serif text-xl text-white font-bold">Recent Client Contact Inquiries</h3>
@@ -1161,21 +1161,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <select
                   value={newsletterStatusFilter}
                   onChange={(e) => setNewsletterStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none cursor-pointer"
+                  className="w-full px-3 py-2.5 rounded-xl bg-[#163129]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none cursor-pointer"
                 >
-                  <option value="All" className="bg-[#141312]">All Statuses ({newsletterSubscribers.length})</option>
-                  <option value="Subscribed" className="bg-[#141312]">Subscribed</option>
-                  <option value="VIP Privé" className="bg-[#141312]">VIP Privé</option>
-                  <option value="Unsubscribed" className="bg-[#141312]">Unsubscribed</option>
+                  <option value="All" className="bg-[#163129] text-white">All Statuses ({newsletterSubscribers.length})</option>
+                  <option value="Subscribed" className="bg-[#163129] text-white">Subscribed</option>
+                  <option value="VIP Privé" className="bg-[#163129] text-white">VIP Privé</option>
+                  <option value="Unsubscribed" className="bg-[#163129] text-white">Unsubscribed</option>
                 </select>
               </div>
             </div>
 
             {/* Subscribers Table */}
-            <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl overflow-hidden shadow-xl">
+            <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl overflow-hidden shadow-xl">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-white/5 text-[#D4AF37] uppercase tracking-wider text-[10px] font-bold border-b border-white/10">
+                  <thead className="bg-[#0F1714]/80 text-[#C9A56A] uppercase tracking-wider text-[10px] font-bold border-b border-white/10">
                     <tr>
                       <th className="p-4">Subscriber Email</th>
                       <th className="p-4">Acquisition Source</th>
@@ -1184,10 +1184,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <th className="p-4 text-right">Status Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5 text-[#D8C8B8]">
+                  <tbody className="divide-y divide-white/5 text-[#E9DFD1]">
                     {filteredSubscribers.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="p-8 text-center text-[#8C7A6B]">
+                        <td colSpan={5} className="p-8 text-center text-[#8C9A90]">
                           No matching subscribers found.
                         </td>
                       </tr>
@@ -1195,15 +1195,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       filteredSubscribers.map((sub) => (
                         <tr key={sub.id} className="hover:bg-white/5 transition-colors">
                           <td className="p-4 font-semibold text-white flex items-center space-x-3">
-                            <div className="w-8 h-8 rounded-full bg-[#C5A059]/20 border border-[#C5A059]/40 flex items-center justify-center text-[#F5D07F] font-bold">
+                            <div className="w-8 h-8 rounded-full bg-[#C9A56A]/20 border border-[#C9A56A]/40 flex items-center justify-center text-[#C9A56A] font-bold">
                               {sub.email[0].toUpperCase()}
                             </div>
                             <div>
                               <span className="block font-medium text-white">{sub.email}</span>
-                              <span className="text-[10px] font-mono text-[#8C7A6B]">ID: {sub.id.substring(0, 8)}</span>
+                              <span className="text-[10px] font-mono text-[#8C9A90]">ID: {sub.id.substring(0, 8)}</span>
                             </div>
                           </td>
-                          <td className="p-4 font-medium text-[#C5A059]">{sub.source}</td>
+                          <td className="p-4 font-medium text-[#C9A56A]">{sub.source}</td>
                           <td className="p-4">
                             <span
                               className={`px-2.5 py-1 rounded-full font-bold text-[10px] border uppercase ${
@@ -1217,7 +1217,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               {sub.status}
                             </span>
                           </td>
-                          <td className="p-4 font-mono text-[11px] text-[#8C7A6B]">{sub.createdAt}</td>
+                          <td className="p-4 font-mono text-[11px] text-[#8C9A90]">{sub.createdAt}</td>
                           <td className="p-4 text-right space-x-2">
                             <button
                               onClick={() => handleUpdateNewsletterStatus(sub.id, 'Subscribed')}
@@ -1230,7 +1230,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <button
                               onClick={() => handleUpdateNewsletterStatus(sub.id, 'VIP Privé')}
                               className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                                sub.status === 'VIP Privé' ? 'bg-[#C5A059] text-[#121110]' : 'bg-white/5 text-white hover:bg-white/10'
+                                sub.status === 'VIP Privé' ? 'bg-[#C9A56A] text-[#0F1714]' : 'bg-white/5 text-white hover:bg-white/10'
                               }`}
                             >
                               VIP Privé
@@ -1267,7 +1267,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="pb-4 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="font-serif text-2xl font-bold text-white">Contact Form Inquiries Module</h2>
-                <p className="text-xs text-[#D8C8B8]">
+                <p className="text-xs text-[#E9DFD1]">
                   Manage private consultations, trade inquiries, and client quotes submitted from the storefront.
                 </p>
               </div>
@@ -1279,7 +1279,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   }}
                   className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs text-white font-semibold flex items-center gap-2 cursor-pointer shrink-0"
                 >
-                  <RefreshCw className="w-3.5 h-3.5 text-[#C5A059]" />
+                  <RefreshCw className="w-3.5 h-3.5 text-[#C9A56A]" />
                   <span>Refresh Inquiries</span>
                 </button>
               </div>
@@ -1293,22 +1293,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search inquiries by client name, email, or message..."
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/15 focus:border-[#C5A059] focus:outline-none text-xs text-white placeholder-white/40"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/15 focus:border-[#C9A56A] focus:outline-none text-xs text-white placeholder-white/40"
                 />
-                <Search className="w-4 h-4 text-[#C5A059] absolute left-3.5 top-3" />
+                <Search className="w-4 h-4 text-[#C9A56A] absolute left-3.5 top-3" />
               </div>
 
               <div className="md:col-span-4">
                 <select
                   value={inquiryStatusFilter}
                   onChange={(e) => setInquiryStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none cursor-pointer"
+                  className="w-full px-3 py-2.5 rounded-xl bg-[#163129]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none cursor-pointer"
                 >
-                  <option value="All" className="bg-[#141312]">All Statuses ({contactInquiries.length})</option>
-                  <option value="New" className="bg-[#141312]">New Action Required</option>
-                  <option value="Contacted" className="bg-[#141312]">Contacted</option>
-                  <option value="Scheduled" className="bg-[#141312]">Scheduled</option>
-                  <option value="Archived" className="bg-[#141312]">Archived</option>
+                  <option value="All" className="bg-[#163129] text-white">All Statuses ({contactInquiries.length})</option>
+                  <option value="New" className="bg-[#163129] text-white">New Action Required</option>
+                  <option value="Contacted" className="bg-[#163129] text-white">Contacted</option>
+                  <option value="Scheduled" className="bg-[#163129] text-white">Scheduled</option>
+                  <option value="Archived" className="bg-[#163129] text-white">Archived</option>
                 </select>
               </div>
             </div>
@@ -1316,14 +1316,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {/* Inquiries Grid */}
             <div className="grid grid-cols-1 gap-4">
               {filteredInquiries.length === 0 ? (
-                <div className="p-12 text-center bg-[#141312] border border-[#C5A059]/30 rounded-2xl text-[#8C7A6B]">
+                <div className="p-12 text-center bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl text-[#8C9A90]">
                   No matching contact form inquiries found.
                 </div>
               ) : (
                 filteredInquiries.map((inq) => (
                   <div
                     key={inq.id}
-                    className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-6 shadow-xl space-y-4 hover:border-[#C5A059]/60 transition-all"
+                    className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 shadow-xl space-y-4 hover:border-[#C9A56A]/50 transition-all"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-white/10 gap-2">
                       <div className="flex items-center space-x-3">
@@ -1480,13 +1480,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <select
                   value={selectedCategoryFilter}
                   onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none cursor-pointer"
+                  className="w-full px-3 py-2.5 rounded-xl bg-[#163129]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none cursor-pointer"
                 >
-                  <option value="All" className="bg-[#141312] text-white">
+                  <option value="All" className="bg-[#163129] text-white">
                     All Categories ({productsList.length})
                   </option>
                   {Object.values(CATEGORIES_DATA).map((cat) => (
-                    <option key={cat.id} value={cat.id} className="bg-[#141312] text-white">
+                    <option key={cat.id} value={cat.id} className="bg-[#163129] text-white">
                       {cat.title}
                     </option>
                   ))}
@@ -1495,10 +1495,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
 
             {/* Product Table */}
-            <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl overflow-hidden shadow-xl">
+            <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl overflow-hidden shadow-xl">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-white/5 text-[#D4AF37] uppercase tracking-wider text-[10px] font-bold border-b border-white/10">
+                  <thead className="bg-[#0F1714]/80 text-[#C9A56A] uppercase tracking-wider text-[10px] font-bold border-b border-white/10">
                     <tr>
                       <th className="p-4">Item</th>
                       <th className="p-4">Category</th>
@@ -1508,7 +1508,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <th className="p-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5 text-[#D8C8B8]">
+                  <tbody className="divide-y divide-white/5 text-[#E9DFD1]">
                     {filteredProducts.map((prod) => (
                       <tr key={prod.id} className="hover:bg-white/5 transition-colors">
                         <td className="p-4 font-semibold text-white flex items-center space-x-3">
@@ -1519,14 +1519,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           />
                           <div>
                             <span className="block font-serif text-sm text-white">{prod.name}</span>
-                            <span className="text-[10px] text-[#8C7A6B]">{prod.id}</span>
+                            <span className="text-[10px] text-[#8C9A90]">{prod.id}</span>
                           </div>
                         </td>
-                        <td className="p-4 font-medium text-[#C5A059]">{prod.categoryName}</td>
+                        <td className="p-4 font-medium text-[#C9A56A]">{prod.categoryName}</td>
                         <td className="p-4 max-w-xs truncate">{prod.materialComposition}</td>
                         <td className="p-4">{prod.origin}</td>
                         <td className="p-4">
-                          <span className="px-2.5 py-1 rounded-full bg-[#C5A059]/20 text-[#F5D07F] font-bold text-[10px] border border-[#C5A059]/30">
+                          <span className="px-2.5 py-1 rounded-full bg-[#C9A56A]/20 text-[#C9A56A] font-bold text-[10px] border border-[#C9A56A]/30">
                             {prod.priceCategory}
                           </span>
                         </td>
@@ -1553,7 +1553,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="pb-4 border-b border-white/10">
               <h2 className="font-serif text-2xl font-bold text-white">Client Swatch Sample Orders</h2>
-              <p className="text-xs text-[#D8C8B8]">
+              <p className="text-xs text-[#E9DFD1]">
                 Inspect high-net-worth client swatch requests synced live with Supabase `swatch_requests` table.
               </p>
             </div>
@@ -1562,7 +1562,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {swatchRequests.map((req) => (
                 <div
                   key={req.id}
-                  className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-6 shadow-xl space-y-4"
+                  className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 shadow-xl space-y-4"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-white/10 gap-2">
                     <div className="flex items-center space-x-3">
@@ -1687,29 +1687,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </div>
 
-            <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl overflow-hidden shadow-xl">
-              <div className="p-4 border-b border-white/10 bg-white/5 flex items-center justify-between text-xs text-[#D4AF37] font-bold uppercase tracking-wider">
+            <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl overflow-hidden shadow-xl">
+              <div className="p-4 border-b border-white/10 bg-[#0F1714]/80 flex items-center justify-between text-xs text-[#C9A56A] font-bold uppercase tracking-wider">
                 <span>Recent Admin Activity Records</span>
                 <span>{auditLogs.length} Events Logged</span>
               </div>
               <div className="divide-y divide-white/5 text-xs">
                 {auditLogs.length === 0 ? (
-                  <div className="p-8 text-center text-[#8C7A6B]">No security logs recorded.</div>
+                  <div className="p-8 text-center text-[#8C9A90]">No security logs recorded.</div>
                 ) : (
                   auditLogs.map((log) => (
                     <div key={log.id} className="p-4 hover:bg-white/5 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center space-x-2">
-                          <span className="px-2 py-0.5 rounded bg-[#C5A059]/20 text-[#F5D07F] font-mono text-[10px] font-bold border border-[#C5A059]/30">
+                          <span className="px-2 py-0.5 rounded bg-[#C9A56A]/20 text-[#C9A56A] font-mono text-[10px] font-bold border border-[#C9A56A]/30">
                             {log.action}
                           </span>
                           <span className="font-semibold text-white">{log.adminEmail}</span>
                         </div>
-                        <p className="text-xs text-[#D8C8B8]">{log.details}</p>
+                        <p className="text-xs text-[#E9DFD1]">{log.details}</p>
                       </div>
 
                       <div className="flex items-center space-x-3 shrink-0 self-end sm:self-auto">
-                        <span className="text-[11px] font-mono text-[#8C7A6B]">{log.createdAt}</span>
+                        <span className="text-[11px] font-mono text-[#8C9A90]">{log.createdAt}</span>
                         <button
                           onClick={() => handleDeleteAuditLog(log.id, log.action)}
                           className="p-1.5 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 transition-all border border-red-500/30 cursor-pointer"
@@ -1731,7 +1731,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="pb-4 border-b border-white/10">
               <h2 className="font-serif text-2xl font-bold text-white">Residence & Yacht Portfolio</h2>
-              <p className="text-xs text-[#D8C8B8]">
+              <p className="text-xs text-[#E9DFD1]">
                 Curate featured interior architecture projects displayed on the public portfolio.
               </p>
             </div>
@@ -1740,21 +1740,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {PROJECTS_DATA.map((prj) => (
                 <div
                   key={prj.id}
-                  className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl overflow-hidden shadow-xl space-y-3"
+                  className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl overflow-hidden shadow-xl space-y-3"
                 >
                   <div className="relative h-44 overflow-hidden">
                     <img src={prj.heroImage} alt={prj.title} className="w-full h-full object-cover" />
-                    <span className="absolute top-3 left-3 bg-[#121110]/80 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-[#F5D07F] border border-[#C5A059]/30 uppercase">
+                    <span className="absolute top-3 left-3 bg-[#0F1714]/80 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-[#C9A56A] border border-[#C9A56A]/30 uppercase">
                       {prj.category}
                     </span>
                   </div>
                   <div className="p-4 space-y-2">
-                    <span className="text-[10px] text-[#C5A059] uppercase tracking-wider">
+                    <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider">
                       {prj.location} ({prj.year})
                     </span>
                     <h4 className="font-serif text-lg text-white font-bold">{prj.title}</h4>
-                    <p className="text-xs text-[#D8C8B8] line-clamp-2">{prj.description}</p>
-                    <span className="text-[11px] text-[#8C7A6B] block">Designed by {prj.designer}</span>
+                    <p className="text-xs text-[#E9DFD1] line-clamp-2">{prj.description}</p>
+                    <span className="text-[11px] text-[#8C9A90] block">Designed by {prj.designer}</span>
                   </div>
                 </div>
               ))}
@@ -1767,58 +1767,58 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="space-y-6 animate-in fade-in duration-300 max-w-4xl">
             <div className="pb-4 border-b border-white/10">
               <h2 className="font-serif text-2xl font-bold text-white">Admin Security & Curator Staff</h2>
-              <p className="text-xs text-[#D8C8B8]">
+              <p className="text-xs text-[#E9DFD1]">
                 Manage active master admin profile credentials, session timeouts, and Supabase database access.
               </p>
             </div>
 
-            <div className="bg-[#141312] border border-[#C5A059]/30 rounded-2xl p-6 shadow-xl space-y-6">
+            <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 shadow-xl space-y-6">
               <div className="flex items-center space-x-4 pb-4 border-b border-white/10">
-                <div className="w-16 h-16 rounded-full bg-[#C5A059] text-[#121110] font-bold text-2xl flex items-center justify-center shadow-lg">
+                <div className="w-16 h-16 rounded-full bg-[#C9A56A] text-[#0F1714] font-bold text-2xl flex items-center justify-center shadow-lg">
                   {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                 </div>
                 <div>
                   <h3 className="font-serif text-xl font-bold text-white">{user.name}</h3>
-                  <span className="text-xs text-[#F5D07F] font-bold uppercase tracking-wider">{user.role}</span>
-                  <span className="text-xs text-[#8C7A6B] block">{user.email}</span>
+                  <span className="text-xs text-[#C9A56A] font-bold uppercase tracking-wider">{user.role}</span>
+                  <span className="text-xs text-[#8C9A90] block">{user.email}</span>
                 </div>
               </div>
 
               {/* Team Members List from Supabase */}
               <div className="space-y-3">
-                <h4 className="font-semibold text-[#D4AF37] uppercase tracking-widest text-xs flex items-center gap-2">
-                  <UserCheck className="w-4 h-4 text-[#C5A059]" />
+                <h4 className="font-semibold text-[#C9A56A] uppercase tracking-widest text-xs flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-[#C9A56A]" />
                   <span>Authorized Master Admin Team</span>
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {adminUsersList.map((admin) => (
-                    <div key={admin.id} className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                    <div key={admin.id} className="p-4 rounded-xl bg-[#0F1714]/60 border border-white/10 space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-white text-xs">{admin.name}</span>
                         <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
                           {admin.status || 'Active'}
                         </span>
                       </div>
-                      <span className="text-[11px] text-[#C5A059] block">{admin.role}</span>
-                      <span className="text-[11px] text-[#8C7A6B] font-mono block">{admin.email}</span>
+                      <span className="text-[11px] text-[#C9A56A] block">{admin.role}</span>
+                      <span className="text-[11px] text-[#8C9A90] font-mono block">{admin.email}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               <div className="space-y-3 text-xs pt-4 border-t border-white/10">
-                <h4 className="font-semibold text-[#D4AF37] uppercase tracking-widest">Supabase Cloud Database Instance</h4>
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10 font-mono space-y-2">
+                <h4 className="font-semibold text-[#C9A56A] uppercase tracking-widest">Supabase Cloud Database Instance</h4>
+                <div className="p-4 rounded-xl bg-[#0F1714]/60 border border-white/10 font-mono space-y-2">
                   <p>
-                    <span className="text-[#8C7A6B]">Project URL:</span>{' '}
+                    <span className="text-[#8C9A90]">Project URL:</span>{' '}
                     <strong className="text-white">https://ywsmtfhzlhljeqetmvol.supabase.co</strong>
                   </p>
                   <p>
-                    <span className="text-[#8C7A6B]">Admin Auth Email:</span>{' '}
+                    <span className="text-[#8C9A90]">Admin Auth Email:</span>{' '}
                     <strong className="text-white">{user.email}</strong>
                   </p>
                   <p>
-                    <span className="text-[#8C7A6B]">Database RLS Policy:</span>{' '}
+                    <span className="text-[#8C9A90]">Database RLS Policy:</span>{' '}
                     <strong className="text-emerald-400">Strict Multi-Tenant Row Level Security Active</strong>
                   </p>
                 </div>
@@ -1831,37 +1831,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* --- ADD PRODUCT MODAL --- */}
       {showAddProductModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-[#141312] border border-[#C5A059]/40 rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-5 text-white shadow-2xl">
+          <div className="bg-[#163129] border border-[#C9A56A]/40 rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-5 text-white shadow-2xl">
             <div>
               <h3 className="font-serif text-2xl font-bold text-white">Add New Product to Catalog</h3>
-              <p className="text-xs text-[#D8C8B8]">
+              <p className="text-xs text-[#E9DFD1]">
                 New products are written directly to your live Supabase `products` catalog table.
               </p>
             </div>
 
             <form onSubmit={handleCreateProduct} className="space-y-4 text-xs">
               <div>
-                <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Product Name</label>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Product Name</label>
                 <input
                   type="text"
                   required
                   value={newProductForm.name}
                   onChange={(e) => setNewProductForm({ ...newProductForm, name: e.target.value })}
                   placeholder="e.g. Florentine Jacquard Damask"
-                  className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none"
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Category</label>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Category</label>
                   <select
                     value={newProductForm.categorySlug}
                     onChange={(e) => setNewProductForm({ ...newProductForm, categorySlug: e.target.value as CategorySlug })}
-                    className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none cursor-pointer"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none cursor-pointer"
                   >
                     {Object.values(CATEGORIES_DATA).map((cat) => (
-                      <option key={cat.id} value={cat.id} className="bg-[#141312]">
+                      <option key={cat.id} value={cat.id} className="bg-[#163129]">
                         {cat.title}
                       </option>
                     ))}
@@ -1869,59 +1869,59 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Price Tier</label>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Price Tier</label>
                   <select
                     value={newProductForm.priceCategory}
                     onChange={(e) => setNewProductForm({ ...newProductForm, priceCategory: e.target.value })}
-                    className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none cursor-pointer"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none cursor-pointer"
                   >
-                    <option value="Bespoke" className="bg-[#141312]">Bespoke</option>
-                    <option value="Haute Couture" className="bg-[#141312]">Haute Couture</option>
-                    <option value="Atelier Reserve" className="bg-[#141312]">Atelier Reserve</option>
+                    <option value="Bespoke" className="bg-[#163129]">Bespoke</option>
+                    <option value="Haute Couture" className="bg-[#163129]">Haute Couture</option>
+                    <option value="Atelier Reserve" className="bg-[#163129]">Atelier Reserve</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Material Composition</label>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Material Composition</label>
                 <input
                   type="text"
                   required
                   value={newProductForm.materialComposition}
                   onChange={(e) => setNewProductForm({ ...newProductForm, materialComposition: e.target.value })}
                   placeholder="e.g. 70% Silk, 30% Egyptian Cotton"
-                  className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none"
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Origin</label>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Origin</label>
                   <input
                     type="text"
                     value={newProductForm.origin}
                     onChange={(e) => setNewProductForm({ ...newProductForm, origin: e.target.value })}
-                    className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Dimensions / Width</label>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Dimensions / Width</label>
                   <input
                     type="text"
                     value={newProductForm.widthOrDimensions}
                     onChange={(e) => setNewProductForm({ ...newProductForm, widthOrDimensions: e.target.value })}
-                    className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Image URL</label>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Image URL</label>
                 <input
                   type="url"
                   value={newProductForm.image}
                   onChange={(e) => setNewProductForm({ ...newProductForm, image: e.target.value })}
-                  className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none"
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
                 />
               </div>
 
@@ -1935,7 +1935,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-[#C5A059] text-[#121110] text-xs font-bold uppercase tracking-wider hover:bg-[#D4AF37] transition-all shadow-lg cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-[#C9A56A] text-[#0F1714] text-xs font-bold uppercase tracking-wider hover:bg-[#D4AF37] transition-all shadow-lg cursor-pointer"
                 >
                   Save Product to Supabase
                 </button>
@@ -1948,35 +1948,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* --- ADD SUBSCRIBER MODAL --- */}
       {showAddSubscriberModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-[#141312] border border-[#C5A059]/40 rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-5 text-white shadow-2xl">
+          <div className="bg-[#163129] border border-[#C9A56A]/40 rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-5 text-white shadow-2xl">
             <div>
               <h3 className="font-serif text-2xl font-bold text-white">Add Newsletter Subscriber</h3>
-              <p className="text-xs text-[#D8C8B8]">
+              <p className="text-xs text-[#E9DFD1]">
                 Manually add a VIP client or trade email to the Atelier Gazette distribution list.
               </p>
             </div>
 
             <form onSubmit={handleCreateSubscriber} className="space-y-4 text-xs">
               <div>
-                <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Subscriber Email</label>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Subscriber Email</label>
                 <input
                   type="email"
                   required
                   value={newSubscriberEmail}
                   onChange={(e) => setNewSubscriberEmail(e.target.value)}
                   placeholder="e.g. client@mayfair-estates.co.uk"
-                  className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none"
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-[10px] uppercase font-bold text-[#D4AF37] block mb-1">Acquisition Source</label>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Acquisition Source</label>
                 <input
                   type="text"
                   value={newSubscriberSource}
                   onChange={(e) => setNewSubscriberSource(e.target.value)}
                   placeholder="e.g. Master Admin, Showroom Invitation, Trade Event"
-                  className="w-full p-3 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:border-[#C5A059] focus:outline-none"
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
                 />
               </div>
 
@@ -1990,7 +1990,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-[#C5A059] text-[#121110] text-xs font-bold uppercase tracking-wider hover:bg-[#D4AF37] transition-all shadow-lg cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-[#C9A56A] text-[#0F1714] text-xs font-bold uppercase tracking-wider hover:bg-[#D4AF37] transition-all shadow-lg cursor-pointer"
                 >
                   Add Subscriber
                 </button>
