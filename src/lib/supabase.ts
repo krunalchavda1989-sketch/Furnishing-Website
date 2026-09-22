@@ -1,6 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import type { AdminUser, AuditLogItem, ContactInquiryItem, NewsletterSubscriberItem } from '../types/adminTypes';
-import type { Product } from '../types';
+import type {
+  Product,
+  Showroom,
+  ContactSettings,
+  Project,
+  SiteSettings,
+  HeaderNavLink,
+  Testimonial,
+  BrandPartner,
+  StorySettings
+} from '../types';
+import { SHOWROOMS_DATA, BRANDS_DATA } from '../data/brandsData';
+import { PROJECTS_DATA } from '../data/projectsData';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -308,6 +320,40 @@ export const createProductInSupabase = async (product: Product, adminEmail: stri
     return true;
   } catch (err) {
     console.warn('Exception inserting product to Supabase:', err);
+    return false;
+  }
+};
+
+/**
+ * Update Existing Product in Supabase
+ */
+export const updateProductInSupabase = async (product: Product, adminEmail: string): Promise<boolean> => {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase.from('products').upsert({
+      id: product.id,
+      name: product.name,
+      category_slug: product.categorySlug,
+      category_name: product.categoryName,
+      short_description: product.shortDescription,
+      full_description: product.fullDescription,
+      material_composition: product.materialComposition,
+      width_or_dimensions: product.widthOrDimensions,
+      origin: product.origin,
+      price_category: product.priceCategory,
+      image: product.image,
+      swatch_type: product.swatchType
+    });
+
+    if (error) {
+      console.error('Error updating product in Supabase:', error);
+      return false;
+    }
+
+    await logAdminActivityInSupabase(adminEmail, 'PRODUCT_UPDATED', `Updated catalog product: ${product.name} (${product.id})`);
+    return true;
+  } catch (err) {
+    console.warn('Exception updating product in Supabase:', err);
     return false;
   }
 };
@@ -659,4 +705,1514 @@ export const deleteNewsletterSubscriberInSupabase = async (
     return false;
   }
 };
+
+export const DEFAULT_HEADER_NAV_LINKS: HeaderNavLink[] = [
+  { id: 'home', label: 'Home', target: 'home', isVisible: true, order: 1 },
+  { id: 'story', label: 'Our Story', target: 'story', isVisible: true, order: 2 },
+  { id: 'catalogue', label: 'Product Catalogue', target: 'catalogue', hasMegaMenu: true, isVisible: true, order: 3 },
+  { id: 'projects', label: 'Our Projects', target: 'projects', isVisible: true, order: 4 },
+  { id: 'brands', label: 'Brands With Us', target: 'brands', isVisible: true, order: 5 },
+  { id: 'contact', label: 'Contact Us', target: 'contact', isVisible: true, order: 6 }
+];
+
+export const DEFAULT_SITE_SETTINGS: SiteSettings = {
+  id: 'default',
+  headerLogoImage: '',
+  headerLogoMonogram: 'A',
+  headerLogoTitle: 'Atelier Living',
+  headerLogoSubtitle: 'Designed For Inspired Living',
+
+  // Header Styling & Layout Options
+  headerFontSize: '13px',
+  headerItemSpacing: '24px',
+  headerFontWeight: '600',
+  headerLetterSpacing: 'widest',
+  headerTextTransform: 'uppercase',
+  headerHeight: 'standard',
+  headerAlignment: 'center',
+  headerLogoHeight: 40,
+  headerSticky: true,
+  headerBackgroundStyle: 'emerald',
+  headerBorderBottom: 'gold',
+
+  // Top Announcement / Utility Bar
+  headerTopBarEnabled: false,
+  headerTopBarText: 'Complimentary Worldwide White-Glove Courier On Orders Over $1,000 | Private Showroom Consultations Available',
+  headerTopBarLink: 'contact',
+  headerTopBarBg: 'gold',
+
+  // Header Action Buttons
+  headerShowSwatchesBtn: true,
+  headerShowSearch: true,
+  headerShowConcierge: true,
+  headerShowCart: true,
+
+  footerLogoImage: '',
+  footerLogoMonogram: 'A',
+  footerLogoTitle: 'Atelier Living',
+  footerDescription:
+    'Atelier Living is an international interior design house crafting bespoke textiles, architectural drapes, structural upholstery, hand-knotted rugs, and limited-edition atelier artifacts for fine private residences, superyachts, and boutique luxury hotels.',
+  footerCopyright: `© ${new Date().getFullYear()} Atelier Living Ltd. All rights reserved.`,
+
+  navLinks: DEFAULT_HEADER_NAV_LINKS,
+
+  socialLinks: {
+    instagram: { enabled: true, url: 'https://instagram.com/atelierliving', label: 'Instagram' },
+    pinterest: { enabled: true, url: 'https://pinterest.com/atelierliving', label: 'Pinterest' },
+    linkedin: { enabled: true, url: 'https://linkedin.com/company/atelier-living', label: 'LinkedIn' },
+    youtube: { enabled: true, url: 'https://youtube.com/@atelierliving', label: 'YouTube' },
+    facebook: { enabled: true, url: 'https://facebook.com/atelierliving', label: 'Facebook' },
+    twitter: { enabled: false, url: 'https://twitter.com/atelierliving', label: 'X / Twitter' },
+    whatsapp: { enabled: true, url: 'https://wa.me/447911123456', label: 'WhatsApp Concierge' }
+  },
+
+  companyName: 'Atelier Living Ltd',
+  primaryPhone: '+44 (0)20 7946 0188',
+  mobileNumber: '+44 7911 123456',
+  whatsappNumber: '+44 7911 123456',
+  generalEmail: 'concierge@atelier-living.com',
+  vipEmail: 'vip@atelier-living.com',
+  pressEmail: 'press@atelier-living.com',
+  tradeEmail: 'trade@atelier-living.com',
+  flagshipAddress: '48 Berkeley Square, Mayfair, London W1J 5AW',
+
+  scheduleMonFri: '09:30 - 18:30',
+  scheduleSat: '10:00 - 17:00',
+  scheduleSun: 'By Private Appointment Only',
+  scheduleHolidays: 'Closed on UK & EU Bank Holidays'
+};
+
+export const DEFAULT_CONTACT_SETTINGS: ContactSettings = {
+  id: 'default',
+  companyName: 'Atelier Living Ltd',
+  primaryPhone: '+44 (0)20 7946 0188',
+  mobileNumber: '+44 7911 123456',
+  whatsappNumber: '+44 7911 123456',
+  generalEmail: 'concierge@atelier-living.com',
+  vipEmail: 'vip@atelier-living.com',
+  pressEmail: 'press@atelier-living.com',
+  tradeEmail: 'trade@atelier-living.com',
+  scheduleMonFri: '09:30 - 18:30',
+  scheduleSat: '10:00 - 17:00',
+  scheduleSun: 'By Private Appointment Only',
+  scheduleHolidays: 'Closed on UK & EU Bank Holidays',
+  instagramUrl: 'https://instagram.com/atelierliving',
+  pinterestUrl: 'https://pinterest.com/atelierliving',
+  linkedinUrl: 'https://linkedin.com/company/atelier-living',
+  youtubeUrl: 'https://youtube.com/@atelierliving',
+  twitterUrl: 'https://twitter.com/atelierliving',
+  facebookUrl: 'https://facebook.com/atelierliving'
+};
+
+/**
+ * Fetch Showroom Locations from Supabase with LocalStorage and Seed Fallbacks
+ */
+export const fetchShowroomsFromSupabase = async (): Promise<Showroom[]> => {
+  // Read deleted showroom keys
+  const getDeletedShowrooms = (): string[] => {
+    try {
+      const data = localStorage.getItem('atelier_deleted_showrooms') || localStorage.getItem('maison_deleted_showrooms');
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const deletedKeys = getDeletedShowrooms();
+
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('showrooms')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        return data
+          .map((item) => ({
+            id: item.id,
+            city: item.city,
+            country: item.country,
+            address: item.address,
+            phone: item.phone,
+            email: item.email,
+            hours: item.hours,
+            image: item.image,
+            coordinates: {
+              lat: item.lat ?? 0,
+              lng: item.lng ?? 0
+            },
+            isFlagship: Boolean(item.is_flagship),
+            notes: item.notes || ''
+          }))
+          .filter((s) => !deletedKeys.includes(s.id));
+      }
+    } catch (err) {
+      console.warn('Error fetching showrooms from Supabase:', err);
+    }
+  }
+
+  // Fallback to local storage custom additions merged with default seed
+  try {
+    const custom = localStorage.getItem('atelier_custom_showrooms');
+    let list: Showroom[] = SHOWROOMS_DATA;
+    if (custom) {
+      const parsed: Showroom[] = JSON.parse(custom);
+      // Merge or replace
+      const customMap = new Map<string, Showroom>();
+      list.forEach((s) => customMap.set(s.id, s));
+      parsed.forEach((s) => customMap.set(s.id, s));
+      list = Array.from(customMap.values());
+    }
+    return list.filter((s) => !deletedKeys.includes(s.id));
+  } catch {
+    return SHOWROOMS_DATA.filter((s) => !deletedKeys.includes(s.id));
+  }
+};
+
+/**
+ * Create or Update Showroom Location in Supabase & LocalStorage
+ */
+export const createOrUpdateShowroomInSupabase = async (
+  showroom: Showroom,
+  adminEmail: string
+): Promise<boolean> => {
+  // 1. Sync to LocalStorage
+  try {
+    const custom = localStorage.getItem('atelier_custom_showrooms');
+    let list: Showroom[] = custom ? JSON.parse(custom) : [...SHOWROOMS_DATA];
+    const existingIndex = list.findIndex((s) => s.id === showroom.id);
+    if (existingIndex >= 0) {
+      list[existingIndex] = showroom;
+    } else {
+      list.push(showroom);
+    }
+    localStorage.setItem('atelier_custom_showrooms', JSON.stringify(list));
+
+    // Remove from deleted list if present
+    const delData = localStorage.getItem('atelier_deleted_showrooms');
+    if (delData) {
+      const delList: string[] = JSON.parse(delData);
+      localStorage.setItem('atelier_deleted_showrooms', JSON.stringify(delList.filter((id) => id !== showroom.id)));
+    }
+  } catch (e) {
+    console.warn('LocalStorage showroom save error:', e);
+  }
+
+  // 2. Sync to Supabase
+  if (isSupabaseConfigured) {
+    try {
+      const { error } = await supabase.from('showrooms').upsert({
+        id: showroom.id,
+        city: showroom.city,
+        country: showroom.country,
+        address: showroom.address,
+        phone: showroom.phone,
+        email: showroom.email,
+        hours: showroom.hours,
+        image: showroom.image,
+        lat: showroom.coordinates?.lat || 0,
+        lng: showroom.coordinates?.lng || 0,
+        is_flagship: Boolean(showroom.isFlagship),
+        notes: showroom.notes || null
+      });
+
+      if (error) {
+        console.warn('Supabase showroom upsert error:', error);
+      } else {
+        await logAdminActivityInSupabase(
+          adminEmail,
+          'SHOWROOM_UPDATED',
+          `Saved showroom location: ${showroom.city} (${showroom.country}) [${showroom.id}]`
+        );
+      }
+    } catch (err) {
+      console.warn('Exception updating showroom in Supabase:', err);
+    }
+  }
+
+  return true;
+};
+
+/**
+ * Delete Showroom Location in Supabase & LocalStorage
+ */
+export const deleteShowroomInSupabase = async (
+  showroomId: string,
+  adminEmail: string
+): Promise<boolean> => {
+  // 1. Sync to LocalStorage
+  try {
+    const delData = localStorage.getItem('atelier_deleted_showrooms');
+    const delList: string[] = delData ? JSON.parse(delData) : [];
+    if (!delList.includes(showroomId)) {
+      delList.push(showroomId);
+      localStorage.setItem('atelier_deleted_showrooms', JSON.stringify(delList));
+    }
+
+    const custom = localStorage.getItem('atelier_custom_showrooms');
+    if (custom) {
+      const parsed: Showroom[] = JSON.parse(custom);
+      localStorage.setItem(
+        'atelier_custom_showrooms',
+        JSON.stringify(parsed.filter((s) => s.id !== showroomId))
+      );
+    }
+  } catch (e) {
+    console.warn('LocalStorage showroom delete error:', e);
+  }
+
+  // 2. Sync to Supabase
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from('showrooms').delete().eq('id', showroomId);
+      await logAdminActivityInSupabase(
+        adminEmail,
+        'SHOWROOM_DELETED',
+        `Deleted showroom location: ${showroomId}`
+      );
+    } catch (err) {
+      console.warn('Exception deleting showroom from Supabase:', err);
+    }
+  }
+
+  return true;
+};
+
+/**
+ * Fetch Global Contact Settings from Supabase or LocalStorage
+ */
+export const fetchContactSettingsFromSupabase = async (): Promise<ContactSettings> => {
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('contact_settings')
+        .select('*')
+        .eq('id', 'default')
+        .maybeSingle();
+
+      if (!error && data) {
+        return {
+          id: data.id,
+          companyName: data.company_name || DEFAULT_CONTACT_SETTINGS.companyName,
+          primaryPhone: data.primary_phone || DEFAULT_CONTACT_SETTINGS.primaryPhone,
+          mobileNumber: data.mobile_number || DEFAULT_CONTACT_SETTINGS.mobileNumber,
+          whatsappNumber: data.whatsapp_number || DEFAULT_CONTACT_SETTINGS.whatsappNumber,
+          generalEmail: data.general_email || DEFAULT_CONTACT_SETTINGS.generalEmail,
+          vipEmail: data.vip_email || DEFAULT_CONTACT_SETTINGS.vipEmail,
+          pressEmail: data.press_email || DEFAULT_CONTACT_SETTINGS.pressEmail,
+          tradeEmail: data.trade_email || DEFAULT_CONTACT_SETTINGS.tradeEmail,
+          scheduleMonFri: data.schedule_mon_fri || DEFAULT_CONTACT_SETTINGS.scheduleMonFri,
+          scheduleSat: data.schedule_sat || DEFAULT_CONTACT_SETTINGS.scheduleSat,
+          scheduleSun: data.schedule_sun || DEFAULT_CONTACT_SETTINGS.scheduleSun,
+          scheduleHolidays: data.schedule_holidays || DEFAULT_CONTACT_SETTINGS.scheduleHolidays,
+          instagramUrl: data.instagram_url || DEFAULT_CONTACT_SETTINGS.instagramUrl,
+          pinterestUrl: data.pinterest_url || DEFAULT_CONTACT_SETTINGS.pinterestUrl,
+          linkedinUrl: data.linkedin_url || DEFAULT_CONTACT_SETTINGS.linkedinUrl,
+          youtubeUrl: data.youtube_url || DEFAULT_CONTACT_SETTINGS.youtubeUrl,
+          twitterUrl: data.twitter_url || DEFAULT_CONTACT_SETTINGS.twitterUrl,
+          facebookUrl: data.facebook_url || DEFAULT_CONTACT_SETTINGS.facebookUrl,
+          updatedAt: data.updated_at
+        };
+      }
+    } catch (err) {
+      console.warn('Error fetching contact settings from Supabase:', err);
+    }
+  }
+
+  // Fallback to local storage or defaults
+  try {
+    const saved = localStorage.getItem('atelier_contact_settings');
+    if (saved) {
+      return { ...DEFAULT_CONTACT_SETTINGS, ...JSON.parse(saved) };
+    }
+  } catch (e) {
+    console.warn('Error reading contact settings from localStorage:', e);
+  }
+
+  return DEFAULT_CONTACT_SETTINGS;
+};
+
+/**
+ * Update Global Contact Settings in Supabase & LocalStorage
+ */
+export const updateContactSettingsInSupabase = async (
+  settings: ContactSettings,
+  adminEmail: string
+): Promise<boolean> => {
+  // 1. Sync to LocalStorage
+  try {
+    localStorage.setItem('atelier_contact_settings', JSON.stringify(settings));
+  } catch (e) {
+    console.warn('LocalStorage contact settings save error:', e);
+  }
+
+  // 2. Sync to Supabase
+  if (isSupabaseConfigured) {
+    try {
+      const { error } = await supabase.from('contact_settings').upsert({
+        id: 'default',
+        company_name: settings.companyName,
+        primary_phone: settings.primaryPhone,
+        mobile_number: settings.mobileNumber,
+        whatsapp_number: settings.whatsappNumber,
+        general_email: settings.generalEmail,
+        vip_email: settings.vipEmail,
+        press_email: settings.pressEmail,
+        trade_email: settings.tradeEmail,
+        schedule_mon_fri: settings.scheduleMonFri,
+        schedule_sat: settings.scheduleSat,
+        schedule_sun: settings.scheduleSun,
+        schedule_holidays: settings.scheduleHolidays,
+        instagram_url: settings.instagramUrl,
+        pinterest_url: settings.pinterestUrl,
+        linkedin_url: settings.linkedinUrl,
+        youtube_url: settings.youtubeUrl,
+        twitter_url: settings.twitterUrl,
+        facebook_url: settings.facebookUrl,
+        updated_at: new Date().toISOString()
+      });
+
+      if (error) {
+        console.warn('Supabase contact settings upsert error:', error);
+      } else {
+        await logAdminActivityInSupabase(
+          adminEmail,
+          'CONTACT_SETTINGS_UPDATED',
+          'Updated global contact info, mobile numbers, schedule, and social media channels'
+        );
+      }
+    } catch (err) {
+      console.warn('Exception updating contact settings in Supabase:', err);
+    }
+  }
+
+  return true;
+};
+
+/**
+ * Fetch Comprehensive Site Branding, Navigation & Global Settings
+ */
+export const fetchSiteSettingsFromSupabase = async (): Promise<SiteSettings> => {
+  let settings: SiteSettings = { ...DEFAULT_SITE_SETTINGS };
+
+  // 1. Try fetching from Supabase site_settings table
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('*')
+        .eq('id', 'default')
+        .maybeSingle();
+
+      if (!error && data) {
+        settings = {
+          id: data.id,
+          headerLogoImage: data.header_logo_image ?? DEFAULT_SITE_SETTINGS.headerLogoImage,
+          headerLogoMonogram: data.header_logo_monogram || DEFAULT_SITE_SETTINGS.headerLogoMonogram,
+          headerLogoTitle: data.header_logo_title || DEFAULT_SITE_SETTINGS.headerLogoTitle,
+          headerLogoSubtitle: data.header_logo_subtitle || DEFAULT_SITE_SETTINGS.headerLogoSubtitle,
+
+          // Header Styling & Layout Options
+          headerFontSize: data.header_font_size || DEFAULT_SITE_SETTINGS.headerFontSize,
+          headerItemSpacing: data.header_item_spacing || DEFAULT_SITE_SETTINGS.headerItemSpacing,
+          headerFontWeight: data.header_font_weight || DEFAULT_SITE_SETTINGS.headerFontWeight,
+          headerLetterSpacing: data.header_letter_spacing || DEFAULT_SITE_SETTINGS.headerLetterSpacing,
+          headerTextTransform: data.header_text_transform || DEFAULT_SITE_SETTINGS.headerTextTransform,
+          headerHeight: data.header_height || DEFAULT_SITE_SETTINGS.headerHeight,
+          headerAlignment: data.header_alignment || DEFAULT_SITE_SETTINGS.headerAlignment,
+          headerLogoHeight: data.header_logo_height ?? DEFAULT_SITE_SETTINGS.headerLogoHeight,
+          headerSticky: data.header_sticky ?? DEFAULT_SITE_SETTINGS.headerSticky,
+          headerBackgroundStyle: data.header_background_style || DEFAULT_SITE_SETTINGS.headerBackgroundStyle,
+          headerBorderBottom: data.header_border_bottom || DEFAULT_SITE_SETTINGS.headerBorderBottom,
+
+          // Top Announcement Bar
+          headerTopBarEnabled: data.header_top_bar_enabled ?? DEFAULT_SITE_SETTINGS.headerTopBarEnabled,
+          headerTopBarText: data.header_top_bar_text || DEFAULT_SITE_SETTINGS.headerTopBarText,
+          headerTopBarLink: data.header_top_bar_link || DEFAULT_SITE_SETTINGS.headerTopBarLink,
+          headerTopBarBg: data.header_top_bar_bg || DEFAULT_SITE_SETTINGS.headerTopBarBg,
+
+          // Header Action Buttons
+          headerShowSwatchesBtn: data.header_show_swatches_btn ?? DEFAULT_SITE_SETTINGS.headerShowSwatchesBtn,
+          headerShowSearch: data.header_show_search ?? DEFAULT_SITE_SETTINGS.headerShowSearch,
+          headerShowConcierge: data.header_show_concierge ?? DEFAULT_SITE_SETTINGS.headerShowConcierge,
+          headerShowCart: data.header_show_cart ?? DEFAULT_SITE_SETTINGS.headerShowCart,
+
+          footerLogoImage: data.footer_logo_image ?? DEFAULT_SITE_SETTINGS.footerLogoImage,
+          footerLogoMonogram: data.footer_logo_monogram || DEFAULT_SITE_SETTINGS.footerLogoMonogram,
+          footerLogoTitle: data.footer_logo_title || DEFAULT_SITE_SETTINGS.footerLogoTitle,
+          footerDescription: data.footer_description || DEFAULT_SITE_SETTINGS.footerDescription,
+          footerCopyright: data.footer_copyright || DEFAULT_SITE_SETTINGS.footerCopyright,
+
+          navLinks: data.nav_links && Array.isArray(data.nav_links) && data.nav_links.length > 0
+            ? data.nav_links
+            : DEFAULT_SITE_SETTINGS.navLinks,
+
+          socialLinks: data.social_links
+            ? { ...DEFAULT_SITE_SETTINGS.socialLinks, ...data.social_links }
+            : DEFAULT_SITE_SETTINGS.socialLinks,
+
+          companyName: data.company_name || DEFAULT_SITE_SETTINGS.companyName,
+          primaryPhone: data.primary_phone || DEFAULT_SITE_SETTINGS.primaryPhone,
+          mobileNumber: data.mobile_number || DEFAULT_SITE_SETTINGS.mobileNumber,
+          whatsappNumber: data.whatsapp_number || DEFAULT_SITE_SETTINGS.whatsappNumber,
+          generalEmail: data.general_email || DEFAULT_SITE_SETTINGS.generalEmail,
+          vipEmail: data.vip_email || DEFAULT_SITE_SETTINGS.vipEmail,
+          pressEmail: data.press_email || DEFAULT_SITE_SETTINGS.pressEmail,
+          tradeEmail: data.trade_email || DEFAULT_SITE_SETTINGS.tradeEmail,
+          flagshipAddress: data.flagship_address || DEFAULT_SITE_SETTINGS.flagshipAddress,
+
+          scheduleMonFri: data.schedule_mon_fri || DEFAULT_SITE_SETTINGS.scheduleMonFri,
+          scheduleSat: data.schedule_sat || DEFAULT_SITE_SETTINGS.scheduleSat,
+          scheduleSun: data.schedule_sun || DEFAULT_SITE_SETTINGS.scheduleSun,
+          scheduleHolidays: data.schedule_holidays || DEFAULT_SITE_SETTINGS.scheduleHolidays,
+
+          updatedAt: data.updated_at
+        };
+
+        return settings;
+      }
+    } catch (err) {
+      console.warn('Error fetching site settings from Supabase:', err);
+    }
+  }
+
+  // 2. Fallback to LocalStorage
+  try {
+    const saved = localStorage.getItem('atelier_site_settings');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        ...DEFAULT_SITE_SETTINGS,
+        ...parsed,
+        socialLinks: { ...DEFAULT_SITE_SETTINGS.socialLinks, ...(parsed.socialLinks || {}) }
+      };
+    }
+
+    // Also check older contact_settings key if present
+    const legacyContact = localStorage.getItem('atelier_contact_settings');
+    if (legacyContact) {
+      const parsedLegacy = JSON.parse(legacyContact);
+      return {
+        ...DEFAULT_SITE_SETTINGS,
+        companyName: parsedLegacy.companyName || DEFAULT_SITE_SETTINGS.companyName,
+        primaryPhone: parsedLegacy.primaryPhone || DEFAULT_SITE_SETTINGS.primaryPhone,
+        mobileNumber: parsedLegacy.mobileNumber || DEFAULT_SITE_SETTINGS.mobileNumber,
+        whatsappNumber: parsedLegacy.whatsappNumber || DEFAULT_SITE_SETTINGS.whatsappNumber,
+        generalEmail: parsedLegacy.generalEmail || DEFAULT_SITE_SETTINGS.generalEmail,
+        vipEmail: parsedLegacy.vipEmail || DEFAULT_SITE_SETTINGS.vipEmail,
+        scheduleMonFri: parsedLegacy.scheduleMonFri || DEFAULT_SITE_SETTINGS.scheduleMonFri,
+        scheduleSat: parsedLegacy.scheduleSat || DEFAULT_SITE_SETTINGS.scheduleSat,
+        scheduleSun: parsedLegacy.scheduleSun || DEFAULT_SITE_SETTINGS.scheduleSun
+      };
+    }
+  } catch (e) {
+    console.warn('Error reading site settings from localStorage:', e);
+  }
+
+  return DEFAULT_SITE_SETTINGS;
+};
+
+/**
+ * Update Comprehensive Site Branding, Navigation & Global Settings
+ */
+export const updateSiteSettingsInSupabase = async (
+  settings: SiteSettings,
+  adminEmail: string
+): Promise<boolean> => {
+  // 1. Sync to LocalStorage
+  try {
+    localStorage.setItem('atelier_site_settings', JSON.stringify(settings));
+
+    // Also maintain legacy contact_settings for backward compatibility
+    const legacyContact: ContactSettings = {
+      id: 'default',
+      companyName: settings.companyName,
+      primaryPhone: settings.primaryPhone,
+      mobileNumber: settings.mobileNumber,
+      whatsappNumber: settings.whatsappNumber,
+      generalEmail: settings.generalEmail,
+      vipEmail: settings.vipEmail,
+      pressEmail: settings.pressEmail,
+      tradeEmail: settings.tradeEmail,
+      scheduleMonFri: settings.scheduleMonFri,
+      scheduleSat: settings.scheduleSat,
+      scheduleSun: settings.scheduleSun,
+      scheduleHolidays: settings.scheduleHolidays,
+      instagramUrl: settings.socialLinks.instagram?.url,
+      pinterestUrl: settings.socialLinks.pinterest?.url,
+      linkedinUrl: settings.socialLinks.linkedin?.url,
+      youtubeUrl: settings.socialLinks.youtube?.url,
+      twitterUrl: settings.socialLinks.twitter?.url,
+      facebookUrl: settings.socialLinks.facebook?.url,
+      updatedAt: new Date().toISOString()
+    };
+    localStorage.setItem('atelier_contact_settings', JSON.stringify(legacyContact));
+  } catch (e) {
+    console.warn('LocalStorage site settings save error:', e);
+  }
+
+  // 2. Sync to Supabase
+  if (isSupabaseConfigured) {
+    try {
+      const { error } = await supabase.from('site_settings').upsert({
+        id: 'default',
+        header_logo_image: settings.headerLogoImage,
+        header_logo_monogram: settings.headerLogoMonogram,
+        header_logo_title: settings.headerLogoTitle,
+        header_logo_subtitle: settings.headerLogoSubtitle,
+
+        // Header Styling & Layout Options
+        header_font_size: settings.headerFontSize,
+        header_item_spacing: settings.headerItemSpacing,
+        header_font_weight: settings.headerFontWeight,
+        header_letter_spacing: settings.headerLetterSpacing,
+        header_text_transform: settings.headerTextTransform,
+        header_height: settings.headerHeight,
+        header_alignment: settings.headerAlignment,
+        header_logo_height: settings.headerLogoHeight,
+        header_sticky: settings.headerSticky,
+        header_background_style: settings.headerBackgroundStyle,
+        header_border_bottom: settings.headerBorderBottom,
+
+        // Top Announcement Bar
+        header_top_bar_enabled: settings.headerTopBarEnabled,
+        header_top_bar_text: settings.headerTopBarText,
+        header_top_bar_link: settings.headerTopBarLink,
+        header_top_bar_bg: settings.headerTopBarBg,
+
+        // Header Action Buttons
+        header_show_swatches_btn: settings.headerShowSwatchesBtn,
+        header_show_search: settings.headerShowSearch,
+        header_show_concierge: settings.headerShowConcierge,
+        header_show_cart: settings.headerShowCart,
+
+        footer_logo_image: settings.footerLogoImage,
+        footer_logo_monogram: settings.footerLogoMonogram,
+        footer_logo_title: settings.footerLogoTitle,
+        footer_description: settings.footerDescription,
+        footer_copyright: settings.footerCopyright,
+
+        nav_links: settings.navLinks,
+        social_links: settings.socialLinks,
+
+        company_name: settings.companyName,
+        primary_phone: settings.primaryPhone,
+        mobile_number: settings.mobileNumber,
+        whatsapp_number: settings.whatsappNumber,
+        general_email: settings.generalEmail,
+        vip_email: settings.vipEmail,
+        press_email: settings.pressEmail,
+        trade_email: settings.tradeEmail,
+        flagship_address: settings.flagshipAddress,
+
+        schedule_mon_fri: settings.scheduleMonFri,
+        schedule_sat: settings.scheduleSat,
+        schedule_sun: settings.scheduleSun,
+        schedule_holidays: settings.scheduleHolidays,
+        updated_at: new Date().toISOString()
+      });
+
+      if (error) {
+        console.warn('Supabase site_settings upsert notice:', error);
+      }
+
+      // Also upsert contact_settings table in parallel
+      await supabase.from('contact_settings').upsert({
+        id: 'default',
+        company_name: settings.companyName,
+        primary_phone: settings.primaryPhone,
+        mobile_number: settings.mobileNumber,
+        whatsapp_number: settings.whatsappNumber,
+        general_email: settings.generalEmail,
+        vip_email: settings.vipEmail,
+        press_email: settings.pressEmail,
+        trade_email: settings.tradeEmail,
+        schedule_mon_fri: settings.scheduleMonFri,
+        schedule_sat: settings.scheduleSat,
+        schedule_sun: settings.scheduleSun,
+        schedule_holidays: settings.scheduleHolidays,
+        instagram_url: settings.socialLinks.instagram?.url,
+        pinterest_url: settings.socialLinks.pinterest?.url,
+        linkedin_url: settings.socialLinks.linkedin?.url,
+        youtube_url: settings.socialLinks.youtube?.url,
+        twitter_url: settings.socialLinks.twitter?.url,
+        facebook_url: settings.socialLinks.facebook?.url,
+        updated_at: new Date().toISOString()
+      });
+
+      await logAdminActivityInSupabase(
+        adminEmail,
+        'SITE_SETTINGS_UPDATED',
+        'Updated site branding, header menu navigation links, logos, socials, and contact coordinates'
+      );
+    } catch (err) {
+      console.warn('Exception updating site settings in Supabase:', err);
+    }
+  }
+
+  return true;
+};
+
+/**
+ * Fetch Projects / Portfolio from Supabase with LocalStorage and Seed Fallbacks
+ */
+export const fetchProjectsFromSupabase = async (): Promise<Project[]> => {
+  const getDeletedProjects = (): string[] => {
+    try {
+      const data = localStorage.getItem('atelier_deleted_projects') || localStorage.getItem('maison_deleted_projects');
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const deletedKeys = getDeletedProjects();
+
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        return data
+          .map((item) => ({
+            id: item.id,
+            title: item.title,
+            category: item.category,
+            location: item.location,
+            year: item.year,
+            heroImage: item.hero_image,
+            gallery: item.gallery && item.gallery.length > 0 ? item.gallery : [item.hero_image],
+            description: item.description,
+            designer: item.designer,
+            productsUsed: item.products_used || []
+          }))
+          .filter((p) => !deletedKeys.includes(p.id));
+      }
+    } catch (err) {
+      console.warn('Error fetching projects from Supabase:', err);
+    }
+  }
+
+  // Fallback to local storage custom additions merged with default seed
+  try {
+    const custom = localStorage.getItem('atelier_custom_projects');
+    let list: Project[] = PROJECTS_DATA;
+    if (custom) {
+      const parsed: Project[] = JSON.parse(custom);
+      const customMap = new Map<string, Project>();
+      list.forEach((p) => customMap.set(p.id, p));
+      parsed.forEach((p) => customMap.set(p.id, p));
+      list = Array.from(customMap.values());
+    }
+    return list.filter((p) => !deletedKeys.includes(p.id));
+  } catch {
+    return PROJECTS_DATA.filter((p) => !deletedKeys.includes(p.id));
+  }
+};
+
+/**
+ * Create or Update Project in Supabase & LocalStorage
+ */
+export const createOrUpdateProjectInSupabase = async (
+  project: Project,
+  adminEmail: string
+): Promise<boolean> => {
+  // 1. Sync to LocalStorage
+  try {
+    const custom = localStorage.getItem('atelier_custom_projects');
+    let list: Project[] = custom ? JSON.parse(custom) : [...PROJECTS_DATA];
+    const existingIndex = list.findIndex((p) => p.id === project.id);
+    if (existingIndex >= 0) {
+      list[existingIndex] = project;
+    } else {
+      list.unshift(project);
+    }
+    localStorage.setItem('atelier_custom_projects', JSON.stringify(list));
+
+    // Remove from deleted list if present
+    const delData = localStorage.getItem('atelier_deleted_projects');
+    if (delData) {
+      const delList: string[] = JSON.parse(delData);
+      localStorage.setItem('atelier_deleted_projects', JSON.stringify(delList.filter((id) => id !== project.id)));
+    }
+  } catch (e) {
+    console.warn('LocalStorage project save error:', e);
+  }
+
+  // 2. Sync to Supabase
+  if (isSupabaseConfigured) {
+    try {
+      const { error } = await supabase.from('projects').upsert({
+        id: project.id,
+        title: project.title,
+        category: project.category,
+        location: project.location,
+        year: project.year,
+        hero_image: project.heroImage,
+        gallery: project.gallery && project.gallery.length > 0 ? project.gallery : [project.heroImage],
+        description: project.description,
+        designer: project.designer,
+        products_used: project.productsUsed || []
+      });
+
+      if (error) {
+        console.warn('Supabase project upsert error:', error);
+      } else {
+        await logAdminActivityInSupabase(
+          adminEmail,
+          'PROJECT_UPDATED',
+          `Saved portfolio project: ${project.title} (${project.location}) [${project.id}]`
+        );
+      }
+    } catch (err) {
+      console.warn('Exception updating project in Supabase:', err);
+    }
+  }
+
+  return true;
+};
+
+/**
+ * Delete Project from Supabase & LocalStorage
+ */
+export const deleteProjectInSupabase = async (
+  projectId: string,
+  adminEmail: string
+): Promise<boolean> => {
+  // 1. Sync to LocalStorage
+  try {
+    const delData = localStorage.getItem('atelier_deleted_projects');
+    const delList: string[] = delData ? JSON.parse(delData) : [];
+    if (!delList.includes(projectId)) {
+      delList.push(projectId);
+      localStorage.setItem('atelier_deleted_projects', JSON.stringify(delList));
+    }
+
+    const custom = localStorage.getItem('atelier_custom_projects');
+    if (custom) {
+      const parsed: Project[] = JSON.parse(custom);
+      localStorage.setItem(
+        'atelier_custom_projects',
+        JSON.stringify(parsed.filter((p) => p.id !== projectId))
+      );
+    }
+  } catch (e) {
+    console.warn('LocalStorage project delete error:', e);
+  }
+
+  // 2. Sync to Supabase
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from('projects').delete().eq('id', projectId);
+      await logAdminActivityInSupabase(
+        adminEmail,
+        'PROJECT_DELETED',
+        `Deleted portfolio project: ${projectId}`
+      );
+    } catch (err) {
+      console.warn('Exception deleting project from Supabase:', err);
+    }
+  }
+
+  return true;
+};
+
+// =======================================================
+// 12. DYNAMIC TESTIMONIALS & CLIENT REVIEWS CMS
+// =======================================================
+
+export const DEFAULT_TESTIMONIALS: Testimonial[] = [
+  {
+    id: 'tst-01',
+    clientName: 'Lady Clarissa Montgomery',
+    clientRole: 'Private Collector & Architectural Patron',
+    location: 'Belgravia Residence, London',
+    quote: 'Working with Atelier Living on our Belgravia townhouse was transformative. Their acoustic sheer drapes and hand-knotted Himalayan rugs brought an understated quiet luxury that defines our home.',
+    rating: 5,
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+    projectOrProduct: 'Belgravia Georgian Townhouse',
+    isFeatured: true,
+    isVisible: true,
+    order: 1
+  },
+  {
+    id: 'tst-02',
+    clientName: 'Alistair Vance',
+    clientRole: 'Principal Architect, Studio Vance & Partners',
+    location: 'Mayfair & Zurich',
+    quote: 'The depth of textile provenance and custom loom weaving capability at Atelier is unmatched. When drafting specifications for 100m+ yachts or heritage estates, their mill sourcing is our first call.',
+    rating: 5,
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+    projectOrProduct: 'Monaco Superyacht Penthouse',
+    isFeatured: true,
+    isVisible: true,
+    order: 2
+  },
+  {
+    id: 'tst-03',
+    clientName: 'Devika Singhania',
+    clientRole: 'Interior Designer & Heritage Restorer',
+    location: 'Altamount Road, Mumbai',
+    quote: 'From custom gold-threaded damasks from Venice to enzyme-washed Belgian flax, Atelier Living brings a sensory depth to spatial interiors that no standard distributor can rival.',
+    rating: 5,
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
+    projectOrProduct: 'Malabar Hill Ocean Villa',
+    isFeatured: true,
+    isVisible: true,
+    order: 3
+  },
+  {
+    id: 'tst-04',
+    clientName: 'Jean-Luc Moreau',
+    clientRole: 'Senior Curator & Hospitality Consultant',
+    location: 'Saint-Germain-des-Prés, Paris',
+    quote: 'Their tactile swatches arrived in signature lacquer presentation boxes within 48 hours. The physical material physics match their 3D simulation with absolute perfection.',
+    rating: 5,
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
+    projectOrProduct: 'Hôtel Particulier Le Marais',
+    isFeatured: true,
+    isVisible: true,
+    order: 4
+  }
+];
+
+export const fetchTestimonialsFromSupabase = async (): Promise<Testimonial[]> => {
+  // 1. Try Supabase
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('testimonials')
+        .select('*')
+        .order('order', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        const mapped: Testimonial[] = data.map((t) => ({
+          id: t.id,
+          clientName: t.client_name || t.clientName || 'Anonymous Collector',
+          clientRole: t.client_role || t.clientRole || '',
+          location: t.location || '',
+          quote: t.quote || '',
+          rating: Number(t.rating || 5),
+          avatar: t.avatar || '',
+          projectOrProduct: t.project_or_product || t.projectOrProduct || '',
+          order: Number(t.order || 1),
+          isFeatured: t.is_featured !== undefined ? t.is_featured : true,
+          isVisible: t.is_visible !== undefined ? t.is_visible : true,
+          createdAt: t.created_at
+        }));
+        localStorage.setItem('atelier_testimonials', JSON.stringify(mapped));
+        return mapped;
+      }
+    } catch (err) {
+      console.warn('Supabase fetch testimonials error:', err);
+    }
+  }
+
+  // 2. Try LocalStorage
+  try {
+    const cached = localStorage.getItem('atelier_testimonials');
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (e) {
+    console.warn('LocalStorage testimonials load error:', e);
+  }
+
+  // 3. Fallback
+  return DEFAULT_TESTIMONIALS;
+};
+
+export const saveTestimonialInSupabase = async (
+  item: Testimonial,
+  adminEmail: string = 'admin@atelier-living.com'
+): Promise<boolean> => {
+  // 1. LocalStorage
+  try {
+    const list = await fetchTestimonialsFromSupabase();
+    const idx = list.findIndex((t) => t.id === item.id);
+    let updated: Testimonial[];
+    if (idx >= 0) {
+      updated = [...list];
+      updated[idx] = item;
+    } else {
+      updated = [item, ...list];
+    }
+    localStorage.setItem('atelier_testimonials', JSON.stringify(updated));
+    window.dispatchEvent(new Event('storage'));
+  } catch (e) {
+    console.warn('LocalStorage testimonial save error:', e);
+  }
+
+  // 2. Supabase
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from('testimonials').upsert({
+        id: item.id,
+        client_name: item.clientName,
+        client_role: item.clientRole,
+        location: item.location,
+        quote: item.quote,
+        rating: item.rating,
+        avatar: item.avatar,
+        project_or_product: item.projectOrProduct,
+        order: item.order || 1,
+        is_featured: item.isFeatured !== false,
+        is_visible: item.isVisible !== false,
+        updated_at: new Date().toISOString()
+      });
+
+      await logAdminActivityInSupabase(
+        adminEmail,
+        'TESTIMONIAL_SAVED',
+        `Saved review from ${item.clientName} (${item.location})`
+      );
+    } catch (err) {
+      console.warn('Supabase testimonial upsert error:', err);
+    }
+  }
+
+  return true;
+};
+
+export const deleteTestimonialInSupabase = async (
+  testimonialId: string,
+  adminEmail: string = 'admin@atelier-living.com'
+): Promise<boolean> => {
+  try {
+    const list = await fetchTestimonialsFromSupabase();
+    const updated = list.filter((t) => t.id !== testimonialId);
+    localStorage.setItem('atelier_testimonials', JSON.stringify(updated));
+    window.dispatchEvent(new Event('storage'));
+  } catch (e) {
+    console.warn('LocalStorage testimonial delete error:', e);
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from('testimonials').delete().eq('id', testimonialId);
+      await logAdminActivityInSupabase(
+        adminEmail,
+        'TESTIMONIAL_DELETED',
+        `Deleted review ${testimonialId}`
+      );
+    } catch (err) {
+      console.warn('Supabase testimonial delete error:', err);
+    }
+  }
+
+  return true;
+};
+
+// =======================================================
+// 13. DYNAMIC GLOBAL BRAND PARTNERS & MARQUEE CMS
+// =======================================================
+
+export const DEFAULT_BRANDS_DATA: BrandPartner[] = BRANDS_DATA.map((b, idx) => ({
+  ...b,
+  order: idx + 1,
+  isVisible: true,
+  websiteUrl: ''
+}));
+
+export const fetchBrandsFromSupabase = async (): Promise<BrandPartner[]> => {
+  // 1. Try Supabase
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('brand_partners')
+        .select('*')
+        .order('order', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        const mapped: BrandPartner[] = data.map((b) => ({
+          id: b.id,
+          name: b.name,
+          country: b.country || '',
+          established: b.established || '',
+          tagline: b.tagline || '',
+          description: b.description || '',
+          logoText: b.logo_text || b.logoText || b.name,
+          image: b.image || '',
+          specialty: b.specialty || '',
+          featuredProducts: Array.isArray(b.featured_products) ? b.featured_products : [],
+          websiteUrl: b.website_url || b.websiteUrl || '',
+          isVisible: b.is_visible !== undefined ? b.is_visible : true,
+          order: Number(b.order || 1)
+        }));
+        localStorage.setItem('atelier_brands_data', JSON.stringify(mapped));
+        return mapped;
+      }
+    } catch (err) {
+      console.warn('Supabase fetch brands error:', err);
+    }
+  }
+
+  // 2. Try LocalStorage
+  try {
+    const cached = localStorage.getItem('atelier_brands_data');
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (e) {
+    console.warn('LocalStorage brands load error:', e);
+  }
+
+  // 3. Fallback
+  return DEFAULT_BRANDS_DATA;
+};
+
+export const saveBrandInSupabase = async (
+  brand: BrandPartner,
+  adminEmail: string = 'admin@atelier-living.com'
+): Promise<boolean> => {
+  // 1. LocalStorage
+  try {
+    const list = await fetchBrandsFromSupabase();
+    const idx = list.findIndex((b) => b.id === brand.id);
+    let updated: BrandPartner[];
+    if (idx >= 0) {
+      updated = [...list];
+      updated[idx] = brand;
+    } else {
+      updated = [...list, brand];
+    }
+    localStorage.setItem('atelier_brands_data', JSON.stringify(updated));
+    window.dispatchEvent(new Event('storage'));
+  } catch (e) {
+    console.warn('LocalStorage brand save error:', e);
+  }
+
+  // 2. Supabase
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from('brand_partners').upsert({
+        id: brand.id,
+        name: brand.name,
+        country: brand.country,
+        established: brand.established,
+        tagline: brand.tagline,
+        description: brand.description,
+        logo_text: brand.logoText,
+        image: brand.image,
+        specialty: brand.specialty,
+        featured_products: brand.featuredProducts || [],
+        website_url: brand.websiteUrl || '',
+        is_visible: brand.isVisible !== false,
+        order: brand.order || 1,
+        updated_at: new Date().toISOString()
+      });
+
+      await logAdminActivityInSupabase(
+        adminEmail,
+        'BRAND_SAVED',
+        `Saved brand partner ${brand.name} (${brand.country})`
+      );
+    } catch (err) {
+      console.warn('Supabase brand upsert error:', err);
+    }
+  }
+
+  return true;
+};
+
+export const deleteBrandInSupabase = async (
+  brandId: string,
+  adminEmail: string = 'admin@atelier-living.com'
+): Promise<boolean> => {
+  try {
+    const list = await fetchBrandsFromSupabase();
+    const updated = list.filter((b) => b.id !== brandId);
+    localStorage.setItem('atelier_brands_data', JSON.stringify(updated));
+    window.dispatchEvent(new Event('storage'));
+  } catch (e) {
+    console.warn('LocalStorage brand delete error:', e);
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from('brand_partners').delete().eq('id', brandId);
+      await logAdminActivityInSupabase(
+        adminEmail,
+        'BRAND_DELETED',
+        `Deleted brand partner ${brandId}`
+      );
+    } catch (err) {
+      console.warn('Supabase brand delete error:', err);
+    }
+  }
+
+  return true;
+};
+
+// =======================================================
+// 14. DYNAMIC OUR STORY & HERITAGE CMS
+// =======================================================
+
+export const DEFAULT_STORY_SETTINGS: StorySettings = {
+  heroBadge: 'Our Heritage & Craftsmanship',
+  heroHeading: 'A Century of Tactile Mastery & Spatial Poetry',
+  heroTitle: 'A Century of Tactile Mastery & Spatial Poetry',
+  heroSubheading:
+    'For over 120 years, Atelier Living has stood at the intersection of artisanal weaving traditions and modern architectural living. We believe that true interior luxury is defined by materials that honor the senses and endure across generations.',
+  heroSubtitle: 'Woven for Generations • Designed to Endure',
+  heroDescription:
+    'For over 120 years, Atelier Living has stood at the intersection of artisanal weaving traditions and modern architectural living.',
+  heroYear: 'EST. 1898',
+  heroImage: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=85',
+
+  ethosBadge: 'The Founder’s Ethos',
+  founderBadge: 'The Founder’s Ethos',
+  ethosQuote: 'We do not decorate rooms. We curate light, acoustic serenity, and human touch.',
+  founderHeadline: '"We do not decorate rooms. We curate light, acoustic serenity, and human touch."',
+  founderQuote:
+    'Founded in Mayfair in 1898, our atelier began as a private commission house for discerning collectors seeking unyielding textile perfection. Today, under the creative direction of Julian & Beatrice Drape, we continue to preserve centuries-old European weaving techniques while engineering modern sustainable textiles.',
+  ethosAuthor: 'Lady Vivienne Sterling',
+  founderSignatory: 'Lady Vivienne Sterling',
+  ethosRole: 'Founder & Master Curator',
+  founderRole: 'Fourth-Generation Managing Director',
+  ethosDescription1:
+    'Founded in Mayfair in 1898, our atelier began as a private commission house for discerning collectors seeking unyielding textile perfection.',
+  ethosDescription2:
+    'Every thread has memory. Every drape defines acoustic presence. We craft tactile atmospheres for the world’s most inspired sanctuaries.',
+  founderDescription:
+    'Every thread has memory. Every drape defines acoustic presence. We craft tactile atmospheres for the world’s most inspired sanctuaries.',
+  ethosImage:
+    'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85',
+  founderImage:
+    'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85',
+
+  pillarsBadge: 'Material Integrity',
+  pillarsTitle: 'Four Cornerstones of Our Sourcing',
+  pillarsSubtitle: 'Direct alliances with historic mill houses and master artisans across the globe.',
+  pillars: [
+    {
+      id: 'plr-1',
+      title: 'Flanders Organic Flax',
+      origin: 'Kortrijk, Belgium',
+      description:
+        'Grown without pesticides in rich river silt, our flax is enzyme-washed to achieve a fluid architectural drape.',
+      icon: 'Feather',
+      iconName: 'Feather',
+      order: 1
+    },
+    {
+      id: 'plr-2',
+      title: 'Como Raw Silk Jacquard',
+      origin: 'Lake Como, Italy',
+      description:
+        'Woven on slow shuttle looms that preserve yarn elasticity, resulting in luminous depth under changing daylight.',
+      icon: 'Sparkles',
+      iconName: 'Sparkles',
+      order: 2
+    },
+    {
+      id: 'plr-3',
+      title: 'Florentine Mohair Velvet',
+      origin: 'Florence, Italy',
+      description:
+        'Dyed in small artisan kettles using natural pigments, producing a dense pile that ages with an extraordinary patina.',
+      icon: 'Compass',
+      iconName: 'Compass',
+      order: 3
+    },
+    {
+      id: 'plr-4',
+      title: 'Himalayan Hand-Knotted Silk',
+      origin: 'Kathmandu, Nepal',
+      description:
+        'Crafted at 150 knots per square inch using hand-carded high-altitude wool and wild mulberry silk.',
+      icon: 'HeartHandshake',
+      iconName: 'HeartHandshake',
+      order: 4
+    }
+  ],
+
+  timelineBadge: 'Chronology of Excellence',
+  timelineTitle: 'Our Historic Milestones',
+  timelineSubtitle: 'A legacy of continuous innovation and artisan stewardship spanning three centuries.',
+  milestones: [
+    {
+      id: 'mls-1',
+      year: '1898',
+      title: 'Foundation in Mayfair',
+      description:
+        'Master weaver Henri Drape established a small silk drapery atelier servicing London and Parisian aristocracy.',
+      location: 'London & Paris',
+      order: 1
+    },
+    {
+      id: 'mls-2',
+      year: '1948',
+      title: 'Expansion into Como Silk Looms',
+      description:
+        'Acquired exclusive historical jacquard weaving looms along Lake Como, establishing custom silk pattern archives.',
+      location: 'Lake Como, Italy',
+      order: 2
+    },
+    {
+      id: 'mls-3',
+      year: '1985',
+      title: 'Flax & Mohair Sourcing Alliance',
+      description:
+        'Pioneered direct organic flax farming partnerships with Kortrijk farmers in Belgium and Angora mohair mills in Florence.',
+      location: 'Belgium & Italy',
+      order: 3
+    },
+    {
+      id: 'mls-4',
+      year: '2012',
+      title: 'Acoustic Sheer Innovation',
+      description:
+        'Engineered micro-flax acoustic sheer weaves in St. Gallen, combining sound absorption with transparent light diffusion.',
+      location: 'St. Gallen, Switzerland',
+      order: 4
+    },
+    {
+      id: 'mls-5',
+      year: '2026',
+      title: 'The 3D Atelier Digital Studio',
+      description:
+        'Launched real-time material simulation enabling interior architects to inspect drape physics and custom colorways remotely.',
+      location: 'Global Ateliers',
+      order: 5
+    }
+  ],
+
+  galleryBadge: 'Inside The Atelier',
+  galleryTitle: 'Workshop & Loom Craft Gallery',
+  gallerySubtitle: 'Behind the scenes at our European weaveries, dye kettles, and master carving workshops.',
+  gallery: [
+    {
+      id: 'gal-1',
+      image: 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&w=1200&q=85',
+      caption: 'Artisanal Jacquard Shuttle Loom in Como, Italy',
+      category: 'Weaving Mill',
+      order: 1
+    },
+    {
+      id: 'gal-2',
+      image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=85',
+      caption: 'Hand-sorting Flanders Flax Fibers in Kortrijk',
+      category: 'Flax Preparation',
+      order: 2
+    },
+    {
+      id: 'gal-3',
+      image: 'https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=1200&q=85',
+      caption: 'Kettle-Dyeing Mohair Velvet in Florence',
+      category: 'Artisan Dyeing',
+      order: 3
+    },
+    {
+      id: 'gal-4',
+      image: 'https://images.unsplash.com/photo-1600121848594-d8644e57abab?auto=format&fit=crop&w=1200&q=85',
+      caption: 'Master Weaver Hand-Carving Relief Rug Contours in Nepal',
+      category: 'Relief Carving',
+      order: 4
+    }
+  ],
+
+  stats: [
+    {
+      value: '1898',
+      label: 'Founding Year',
+      description: 'Over a century of continuous artisan lineage'
+    },
+    {
+      value: '8 Archives',
+      label: 'Mill Houses',
+      description: 'Exclusive heritage weaving alliances across Europe'
+    },
+    {
+      value: '15,000+',
+      label: 'Bespoke Meters',
+      description: 'Woven annually for global private residences'
+    },
+    {
+      value: '1,200+',
+      label: 'Private Estates',
+      description: 'Furnished across London, Paris, New York & Tokyo'
+    }
+  ],
+
+  statsLegacy: '1898',
+  statsArchives: '8 Archives',
+  statsSwatches: '15,000+',
+  statsResidences: '1,200+'
+};
+
+export const fetchStorySettingsFromSupabase = async (): Promise<StorySettings> => {
+  // 1. Try Supabase
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('story_settings')
+        .select('*')
+        .eq('id', 'global-story')
+        .maybeSingle();
+
+      if (!error && data) {
+        const mapped: StorySettings = {
+          heroBadge: data.hero_badge || DEFAULT_STORY_SETTINGS.heroBadge,
+          heroHeading: data.hero_heading || data.hero_title || DEFAULT_STORY_SETTINGS.heroHeading,
+          heroTitle: data.hero_title || DEFAULT_STORY_SETTINGS.heroTitle,
+          heroSubheading: data.hero_subheading || data.hero_subtitle || DEFAULT_STORY_SETTINGS.heroSubheading,
+          heroSubtitle: data.hero_subtitle || DEFAULT_STORY_SETTINGS.heroSubtitle,
+          heroDescription: data.hero_description || DEFAULT_STORY_SETTINGS.heroDescription,
+          heroYear: data.hero_year || DEFAULT_STORY_SETTINGS.heroYear,
+          heroImage: data.hero_image || DEFAULT_STORY_SETTINGS.heroImage,
+
+          ethosBadge: data.ethos_badge || data.founder_badge || DEFAULT_STORY_SETTINGS.ethosBadge,
+          founderBadge: data.founder_badge || DEFAULT_STORY_SETTINGS.founderBadge,
+          ethosQuote: data.ethos_quote || data.founder_headline || data.founder_quote || DEFAULT_STORY_SETTINGS.ethosQuote,
+          founderHeadline: data.founder_headline || DEFAULT_STORY_SETTINGS.founderHeadline,
+          founderQuote: data.founder_quote || DEFAULT_STORY_SETTINGS.founderQuote,
+          ethosAuthor: data.ethos_author || data.founder_signatory || DEFAULT_STORY_SETTINGS.ethosAuthor,
+          founderSignatory: data.founder_signatory || DEFAULT_STORY_SETTINGS.founderSignatory,
+          ethosRole: data.ethos_role || data.founder_role || DEFAULT_STORY_SETTINGS.ethosRole,
+          founderRole: data.founder_role || DEFAULT_STORY_SETTINGS.founderRole,
+          ethosDescription1: data.ethos_description1 || data.founder_description || DEFAULT_STORY_SETTINGS.ethosDescription1,
+          ethosDescription2: data.ethos_description2 || DEFAULT_STORY_SETTINGS.ethosDescription2,
+          founderDescription: data.founder_description || DEFAULT_STORY_SETTINGS.founderDescription,
+          ethosImage: data.ethos_image || data.founder_image || DEFAULT_STORY_SETTINGS.ethosImage,
+          founderImage: data.founder_image || DEFAULT_STORY_SETTINGS.founderImage,
+
+          pillarsBadge: data.pillars_badge || DEFAULT_STORY_SETTINGS.pillarsBadge,
+          pillarsTitle: data.pillars_title || DEFAULT_STORY_SETTINGS.pillarsTitle,
+          pillarsSubtitle: data.pillars_subtitle || DEFAULT_STORY_SETTINGS.pillarsSubtitle,
+          pillars: Array.isArray(data.pillars) && data.pillars.length > 0 ? data.pillars : DEFAULT_STORY_SETTINGS.pillars,
+
+          timelineBadge: data.timeline_badge || DEFAULT_STORY_SETTINGS.timelineBadge,
+          timelineTitle: data.timeline_title || DEFAULT_STORY_SETTINGS.timelineTitle,
+          timelineSubtitle: data.timeline_subtitle || DEFAULT_STORY_SETTINGS.timelineSubtitle,
+          milestones:
+            Array.isArray(data.milestones) && data.milestones.length > 0
+              ? data.milestones
+              : Array.isArray(data.timeline_milestones) && data.timeline_milestones.length > 0
+              ? data.timeline_milestones
+              : DEFAULT_STORY_SETTINGS.milestones,
+
+          galleryBadge: data.gallery_badge || DEFAULT_STORY_SETTINGS.galleryBadge,
+          galleryTitle: data.gallery_title || DEFAULT_STORY_SETTINGS.galleryTitle,
+          gallerySubtitle: data.gallery_subtitle || DEFAULT_STORY_SETTINGS.gallerySubtitle,
+          gallery:
+            Array.isArray(data.gallery) && data.gallery.length > 0
+              ? data.gallery
+              : Array.isArray(data.gallery_images) && data.gallery_images.length > 0
+              ? data.gallery_images.map((img: any) => ({
+                  image: img.image || img.url || '',
+                  caption: img.caption || '',
+                  category: img.category || 'Atelier'
+                }))
+              : DEFAULT_STORY_SETTINGS.gallery,
+
+          stats:
+            Array.isArray(data.stats) && data.stats.length > 0
+              ? data.stats
+              : DEFAULT_STORY_SETTINGS.stats,
+          statsLegacy: data.stats_legacy || DEFAULT_STORY_SETTINGS.statsLegacy,
+          statsArchives: data.stats_archives || DEFAULT_STORY_SETTINGS.statsArchives,
+          statsSwatches: data.stats_swatches || DEFAULT_STORY_SETTINGS.statsSwatches,
+          statsResidences: data.stats_residences || DEFAULT_STORY_SETTINGS.statsResidences,
+          updatedAt: data.updated_at
+        };
+        localStorage.setItem('atelier_story_settings', JSON.stringify(mapped));
+        return mapped;
+      }
+    } catch (err) {
+      console.warn('Supabase fetch story settings error:', err);
+    }
+  }
+
+  // 2. Try LocalStorage
+  try {
+    const cached = localStorage.getItem('atelier_story_settings');
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (e) {
+    console.warn('LocalStorage story settings load error:', e);
+  }
+
+  // 3. Fallback
+  return DEFAULT_STORY_SETTINGS;
+};
+
+export const updateStorySettingsInSupabase = async (
+  settings: StorySettings,
+  adminEmail: string = 'admin@atelier-living.com'
+): Promise<boolean> => {
+  // 1. LocalStorage
+  try {
+    localStorage.setItem('atelier_story_settings', JSON.stringify(settings));
+    window.dispatchEvent(new Event('storage'));
+  } catch (e) {
+    console.warn('LocalStorage story settings save error:', e);
+  }
+
+  // 2. Supabase
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from('story_settings').upsert({
+        id: 'global-story',
+        hero_badge: settings.heroBadge,
+        hero_heading: settings.heroHeading,
+        hero_title: settings.heroHeading || settings.heroTitle,
+        hero_subheading: settings.heroSubheading,
+        hero_subtitle: settings.heroSubheading || settings.heroSubtitle,
+        hero_description: settings.heroDescription || settings.heroSubheading,
+        hero_year: settings.heroYear,
+        hero_image: settings.heroImage,
+        ethos_badge: settings.ethosBadge,
+        founder_badge: settings.ethosBadge,
+        ethos_quote: settings.ethosQuote,
+        founder_headline: settings.ethosQuote,
+        founder_quote: settings.ethosQuote,
+        ethos_author: settings.ethosAuthor,
+        founder_signatory: settings.ethosAuthor,
+        ethos_role: settings.ethosRole,
+        founder_role: settings.ethosRole,
+        ethos_description1: settings.ethosDescription1,
+        ethos_description2: settings.ethosDescription2,
+        founder_description: settings.ethosDescription1,
+        ethos_image: settings.ethosImage,
+        founder_image: settings.ethosImage,
+        pillars_badge: settings.pillarsBadge,
+        pillars_title: settings.pillarsTitle,
+        pillars_subtitle: settings.pillarsSubtitle,
+        pillars: settings.pillars,
+        timeline_badge: settings.timelineBadge,
+        timeline_title: settings.timelineTitle,
+        timeline_subtitle: settings.timelineSubtitle,
+        milestones: settings.milestones,
+        gallery_badge: settings.galleryBadge,
+        gallery_title: settings.galleryTitle,
+        gallery_subtitle: settings.gallerySubtitle,
+        gallery: settings.gallery,
+        stats: settings.stats,
+        stats_legacy: settings.statsLegacy,
+        stats_archives: settings.statsArchives,
+        stats_swatches: settings.statsSwatches,
+        stats_residences: settings.statsResidences,
+        updated_at: new Date().toISOString()
+      });
+
+      await logAdminActivityInSupabase(
+        adminEmail,
+        'STORY_SETTINGS_UPDATED',
+        'Updated Our Story & Heritage page content'
+      );
+    } catch (err) {
+      console.warn('Supabase story settings upsert error:', err);
+    }
+  }
+
+  return true;
+};
+
+
 

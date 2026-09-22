@@ -1,16 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { CATEGORIES_DATA } from '../../data/categoriesData';
-import type { CategorySlug } from '../../types';
-import { Menu, X, ChevronDown, PhoneCall, Compass, PackageCheck, ArrowRight, Sparkles } from 'lucide-react';
+import type { CategorySlug, SiteSettings, HeaderNavLink } from '../../types';
+import { DEFAULT_SITE_SETTINGS, DEFAULT_HEADER_NAV_LINKS } from '../../lib/supabase';
+import {
+  Menu,
+  X,
+  ChevronDown,
+  PhoneCall,
+  Compass,
+  PackageCheck,
+  ArrowRight,
+  Sparkles,
+  ExternalLink,
+  Phone,
+  Search,
+  ShoppingBag
+} from 'lucide-react';
 
 interface NavbarProps {
   activeTab: string;
+  siteSettings?: SiteSettings;
   onNavigate: (tab: string, categorySlug?: CategorySlug) => void;
   onRequestSwatches: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
+  siteSettings = DEFAULT_SITE_SETTINGS,
   onNavigate,
   onRequestSwatches
 }) => {
@@ -27,7 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         setIsScrolled(false);
       }
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -49,25 +65,158 @@ export const Navbar: React.FC<NavbarProps> = ({
     onNavigate('category', catId);
   };
 
-  const navLinks = [
-    { id: 'home', label: 'Home' },
-    { id: 'story', label: 'Our Story' },
-    { id: 'projects', label: 'Our Projects', hasMegaMenu: true },
-    { id: 'brands', label: 'Brands With Us' },
-    { id: 'contact', label: 'Contact Us' }
-  ];
+  const navLinks: HeaderNavLink[] = (siteSettings?.navLinks && siteSettings.navLinks.length > 0
+    ? siteSettings.navLinks
+    : DEFAULT_HEADER_NAV_LINKS
+  )
+    .filter((link) => link.isVisible !== false)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  const handleLinkClick = (link: HeaderNavLink) => {
+    setIsMobileDrawerOpen(false);
+    if (link.isExternal && link.target) {
+      window.open(link.target, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (link.hasMegaMenu) {
+      handleCategoryClick('fabrics');
+      return;
+    }
+    onNavigate(link.target || link.id);
+  };
+
+  const hasHeaderLogoImage = Boolean(siteSettings?.headerLogoImage && siteSettings.headerLogoImage.trim() !== '');
+
+  // Dynamic Typography & Sizing Helpers
+  const getNavFontSizeClass = () => {
+    switch (siteSettings.headerFontSize) {
+      case '11px': return 'text-[11px]';
+      case '12px': return 'text-[12px]';
+      case '14px': return 'text-[14px]';
+      case '15px': return 'text-[15px]';
+      case '16px': return 'text-[16px]';
+      case '13px':
+      default: return 'text-[13px]';
+    }
+  };
+
+  const getNavItemSpacingStyle = () => {
+    switch (siteSettings.headerItemSpacing) {
+      case '12px': return { gap: '12px' };
+      case '18px': return { gap: '18px' };
+      case '32px': return { gap: '32px' };
+      case '40px': return { gap: '40px' };
+      case '48px': return { gap: '48px' };
+      case '24px':
+      default: return { gap: '24px' };
+    }
+  };
+
+  const getNavFontWeightClass = () => {
+    switch (siteSettings.headerFontWeight) {
+      case '300': return 'font-light';
+      case '400': return 'font-normal';
+      case '500': return 'font-medium';
+      case '700': return 'font-bold';
+      case '600':
+      default: return 'font-semibold';
+    }
+  };
+
+  const getNavLetterSpacingClass = () => {
+    switch (siteSettings.headerLetterSpacing) {
+      case 'tight': return 'tracking-normal';
+      case 'normal': return 'tracking-wide';
+      case 'wide': return 'tracking-wider';
+      case 'wider': return 'tracking-[0.15em]';
+      case 'widest':
+      default: return 'tracking-[0.2em]';
+    }
+  };
+
+  const getNavTextTransformClass = () => {
+    switch (siteSettings.headerTextTransform) {
+      case 'capitalize': return 'capitalize';
+      case 'normal-case': return 'normal-case';
+      case 'uppercase':
+      default: return 'uppercase';
+    }
+  };
+
+  const getHeaderPaddingClass = () => {
+    if (isScrolled) {
+      return 'py-2 sm:py-2.5';
+    }
+    switch (siteSettings.headerHeight) {
+      case 'compact': return 'py-1.5 sm:py-2';
+      case 'luxury': return 'py-4 sm:py-5';
+      case 'standard':
+      default: return 'py-2.5 sm:py-3.5';
+    }
+  };
+
+  const getHeaderBackgroundClass = () => {
+    if (isScrolled) {
+      return 'bg-[#0F1714]/98 backdrop-blur-2xl shadow-2xl';
+    }
+    switch (siteSettings.headerBackgroundStyle) {
+      case 'obsidian': return 'bg-[#0F1714]/98 backdrop-blur-2xl shadow-xl';
+      case 'glass': return 'bg-black/60 backdrop-blur-2xl shadow-xl';
+      case 'solid': return 'bg-[#0F1714] shadow-xl';
+      case 'emerald':
+      default: return 'bg-[#163129]/95 backdrop-blur-xl shadow-xl';
+    }
+  };
+
+  const getHeaderBorderClass = () => {
+    switch (siteSettings.headerBorderBottom) {
+      case 'subtle': return 'border-b border-white/15';
+      case 'glow': return 'border-b border-[#C9A56A] shadow-[0_4px_25px_rgba(201,165,106,0.25)]';
+      case 'none': return 'border-b-0';
+      case 'gold':
+      default: return isScrolled ? 'border-b border-[#C9A56A]/50' : 'border-b border-[#C9A56A]/35';
+    }
+  };
+
+  const logoHeight = siteSettings.headerLogoHeight || 40;
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-[#0F1714]/98 backdrop-blur-2xl border-b border-[#C9A56A]/50 py-2 sm:py-2.5 shadow-2xl text-white'
-          : 'bg-[#163129]/95 backdrop-blur-xl border-b border-[#C9A56A]/35 py-2.5 sm:py-3.5 shadow-xl text-white'
-      }`}
+      className={`${
+        siteSettings.headerSticky !== false ? 'fixed top-0 left-0 right-0 z-50' : 'relative z-50'
+      } transition-all duration-300 ${getHeaderBackgroundClass()} ${getHeaderBorderClass()}`}
     >
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+      {/* Optional Top Announcement / Utility Banner Ribbon */}
+      {siteSettings.headerTopBarEnabled && siteSettings.headerTopBarText && (
+        <div
+          className={`text-center py-1.5 px-4 text-[10px] sm:text-[11px] font-medium tracking-widest uppercase transition-all select-none ${
+            siteSettings.headerTopBarBg === 'gold'
+              ? 'bg-[#C9A56A] text-[#0F1714] font-bold'
+              : siteSettings.headerTopBarBg === 'obsidian'
+              ? 'bg-[#0F1714] text-[#C9A56A] border-b border-[#C9A56A]/30'
+              : 'bg-[#163129] text-white border-b border-white/10'
+          }`}
+        >
+          <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
+            <Sparkles className="w-3 h-3 shrink-0 opacity-80" />
+            {siteSettings.headerTopBarLink ? (
+              <button
+                onClick={() => onNavigate(siteSettings.headerTopBarLink || 'contact')}
+                className="hover:underline cursor-pointer flex items-center gap-1 font-semibold"
+              >
+                <span>{siteSettings.headerTopBarText}</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            ) : (
+              <span>{siteSettings.headerTopBarText}</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className={`max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 ${getHeaderPaddingClass()} transition-all duration-300`}>
         <div className="flex items-center justify-between">
-          {/* Compact Brand Logo Header */}
+          {/* Header Brand Logo (Image or Customized Text Fallback) */}
           <button
             onClick={() => {
               setIsMobileDrawerOpen(false);
@@ -75,27 +224,53 @@ export const Navbar: React.FC<NavbarProps> = ({
             }}
             className="flex items-center space-x-2 sm:space-x-3 group text-left focus:outline-none shrink-0 cursor-pointer"
           >
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-[#C9A56A] sm:border-2 flex items-center justify-center bg-[#C9A56A]/20 group-hover:bg-[#C9A56A] group-hover:shadow-[0_0_15px_rgba(201,165,106,0.5)] transition-all duration-300 shadow-md shrink-0">
-              <span className="font-serif font-bold text-base sm:text-xl text-[#C9A56A] group-hover:text-[#0F1714] transition-colors">
-                A
-              </span>
-            </div>
-            <div className="leading-tight">
-              <span className="font-serif tracking-wider sm:tracking-widest text-sm sm:text-xl font-bold uppercase text-white group-hover:text-[#C9A56A] transition-colors block drop-shadow-sm">
-                Atelier Living
-              </span>
-              <span className="hidden xs:block text-[8px] sm:text-[10px] tracking-[0.18em] sm:tracking-[0.28em] uppercase text-[#C9A56A] font-semibold">
-                Designed For Inspired Living
-              </span>
-            </div>
+            {hasHeaderLogoImage ? (
+              <div style={{ height: `${logoHeight}px` }} className="flex items-center transition-all duration-300">
+                <img
+                  src={siteSettings.headerLogoImage}
+                  alt={siteSettings.headerLogoTitle || 'Atelier Living'}
+                  style={{ maxHeight: `${logoHeight}px` }}
+                  className="w-auto object-contain transition-transform group-hover:scale-105 duration-300"
+                />
+              </div>
+            ) : (
+              <>
+                <div
+                  style={{ width: `${Math.max(36, logoHeight)}px`, height: `${Math.max(36, logoHeight)}px` }}
+                  className="rounded-full border border-[#C9A56A] sm:border-2 flex items-center justify-center bg-[#C9A56A]/20 group-hover:bg-[#C9A56A] group-hover:shadow-[0_0_15px_rgba(201,165,106,0.5)] transition-all duration-300 shadow-md shrink-0"
+                >
+                  <span className="font-serif font-bold text-base sm:text-xl text-[#C9A56A] group-hover:text-[#0F1714] transition-colors">
+                    {siteSettings?.headerLogoMonogram || 'A'}
+                  </span>
+                </div>
+                <div className="leading-tight">
+                  <span className="font-serif tracking-wider sm:tracking-widest text-sm sm:text-xl font-bold uppercase text-white group-hover:text-[#C9A56A] transition-colors block drop-shadow-sm">
+                    {siteSettings?.headerLogoTitle || 'Atelier Living'}
+                  </span>
+                  <span className="hidden xs:block text-[8px] sm:text-[10px] tracking-[0.18em] sm:tracking-[0.28em] uppercase text-[#C9A56A] font-semibold">
+                    {siteSettings?.headerLogoSubtitle || 'Designed For Inspired Living'}
+                  </span>
+                </div>
+              </>
+            )}
           </button>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center space-x-1 xl:space-x-3">
+          {/* Dynamic Desktop Navigation Links */}
+          <nav
+            style={getNavItemSpacingStyle()}
+            className="hidden lg:flex items-center justify-center transition-all duration-200"
+          >
             {navLinks.map((link) => {
               const isActive =
+                activeTab === link.target ||
                 activeTab === link.id ||
-                (link.hasMegaMenu && (activeTab === 'projects' || activeTab === 'category'));
+                ((link.target === 'catalogue' || link.id === 'catalogue') && activeTab === 'category');
+
+              const linkClasses = `relative ${getNavFontSizeClass()} ${getNavFontWeightClass()} ${getNavLetterSpacingClass()} ${getNavTextTransformClass()} px-2 py-1.5 transition-all duration-200 cursor-pointer flex items-center gap-1 ${
+                isActive
+                  ? 'text-[#C9A56A] font-bold drop-shadow-[0_0_8px_rgba(201,165,106,0.4)]'
+                  : 'text-white/90 hover:text-[#C9A56A]'
+              }`;
 
               if (link.hasMegaMenu) {
                 return (
@@ -106,39 +281,35 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onMouseLeave={() => setIsMegaMenuOpen(false)}
                   >
                     <button
-                      onClick={() => onNavigate('projects')}
-                      className={`relative flex items-center space-x-1.5 text-xs xl:text-sm uppercase tracking-widest font-semibold px-3 py-2 transition-all duration-200 cursor-pointer ${
-                        isActive
-                          ? 'text-[#C9A56A] font-bold'
-                          : 'text-white/90 hover:text-[#C9A56A]'
-                      }`}
+                      onClick={() => handleCategoryClick('fabrics')}
+                      className={linkClasses}
                     >
                       <span>{link.label}</span>
                       <ChevronDown
-                        className={`w-4 h-4 transition-transform duration-300 ${
+                        className={`w-3.5 h-3.5 transition-transform duration-300 ${
                           isMegaMenuOpen ? 'rotate-180 text-[#C9A56A]' : isActive ? 'text-[#C9A56A]' : ''
                         }`}
                       />
                       {isActive && (
-                        <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-[#C9A56A] rounded-full shadow-[0_0_8px_rgba(201,165,106,0.8)]" />
+                        <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#C9A56A] rounded-full shadow-[0_0_8px_rgba(201,165,106,0.8)]" />
                       )}
                     </button>
 
                     {/* Mega Menu Dropdown */}
                     {isMegaMenuOpen && (
-                      <div className="absolute top-full -left-48 w-[840px] bg-[#0F1714]/98 backdrop-blur-2xl rounded-2xl p-6 shadow-2xl border border-[#C9A56A]/40 grid grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-3 duration-300">
+                      <div className="absolute top-full -left-48 w-[840px] bg-[#0F1714]/98 backdrop-blur-2xl rounded-2xl p-6 shadow-2xl border border-[#C9A56A]/40 grid grid-cols-4 gap-4 animate-in fade-in slide-from-top-3 duration-300 z-50">
                         <div className="col-span-4 pb-3 mb-2 border-b border-[#C9A56A]/30 flex items-center justify-between">
                           <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-bold flex items-center gap-1.5">
-                            <Compass className="w-4 h-4 text-[#C9A56A]" /> Explore Furnishing Categories
+                            <Compass className="w-4 h-4 text-[#C9A56A]" /> Explore Product Catalogue (8 Archives)
                           </span>
                           <button
                             onClick={() => {
                               setIsMegaMenuOpen(false);
-                              onNavigate('projects');
+                              onRequestSwatches();
                             }}
-                            className="text-xs text-white hover:text-[#C9A56A] underline tracking-wider font-medium cursor-pointer"
+                            className="text-xs text-white hover:text-[#C9A56A] underline tracking-wider font-medium cursor-pointer flex items-center gap-1"
                           >
-                            View All Projects Portfolio &rarr;
+                            <PackageCheck className="w-3.5 h-3.5 text-[#C9A56A]" /> Order Swatch Box &rarr;
                           </button>
                         </div>
 
@@ -175,42 +346,80 @@ export const Navbar: React.FC<NavbarProps> = ({
               return (
                 <button
                   key={link.id}
-                  onClick={() => onNavigate(link.id)}
-                  className={`relative text-xs xl:text-sm uppercase tracking-widest font-semibold px-3 py-2 transition-all duration-200 cursor-pointer ${
-                    isActive
-                      ? 'text-[#C9A56A] font-bold'
-                      : 'text-white/90 hover:text-[#C9A56A]'
-                  }`}
+                  onClick={() => handleLinkClick(link)}
+                  className={linkClasses}
                 >
                   <span>{link.label}</span>
+                  {link.isExternal && <ExternalLink className="w-3 h-3 opacity-60" />}
                   {isActive && (
-                    <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-[#C9A56A] rounded-full shadow-[0_0_8px_rgba(201,165,106,0.8)]" />
+                    <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#C9A56A] rounded-full shadow-[0_0_8px_rgba(201,165,106,0.8)]" />
                   )}
                 </button>
               );
             })}
           </nav>
 
-          {/* Desktop Right CTA */}
-          <div className="hidden lg:flex items-center space-x-4">
-            <button
-              onClick={onRequestSwatches}
-              className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#C9A56A] via-[#E6C894] to-[#C9A56A] text-[#0F1714] hover:brightness-110 font-bold text-xs uppercase tracking-widest shadow-lg shadow-[#C9A56A]/25 hover:shadow-[#C9A56A]/40 hover:scale-[1.03] active:scale-[0.98] transition-all flex items-center space-x-2 border border-[#E9DFD1]/60 cursor-pointer"
-            >
-              <PackageCheck className="w-4 h-4 text-[#0F1714] stroke-[2.5]" />
-              <span>Request Swatches</span>
-            </button>
+          {/* Desktop Right Action Buttons */}
+          <div className="hidden lg:flex items-center space-x-3">
+            {/* Quick Search Trigger */}
+            {siteSettings.headerShowSearch && (
+              <button
+                onClick={() => onNavigate('catalogue')}
+                className="p-2.5 rounded-full bg-white/5 hover:bg-[#C9A56A]/20 border border-white/10 hover:border-[#C9A56A] text-white/90 hover:text-[#C9A56A] transition-all cursor-pointer shadow-sm"
+                title="Search Catalogue & Collections"
+                aria-label="Search"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Direct Concierge Contact Button */}
+            {siteSettings.headerShowConcierge !== false && (
+              <a
+                href={`tel:${siteSettings.primaryPhone.replace(/\s+/g, '')}`}
+                className="p-2.5 rounded-full bg-white/5 hover:bg-[#C9A56A]/20 border border-white/10 hover:border-[#C9A56A] text-[#C9A56A] transition-all cursor-pointer shadow-sm flex items-center gap-1.5 text-xs font-semibold"
+                title={`Call Atelier VIP Concierge: ${siteSettings.primaryPhone}`}
+              >
+                <Phone className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline text-[11px] font-mono">{siteSettings.primaryPhone}</span>
+              </a>
+            )}
+
+            {/* Inquiry Bag / Cart Trigger */}
+            {siteSettings.headerShowCart && (
+              <button
+                onClick={onRequestSwatches}
+                className="p-2.5 rounded-full bg-white/5 hover:bg-[#C9A56A]/20 border border-white/10 hover:border-[#C9A56A] text-white/90 hover:text-[#C9A56A] transition-all cursor-pointer shadow-sm relative"
+                title="View Inquiry Bag / Swatches"
+                aria-label="Inquiry Bag"
+              >
+                <ShoppingBag className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Request Swatches CTA Button */}
+            {siteSettings.headerShowSwatchesBtn !== false && (
+              <button
+                onClick={onRequestSwatches}
+                className="px-4.5 py-2 rounded-full bg-gradient-to-r from-[#C9A56A] via-[#E6C894] to-[#C9A56A] text-[#0F1714] hover:brightness-110 font-bold text-xs uppercase tracking-widest shadow-lg shadow-[#C9A56A]/25 hover:shadow-[#C9A56A]/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center space-x-1.5 border border-[#E9DFD1]/60 cursor-pointer"
+              >
+                <PackageCheck className="w-3.5 h-3.5 text-[#0F1714] stroke-[2.5]" />
+                <span>Swatches</span>
+              </button>
+            )}
           </div>
 
           {/* Compact Mobile Controls */}
           <div className="flex lg:hidden items-center space-x-2">
-            <button
-              onClick={onRequestSwatches}
-              className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-full bg-gradient-to-r from-[#C9A56A] to-[#E6C894] text-[#0F1714] text-[10px] sm:text-[11px] font-bold tracking-wider uppercase flex items-center gap-1 shadow-md border border-[#E9DFD1]/50 shrink-0 cursor-pointer"
-            >
-              <PackageCheck className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>Swatches</span>
-            </button>
+            {siteSettings.headerShowSwatchesBtn !== false && (
+              <button
+                onClick={onRequestSwatches}
+                className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-full bg-gradient-to-r from-[#C9A56A] to-[#E6C894] text-[#0F1714] text-[10px] sm:text-[11px] font-bold tracking-wider uppercase flex items-center gap-1 shadow-md border border-[#E9DFD1]/50 shrink-0 cursor-pointer"
+              >
+                <PackageCheck className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Swatches</span>
+              </button>
+            )}
 
             <button
               onClick={() => setIsMobileDrawerOpen(!isMobileDrawerOpen)}
@@ -237,8 +446,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="space-y-3">
               {navLinks.map((link) => {
                 const isActive =
+                  activeTab === link.target ||
                   activeTab === link.id ||
-                  (link.hasMegaMenu && (activeTab === 'projects' || activeTab === 'category'));
+                  ((link.target === 'catalogue' || link.id === 'catalogue') && activeTab === 'category');
 
                 if (link.hasMegaMenu) {
                   return (
@@ -247,13 +457,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <button
                           onClick={() => {
                             setIsMobileDrawerOpen(false);
-                            onNavigate('projects');
+                            onNavigate('category', 'fabrics');
                           }}
                           className={`text-base sm:text-lg uppercase tracking-wider font-serif font-bold text-left flex items-center gap-2 ${
                             isActive ? 'text-[#C9A56A]' : 'text-white hover:text-[#C9A56A]'
                           }`}
                         >
-                          <span>Our Projects</span>
+                          <span>{link.label}</span>
                           <Sparkles className="w-3.5 h-3.5 text-[#C9A56A]" />
                         </button>
 
@@ -299,15 +509,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 return (
                   <button
                     key={link.id}
-                    onClick={() => {
-                      setIsMobileDrawerOpen(false);
-                      onNavigate(link.id);
-                    }}
+                    onClick={() => handleLinkClick(link)}
                     className={`block w-full text-left text-base sm:text-lg uppercase tracking-wider font-serif font-bold border-b border-white/10 pb-3 transition-colors ${
                       isActive ? 'text-[#C9A56A]' : 'text-white hover:text-[#C9A56A]'
                     }`}
                   >
-                    {link.label}
+                    <div className="flex items-center justify-between">
+                      <span>{link.label}</span>
+                      {link.isExternal && <ExternalLink className="w-4 h-4 text-[#C9A56A]" />}
+                    </div>
                   </button>
                 );
               })}
@@ -315,27 +525,29 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Bottom Actions in Dropdown */}
             <div className="pt-4 border-t border-[#C9A56A]/40 space-y-2.5 mt-4">
-              <button
-                onClick={() => {
-                  setIsMobileDrawerOpen(false);
-                  onRequestSwatches();
-                }}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#C9A56A] via-[#E6C894] to-[#C9A56A] text-[#0F1714] uppercase tracking-widest text-xs font-bold flex items-center justify-center gap-2 shadow-lg cursor-pointer"
-              >
-                <PackageCheck className="w-4 h-4 text-[#0F1714] stroke-[2.5]" />
-                <span>Order Swatch Box</span>
-              </button>
+              {siteSettings.headerShowSwatchesBtn !== false && (
+                <button
+                  onClick={() => {
+                    setIsMobileDrawerOpen(false);
+                    onRequestSwatches();
+                  }}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-[#C9A56A] via-[#E6C894] to-[#C9A56A] text-[#0F1714] uppercase tracking-widest text-xs font-bold flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+                >
+                  <PackageCheck className="w-4 h-4 text-[#0F1714] stroke-[2.5]" />
+                  <span>Order Swatch Box</span>
+                </button>
+              )}
 
-              <button
-                onClick={() => {
-                  setIsMobileDrawerOpen(false);
-                  onNavigate('contact');
-                }}
-                className="w-full py-2.5 rounded-xl bg-white/5 border border-white/15 text-white hover:bg-white/10 text-xs font-bold uppercase tracking-wider flex items-center justify-center space-x-2 cursor-pointer"
-              >
-                <PhoneCall className="w-3.5 h-3.5 text-[#C9A56A]" />
-                <span>Private Consultation</span>
-              </button>
+              {siteSettings.headerShowConcierge !== false && (
+                <a
+                  href={`tel:${siteSettings.primaryPhone.replace(/\s+/g, '')}`}
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="w-full py-2.5 rounded-xl bg-white/5 border border-white/15 text-white hover:bg-white/10 text-xs font-bold uppercase tracking-wider flex items-center justify-center space-x-2 cursor-pointer"
+                >
+                  <PhoneCall className="w-3.5 h-3.5 text-[#C9A56A]" />
+                  <span>Private Consultation ({siteSettings.primaryPhone})</span>
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -343,4 +555,3 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
-

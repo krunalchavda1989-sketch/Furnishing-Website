@@ -17,17 +17,66 @@ import {
   UserCheck,
   Mail,
   PhoneCall,
+  Phone,
+  Smartphone,
+  MapPin,
+  Clock,
+  Share2,
+  Edit,
+  Save,
   Menu,
   X,
   ChevronRight,
   Send,
-  Download
+  Download,
+  Eye,
+  EyeOff,
+  Sparkles,
+  SlidersHorizontal,
+  ArrowUp,
+  ArrowDown,
+  RotateCcw,
+  Globe,
+  Image as ImageIcon,
+  Type,
+  Sliders,
+  PackageCheck,
+  Layout,
+  Star,
+  Quote,
+  Compass,
+  Award,
+  History,
+  User
 } from 'lucide-react';
+import {
+  InstagramIcon,
+  PinterestIcon,
+  LinkedInIcon,
+  YouTubeIcon,
+  FacebookIcon,
+  TwitterIcon,
+  WhatsAppIcon
+} from '../ui/SocialIcons';
 import type { AdminUser, SwatchRequestItem, AuditLogItem, ContactInquiryItem, NewsletterSubscriberItem } from '../../types/adminTypes';
-import type { Product, CategorySlug } from '../../types';
+import type {
+  Product,
+  CategorySlug,
+  Showroom,
+  ContactSettings,
+  Project,
+  SiteSettings,
+  HeaderNavLink,
+  Testimonial,
+  BrandPartner,
+  StorySettings,
+  StoryMilestone,
+  StoryGalleryItem
+} from '../../types';
 import { CATEGORIES_DATA } from '../../data/categoriesData';
 import { PRODUCTS_DATA } from '../../data/productsData';
 import { PROJECTS_DATA } from '../../data/projectsData';
+import { SHOWROOMS_DATA } from '../../data/brandsData';
 import {
   supabase,
   isSupabaseConfigured,
@@ -35,6 +84,9 @@ import {
   fetchProductsFromSupabase,
   createProductInSupabase,
   deleteProductInSupabase,
+  fetchProjectsFromSupabase,
+  createOrUpdateProjectInSupabase,
+  deleteProjectInSupabase,
   fetchAdminAuditLogsFromSupabase,
   logAdminActivityInSupabase,
   fetchAdminUsersFromSupabase,
@@ -47,10 +99,31 @@ import {
   updateNewsletterSubscriberStatusInSupabase,
   deleteNewsletterSubscriberInSupabase,
   deleteAdminAuditLogInSupabase,
-  clearAllAdminAuditLogsInSupabase
+  clearAllAdminAuditLogsInSupabase,
+  fetchShowroomsFromSupabase,
+  createOrUpdateShowroomInSupabase,
+  deleteShowroomInSupabase,
+  fetchContactSettingsFromSupabase,
+  updateContactSettingsInSupabase,
+  DEFAULT_CONTACT_SETTINGS,
+  fetchSiteSettingsFromSupabase,
+  updateSiteSettingsInSupabase,
+  DEFAULT_SITE_SETTINGS,
+  DEFAULT_TESTIMONIALS,
+  DEFAULT_BRANDS_DATA,
+  DEFAULT_STORY_SETTINGS,
+  fetchTestimonialsFromSupabase,
+  saveTestimonialInSupabase,
+  deleteTestimonialInSupabase,
+  fetchBrandsFromSupabase,
+  saveBrandInSupabase,
+  deleteBrandInSupabase,
+  fetchStorySettingsFromSupabase,
+  updateStorySettingsInSupabase
 } from '../../lib/supabase';
 import { useToast } from '../ui/ToastNotification';
 import { ConfirmDeleteModal } from '../ui/ConfirmDeleteModal';
+import { ImageUploader } from '../ui/ImageUploader';
 
 // Persistent LocalStorage Deleted Keys Tracking Helpers
 const getDeletedKeys = (key: string): string[] => {
@@ -165,10 +238,107 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onReturnToSite
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'inquiries' | 'products' | 'swatches' | 'audit-logs' | 'projects' | 'settings' | 'newsletter'
+    'overview' | 'inquiries' | 'products' | 'swatches' | 'audit-logs' | 'projects' | 'settings' | 'newsletter' | 'locations-contact' | 'site-branding'
   >('overview');
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Site Branding & Navigation State
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>(() => {
+    try {
+      const saved = localStorage.getItem('atelier_site_settings');
+      if (saved) return { ...DEFAULT_SITE_SETTINGS, ...JSON.parse(saved) };
+    } catch {}
+    return DEFAULT_SITE_SETTINGS;
+  });
+
+  const [siteSettingsForm, setSiteSettingsForm] = useState<SiteSettings>(() => {
+    try {
+      const saved = localStorage.getItem('atelier_site_settings');
+      if (saved) return { ...DEFAULT_SITE_SETTINGS, ...JSON.parse(saved) };
+    } catch {}
+    return DEFAULT_SITE_SETTINGS;
+  });
+
+  const [siteSettingsSubtab, setSiteSettingsSubtab] = useState<
+    'nav-links' | 'header-styling' | 'logos' | 'testimonials' | 'brands' | 'story-cms' | 'socials' | 'contact'
+  >('nav-links');
+  const [isSavingSiteSettings, setIsSavingSiteSettings] = useState(false);
+
+  // Testimonials State
+  const [testimonialsList, setTestimonialsList] = useState<Testimonial[]>(() => {
+    try {
+      const saved = localStorage.getItem('atelier_testimonials');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return DEFAULT_TESTIMONIALS;
+  });
+  const [showTestimonialModal, setShowTestimonialModal] = useState(false);
+  const [editingTestimonialId, setEditingTestimonialId] = useState<string | null>(null);
+  const [testimonialForm, setTestimonialForm] = useState<Testimonial>({
+    id: `tst-${Date.now()}`,
+    clientName: '',
+    clientRole: '',
+    location: '',
+    quote: '',
+    rating: 5,
+    avatar: '',
+    projectOrProduct: '',
+    isFeatured: true,
+    isVisible: true,
+    order: 1
+  });
+
+  // Brands / Mill Partners State
+  const [brandsList, setBrandsList] = useState<BrandPartner[]>(() => {
+    try {
+      const saved = localStorage.getItem('atelier_brands_data');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return DEFAULT_BRANDS_DATA;
+  });
+  const [showBrandModal, setShowBrandModal] = useState(false);
+  const [editingBrandId, setEditingBrandId] = useState<string | null>(null);
+  const [brandForm, setBrandForm] = useState<BrandPartner>({
+    id: `bnd-${Date.now()}`,
+    name: '',
+    country: '',
+    established: '',
+    tagline: '',
+    description: '',
+    logoText: '',
+    image: '',
+    specialty: '',
+    featuredProducts: [],
+    websiteUrl: '',
+    isVisible: true,
+    order: 1
+  });
+
+  // Our Story CMS State
+  const [storySettingsForm, setStorySettingsForm] = useState<StorySettings>(() => {
+    try {
+      const saved = localStorage.getItem('atelier_story_settings');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return DEFAULT_STORY_SETTINGS;
+  });
+  const [isSavingStorySettings, setIsSavingStorySettings] = useState(false);
+  const [storyCmsSection, setStoryCmsSection] = useState<'hero' | 'founder' | 'pillars' | 'timeline' | 'gallery' | 'stats'>('hero');
+
+  // Add / Edit Header Menu Link Modal State
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
+  const [linkForm, setLinkForm] = useState<HeaderNavLink>({
+    id: 'custom-link',
+    label: '',
+    target: 'home',
+    hasMegaMenu: false,
+    isExternal: false,
+    isVisible: true,
+    order: 1
+  });
+
 
   const [swatchRequests, setSwatchRequests] = useState<SwatchRequestItem[]>(() => {
     const deleted = getDeletedKeys('atelier_deleted_swatches').concat(getDeletedKeys('maison_deleted_swatches'));
@@ -188,6 +358,76 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [productsList, setProductsList] = useState<Product[]>(() => {
     const deleted = getDeletedKeys('atelier_deleted_products').concat(getDeletedKeys('maison_deleted_products'));
     return PRODUCTS_DATA.filter((p) => !deleted.includes(p.id));
+  });
+
+  const [showroomsList, setShowroomsList] = useState<Showroom[]>(() => {
+    const deleted = getDeletedKeys('atelier_deleted_showrooms').concat(getDeletedKeys('maison_deleted_showrooms'));
+    try {
+      const custom = localStorage.getItem('atelier_custom_showrooms');
+      if (custom) {
+        const parsed: Showroom[] = JSON.parse(custom);
+        const map = new Map<string, Showroom>();
+        SHOWROOMS_DATA.forEach((s) => map.set(s.id, s));
+        parsed.forEach((s) => map.set(s.id, s));
+        return Array.from(map.values()).filter((s) => !deleted.includes(s.id));
+      }
+    } catch {
+      // fallback to SHOWROOMS_DATA
+    }
+    return SHOWROOMS_DATA.filter((s) => !deleted.includes(s.id));
+  });
+
+  const [contactSettings, setContactSettings] = useState<ContactSettings>(() => {
+    try {
+      const saved = localStorage.getItem('atelier_contact_settings');
+      if (saved) return { ...DEFAULT_CONTACT_SETTINGS, ...JSON.parse(saved) };
+    } catch {
+      // fallback
+    }
+    return DEFAULT_CONTACT_SETTINGS;
+  });
+
+  const [contactSettingsForm, setContactSettingsForm] = useState<ContactSettings>(() => {
+    try {
+      const saved = localStorage.getItem('atelier_contact_settings');
+      if (saved) return { ...DEFAULT_CONTACT_SETTINGS, ...JSON.parse(saved) };
+    } catch {
+      // fallback
+    }
+    return DEFAULT_CONTACT_SETTINGS;
+  });
+
+  const [isSavingContactSettings, setIsSavingContactSettings] = useState(false);
+
+  // Showroom modal state
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
+  const [locationForm, setLocationForm] = useState<{
+    id: string;
+    city: string;
+    country: string;
+    address: string;
+    phone: string;
+    email: string;
+    hours: string;
+    image: string;
+    lat: number;
+    lng: number;
+    isFlagship: boolean;
+    notes: string;
+  }>({
+    id: '',
+    city: '',
+    country: '',
+    address: '',
+    phone: '',
+    email: '',
+    hours: '',
+    image: '',
+    lat: 0,
+    lng: 0,
+    isFlagship: false,
+    notes: ''
   });
 
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
@@ -242,6 +482,57 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     message: 'Initializing...',
     isTesting: false
   });
+
+  // Projects State & Modal
+  const [projectsList, setProjectsList] = useState<Project[]>(() => {
+    const deleted = getDeletedKeys('atelier_deleted_projects').concat(getDeletedKeys('maison_deleted_projects'));
+    try {
+      const custom = localStorage.getItem('atelier_custom_projects');
+      if (custom) {
+        const parsed: Project[] = JSON.parse(custom);
+        const map = new Map<string, Project>();
+        PROJECTS_DATA.forEach((p) => map.set(p.id, p));
+        parsed.forEach((p) => map.set(p.id, p));
+        return Array.from(map.values()).filter((p) => !deleted.includes(p.id));
+      }
+    } catch {
+      // fallback
+    }
+    return PROJECTS_DATA.filter((p) => !deleted.includes(p.id));
+  });
+
+  const [showProjectModal, setShowProjectModal] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [projectForm, setProjectForm] = useState<{
+    id: string;
+    title: string;
+    category: string;
+    location: string;
+    year: string;
+    designer: string;
+    description: string;
+    heroImage: string;
+    gallery: string[];
+    productsUsed: { productName: string; categorySlug: CategorySlug }[];
+  }>({
+    id: '',
+    title: '',
+    category: 'Private Residence',
+    location: '',
+    year: '2026',
+    designer: 'Studio Harrison & Co.',
+    description: '',
+    heroImage: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=85',
+    gallery: [],
+    productsUsed: []
+  });
+
+  const [newProjectProdName, setNewProjectProdName] = useState('');
+  const [newProjectProdCategory, setNewProjectProdCategory] = useState<CategorySlug>('fabrics');
+  const [newGalleryUrl, setNewGalleryUrl] = useState('');
+  const [projectCategoryFilter, setProjectCategoryFilter] = useState('All');
+  const [previewProject, setPreviewProject] = useState<Project | null>(null);
+
 
   // Add Product Form State
   const [newProductForm, setNewProductForm] = useState({
@@ -316,6 +607,50 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setNewsletterSubscribers(subs.filter((s) => !deletedSubs.includes(s.id) && !deletedSubs.includes(s.email)));
     } else {
       setNewsletterSubscribers((prev) => prev.filter((s) => !deletedSubs.includes(s.id) && !deletedSubs.includes(s.email)));
+    }
+
+    // 7. Fetch Showrooms
+    const shws = await fetchShowroomsFromSupabase();
+    if (shws && shws.length > 0) {
+      setShowroomsList(shws);
+    }
+
+    // 8. Fetch Contact Settings
+    const cSettings = await fetchContactSettingsFromSupabase();
+    if (cSettings) {
+      setContactSettings(cSettings);
+      setContactSettingsForm(cSettings);
+    }
+
+    // 9. Fetch Projects
+    const dbProjects = await fetchProjectsFromSupabase();
+    if (dbProjects && dbProjects.length > 0) {
+      setProjectsList(dbProjects);
+    }
+
+    // 10. Fetch Site Branding, Logos, Navigation & Socials Settings
+    const sSettings = await fetchSiteSettingsFromSupabase();
+    if (sSettings) {
+      setSiteSettings(sSettings);
+      setSiteSettingsForm(sSettings);
+    }
+
+    // 11. Fetch Testimonials
+    const tList = await fetchTestimonialsFromSupabase();
+    if (tList && tList.length > 0) {
+      setTestimonialsList(tList);
+    }
+
+    // 12. Fetch Brands
+    const bList = await fetchBrandsFromSupabase();
+    if (bList && bList.length > 0) {
+      setBrandsList(bList);
+    }
+
+    // 13. Fetch Story Settings
+    const story = await fetchStorySettingsFromSupabase();
+    if (story) {
+      setStorySettingsForm(story);
     }
   };
 
@@ -641,6 +976,291 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     });
   };
 
+  // Save/Update Global Contact Settings Handler
+  const handleSaveContactSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingContactSettings(true);
+    setContactSettings(contactSettingsForm);
+    await updateContactSettingsInSupabase(contactSettingsForm, user.email);
+    setIsSavingContactSettings(false);
+    showToast(
+      'Contact Settings Saved',
+      'Global phone numbers, emails, operating hours, and social accounts synced.',
+      'success'
+    );
+    if (isSupabaseConfigured) {
+      const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+      setAuditLogs(updatedLogs);
+    }
+  };
+
+  // Open Add Showroom Modal
+  const handleOpenAddLocation = () => {
+    setEditingLocationId(null);
+    setLocationForm({
+      id: `shw-${Date.now().toString().slice(-4)}`,
+      city: '',
+      country: '',
+      address: '',
+      phone: '',
+      email: '',
+      hours: 'Mon - Sat: 10:00 - 18:30 | Sun: By Private Appointment',
+      image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=85',
+      lat: 0,
+      lng: 0,
+      isFlagship: false,
+      notes: ''
+    });
+    setShowLocationModal(true);
+  };
+
+  // Open Edit Showroom Modal
+  const handleOpenEditLocation = (shw: Showroom) => {
+    setEditingLocationId(shw.id);
+    setLocationForm({
+      id: shw.id,
+      city: shw.city,
+      country: shw.country,
+      address: shw.address,
+      phone: shw.phone,
+      email: shw.email,
+      hours: shw.hours,
+      image: shw.image,
+      lat: shw.coordinates?.lat || 0,
+      lng: shw.coordinates?.lng || 0,
+      isFlagship: Boolean(shw.isFlagship),
+      notes: shw.notes || ''
+    });
+    setShowLocationModal(true);
+  };
+
+  // Save / Update Showroom Location Handler
+  const handleSaveLocation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!locationForm.city || !locationForm.address) return;
+
+    const newShowroom: Showroom = {
+      id: locationForm.id || `shw-${Date.now().toString().slice(-4)}`,
+      city: locationForm.city,
+      country: locationForm.country,
+      address: locationForm.address,
+      phone: locationForm.phone,
+      email: locationForm.email,
+      hours: locationForm.hours,
+      image: locationForm.image || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=85',
+      coordinates: {
+        lat: Number(locationForm.lat) || 0,
+        lng: Number(locationForm.lng) || 0
+      },
+      isFlagship: locationForm.isFlagship,
+      notes: locationForm.notes
+    };
+
+    setShowroomsList((prev) => {
+      const idx = prev.findIndex((s) => s.id === newShowroom.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = newShowroom;
+        return next;
+      }
+      return [...prev, newShowroom];
+    });
+
+    await createOrUpdateShowroomInSupabase(newShowroom, user.email);
+    setShowLocationModal(false);
+    showToast(
+      editingLocationId ? 'Location Updated' : 'New Location Added',
+      `${newShowroom.city} Showroom (${newShowroom.country}) saved successfully.`,
+      'success'
+    );
+
+    if (isSupabaseConfigured) {
+      const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+      setAuditLogs(updatedLogs);
+    }
+  };
+
+  // Delete Showroom Location Handler
+  const handleDeleteLocation = (shw: Showroom) => {
+    setDeleteModalState({
+      isOpen: true,
+      title: 'Delete Showroom Location',
+      itemName: `${shw.city} Showroom (${shw.country})`,
+      itemType: 'showroom location',
+      onConfirm: async () => {
+        setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+        recordDeletedKey('atelier_deleted_showrooms', shw.id);
+        setShowroomsList((prev) => prev.filter((s) => s.id !== shw.id));
+
+        await deleteShowroomInSupabase(shw.id, user.email);
+        if (isSupabaseConfigured) {
+          const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+          setAuditLogs(updatedLogs);
+        }
+        showToast('Showroom Deleted', `Showroom "${shw.city}" removed from public display.`, 'delete');
+      }
+    });
+  };
+
+  // Open Add Project Modal
+  const handleOpenAddProject = () => {
+    setEditingProjectId(null);
+    setProjectForm({
+      id: `prj-${Date.now().toString().slice(-4)}`,
+      title: '',
+      category: 'Private Residence',
+      location: '',
+      year: '2026',
+      designer: 'Studio Harrison & Co.',
+      description: '',
+      heroImage: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=85',
+      gallery: [
+        'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85',
+        'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85'
+      ],
+      productsUsed: [
+        { productName: 'Kortrijk Washed Flax Linen', categorySlug: 'fabrics' },
+        { productName: 'Symphony Acoustic Linen Sheer', categorySlug: 'curtains-upholstery' }
+      ]
+    });
+    setNewProjectProdName('');
+    setNewGalleryUrl('');
+    setShowProjectModal(true);
+  };
+
+  // Open Edit Project Modal
+  const handleOpenEditProject = (prj: Project) => {
+    setEditingProjectId(prj.id);
+    setProjectForm({
+      id: prj.id,
+      title: prj.title,
+      category: prj.category,
+      location: prj.location,
+      year: prj.year,
+      designer: prj.designer,
+      description: prj.description,
+      heroImage: prj.heroImage,
+      gallery: prj.gallery && prj.gallery.length > 0 ? [...prj.gallery] : [prj.heroImage],
+      productsUsed: prj.productsUsed ? [...prj.productsUsed] : []
+    });
+    setNewProjectProdName('');
+    setNewGalleryUrl('');
+    setShowProjectModal(true);
+  };
+
+  // Save / Update Project Handler
+  const handleSaveProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!projectForm.title || !projectForm.location || !projectForm.description) {
+      showToast('Missing Details', 'Please enter a project title, location, and description.', 'error');
+      return;
+    }
+
+    const newProject: Project = {
+      id: projectForm.id || `prj-${Date.now().toString().slice(-4)}`,
+      title: projectForm.title,
+      category: projectForm.category || 'Private Residence',
+      location: projectForm.location,
+      year: projectForm.year || '2026',
+      designer: projectForm.designer || 'Studio Harrison & Co.',
+      description: projectForm.description,
+      heroImage: projectForm.heroImage || 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=85',
+      gallery: projectForm.gallery && projectForm.gallery.length > 0 ? projectForm.gallery : [projectForm.heroImage],
+      productsUsed: projectForm.productsUsed || []
+    };
+
+    setProjectsList((prev) => {
+      const idx = prev.findIndex((p) => p.id === newProject.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = newProject;
+        return next;
+      }
+      return [newProject, ...prev];
+    });
+
+    await createOrUpdateProjectInSupabase(newProject, user.email);
+    setShowProjectModal(false);
+    showToast(
+      editingProjectId ? 'Project Updated' : 'Project Created',
+      `"${newProject.title}" (${newProject.location}) synced with portfolio.`,
+      'success'
+    );
+
+    if (isSupabaseConfigured) {
+      const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+      setAuditLogs(updatedLogs);
+    }
+  };
+
+  // Delete Project Handler
+  const handleDeleteProject = (prj: Project) => {
+    setDeleteModalState({
+      isOpen: true,
+      title: 'Delete Portfolio Commission',
+      itemName: `${prj.title} (${prj.location})`,
+      itemType: 'portfolio project',
+      onConfirm: async () => {
+        setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+        recordDeletedKey('atelier_deleted_projects', prj.id);
+        setProjectsList((prev) => prev.filter((p) => p.id !== prj.id));
+
+        await deleteProjectInSupabase(prj.id, user.email);
+        if (isSupabaseConfigured) {
+          const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+          setAuditLogs(updatedLogs);
+        }
+        showToast('Project Removed', `"${prj.title}" removed from public portfolio.`, 'delete');
+      }
+    });
+  };
+
+  const handleAddProductToProject = () => {
+    if (!newProjectProdName.trim()) return;
+    setProjectForm((prev) => ({
+      ...prev,
+      productsUsed: [
+        ...prev.productsUsed,
+        { productName: newProjectProdName.trim(), categorySlug: newProjectProdCategory }
+      ]
+    }));
+    setNewProjectProdName('');
+  };
+
+  const handleRemoveProductFromProject = (index: number) => {
+    setProjectForm((prev) => ({
+      ...prev,
+      productsUsed: prev.productsUsed.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleAddGalleryUrl = () => {
+    if (!newGalleryUrl.trim()) return;
+    setProjectForm((prev) => ({
+      ...prev,
+      gallery: [...prev.gallery, newGalleryUrl.trim()]
+    }));
+    setNewGalleryUrl('');
+  };
+
+  const handleRemoveGalleryImage = (index: number) => {
+    setProjectForm((prev) => ({
+      ...prev,
+      gallery: prev.gallery.filter((_, i) => i !== index)
+    }));
+  };
+
+  const filteredProjects = projectsList.filter((prj) => {
+    const matchesSearch =
+      prj.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      prj.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      prj.designer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      prj.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      prj.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCat = projectCategoryFilter === 'All' || prj.category.toLowerCase() === projectCategoryFilter.toLowerCase();
+    return matchesSearch && matchesCat;
+  });
+
   const filteredProducts = productsList.filter((p) => {
     const matchesSearch =
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -666,7 +1286,399 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return matchesSearch && matchesStatus;
   });
 
-  const navigationItems = [
+  // --- SITE BRANDING & HEADER NAVIGATION HANDLERS ---
+  const handleMoveLinkUp = (index: number) => {
+    if (index <= 0) return;
+    setSiteSettingsForm((prev) => {
+      const newLinks = [...prev.navLinks];
+      const temp = newLinks[index - 1];
+      newLinks[index - 1] = newLinks[index];
+      newLinks[index] = temp;
+      newLinks.forEach((l, i) => {
+        l.order = i + 1;
+      });
+      return { ...prev, navLinks: newLinks };
+    });
+  };
+
+  const handleMoveLinkDown = (index: number) => {
+    if (index >= siteSettingsForm.navLinks.length - 1) return;
+    setSiteSettingsForm((prev) => {
+      const newLinks = [...prev.navLinks];
+      const temp = newLinks[index + 1];
+      newLinks[index + 1] = newLinks[index];
+      newLinks[index] = temp;
+      newLinks.forEach((l, i) => {
+        l.order = i + 1;
+      });
+      return { ...prev, navLinks: newLinks };
+    });
+  };
+
+  const handleToggleLinkVisibility = (id: string) => {
+    setSiteSettingsForm((prev) => ({
+      ...prev,
+      navLinks: prev.navLinks.map((link) =>
+        link.id === id ? { ...link, isVisible: !link.isVisible } : link
+      )
+    }));
+  };
+
+  const handleDeleteLink = (id: string, label: string) => {
+    setDeleteModalState({
+      isOpen: true,
+      title: 'Remove Header Menu Link',
+      itemName: `Menu item: "${label}"`,
+      itemType: 'navigation link',
+      onConfirm: () => {
+        setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+        setSiteSettingsForm((prev) => {
+          const filtered = prev.navLinks.filter((l) => l.id !== id);
+          filtered.forEach((l, idx) => {
+            l.order = idx + 1;
+          });
+          return { ...prev, navLinks: filtered };
+        });
+        showToast('Link Removed', `"${label}" removed from header menu. Click Save to publish.`, 'info');
+      }
+    });
+  };
+
+  const handleOpenAddLink = () => {
+    setEditingLinkId(null);
+    setLinkForm({
+      id: `nav-${Date.now()}`,
+      label: '',
+      target: 'home',
+      hasMegaMenu: false,
+      isExternal: false,
+      isVisible: true,
+      order: siteSettingsForm.navLinks.length + 1
+    });
+    setShowLinkModal(true);
+  };
+
+  const handleOpenEditLink = (link: HeaderNavLink) => {
+    setEditingLinkId(link.id);
+    setLinkForm({ ...link });
+    setShowLinkModal(true);
+  };
+
+  const handleSaveLink = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!linkForm.label.trim()) {
+      showToast('Validation Error', 'Please enter a navigation link label.', 'error');
+      return;
+    }
+
+    setSiteSettingsForm((prev) => {
+      let updatedLinks = [...prev.navLinks];
+      if (editingLinkId) {
+        updatedLinks = updatedLinks.map((l) => (l.id === editingLinkId ? linkForm : l));
+      } else {
+        updatedLinks.push({ ...linkForm, id: linkForm.id || `nav-${Date.now()}` });
+      }
+      return { ...prev, navLinks: updatedLinks };
+    });
+
+    setShowLinkModal(false);
+    showToast(
+      editingLinkId ? 'Link Updated' : 'Link Added',
+      `Header menu link "${linkForm.label}" saved. Click "Save & Sync All Branding" to publish live.`,
+      'success'
+    );
+  };
+
+  const handleSaveSiteSettings = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsSavingSiteSettings(true);
+    try {
+      const ok = await updateSiteSettingsInSupabase(siteSettingsForm, user.email);
+      if (ok) {
+        setSiteSettings(siteSettingsForm);
+        window.dispatchEvent(new Event('storage'));
+        showToast('Branding & Navigation Saved', 'Site logos, header links, socials, and contact details synced live.', 'success');
+      } else {
+        showToast('Sync Notice', 'Settings saved locally. Cloud sync pending.', 'info');
+      }
+    } catch (err) {
+      console.warn('Error saving site settings:', err);
+      showToast('Error', 'Failed to save site settings.', 'error');
+    } finally {
+      setIsSavingSiteSettings(false);
+    }
+  };
+
+  const handleResetSiteSettings = () => {
+    setDeleteModalState({
+      isOpen: true,
+      title: 'Reset Site Branding & Navigation',
+      itemName: 'All Header Links, Logos, Socials & Contact Coordinates',
+      itemType: 'site settings reset',
+      onConfirm: async () => {
+        setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+        setSiteSettingsForm(DEFAULT_SITE_SETTINGS);
+        setSiteSettings(DEFAULT_SITE_SETTINGS);
+        await updateSiteSettingsInSupabase(DEFAULT_SITE_SETTINGS, user.email);
+        window.dispatchEvent(new Event('storage'));
+        showToast('Reset Completed', 'Site branding and navigation restored to luxury defaults.', 'info');
+      }
+    });
+  };
+
+  // --- TESTIMONIALS HANDLERS ---
+  const handleOpenAddTestimonial = () => {
+    setEditingTestimonialId(null);
+    setTestimonialForm({
+      id: `tst-${Date.now()}`,
+      clientName: '',
+      clientRole: '',
+      location: '',
+      quote: '',
+      rating: 5,
+      avatar: '',
+      projectOrProduct: '',
+      isFeatured: true,
+      isVisible: true,
+      order: testimonialsList.length + 1
+    });
+    setShowTestimonialModal(true);
+  };
+
+  const handleOpenEditTestimonial = (t: Testimonial) => {
+    setEditingTestimonialId(t.id);
+    setTestimonialForm({ ...t });
+    setShowTestimonialModal(true);
+  };
+
+  const handleSaveTestimonial = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!testimonialForm.clientName.trim() || !testimonialForm.quote.trim()) {
+      showToast('Validation Error', 'Please enter client name and quote text.', 'error');
+      return;
+    }
+
+    const itemToSave: Testimonial = {
+      ...testimonialForm,
+      id: editingTestimonialId || testimonialForm.id || `tst-${Date.now()}`
+    };
+
+    setTestimonialsList((prev) => {
+      const idx = prev.findIndex((t) => t.id === itemToSave.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = itemToSave;
+        return next;
+      }
+      return [itemToSave, ...prev];
+    });
+
+    await saveTestimonialInSupabase(itemToSave, user.email);
+    setShowTestimonialModal(false);
+    showToast(
+      editingTestimonialId ? 'Review Updated' : 'Review Added',
+      `Testimonial from ${itemToSave.clientName} has been saved live.`,
+      'success'
+    );
+  };
+
+  const handleDeleteTestimonial = (id: string, name: string) => {
+    setDeleteModalState({
+      isOpen: true,
+      title: 'Delete Client Review',
+      itemName: `Testimonial from ${name}`,
+      itemType: 'testimonial review',
+      onConfirm: async () => {
+        setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+        setTestimonialsList((prev) => prev.filter((t) => t.id !== id));
+        await deleteTestimonialInSupabase(id, user.email);
+        showToast('Review Deleted', `Testimonial from ${name} removed.`, 'delete');
+      }
+    });
+  };
+
+  const handleToggleTestimonialVisibility = async (id: string) => {
+    const target = testimonialsList.find((t) => t.id === id);
+    if (!target) return;
+    const updated = { ...target, isVisible: !target.isVisible };
+    setTestimonialsList((prev) => prev.map((t) => (t.id === id ? updated : t)));
+    await saveTestimonialInSupabase(updated, user.email);
+    showToast(
+      updated.isVisible ? 'Review Published' : 'Review Hidden',
+      `Testimonial is now ${updated.isVisible ? 'visible' : 'hidden'} on the landing page.`,
+      'info'
+    );
+  };
+
+  const handleToggleTestimonialFeatured = async (id: string) => {
+    const target = testimonialsList.find((t) => t.id === id);
+    if (!target) return;
+    const updated = { ...target, isFeatured: !target.isFeatured };
+    setTestimonialsList((prev) => prev.map((t) => (t.id === id ? updated : t)));
+    await saveTestimonialInSupabase(updated, user.email);
+    showToast('Featured Status Updated', `Review set to ${updated.isFeatured ? 'Featured' : 'Standard'}.`, 'success');
+  };
+
+  // --- BRAND PARTNERS & MARQUEE HANDLERS ---
+  const handleOpenAddBrand = () => {
+    setEditingBrandId(null);
+    setBrandForm({
+      id: `bnd-${Date.now()}`,
+      name: '',
+      country: '',
+      established: '',
+      tagline: '',
+      description: '',
+      logoText: '',
+      image: '',
+      specialty: '',
+      featuredProducts: [],
+      websiteUrl: '',
+      isVisible: true,
+      order: brandsList.length + 1
+    });
+    setShowBrandModal(true);
+  };
+
+  const handleOpenEditBrand = (b: BrandPartner) => {
+    setEditingBrandId(b.id);
+    setBrandForm({ ...b });
+    setShowBrandModal(true);
+  };
+
+  const handleSaveBrand = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!brandForm.name.trim() || !brandForm.logoText.trim()) {
+      showToast('Validation Error', 'Please enter brand house name and logo typography text.', 'error');
+      return;
+    }
+
+    const itemToSave: BrandPartner = {
+      ...brandForm,
+      id: editingBrandId || brandForm.id || `bnd-${Date.now()}`
+    };
+
+    setBrandsList((prev) => {
+      const idx = prev.findIndex((b) => b.id === itemToSave.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = itemToSave;
+        return next;
+      }
+      return [...prev, itemToSave];
+    });
+
+    await saveBrandInSupabase(itemToSave, user.email);
+    setShowBrandModal(false);
+    showToast(
+      editingBrandId ? 'Brand Updated' : 'Brand Added',
+      `Brand partner ${itemToSave.name} saved and synced to marquee ticker.`,
+      'success'
+    );
+  };
+
+  const handleDeleteBrand = (id: string, name: string) => {
+    setDeleteModalState({
+      isOpen: true,
+      title: 'Remove Brand Partner',
+      itemName: `Brand: ${name}`,
+      itemType: 'brand partner',
+      onConfirm: async () => {
+        setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+        setBrandsList((prev) => prev.filter((b) => b.id !== id));
+        await deleteBrandInSupabase(id, user.email);
+        showToast('Brand Partner Removed', `${name} removed from global mill partners.`, 'delete');
+      }
+    });
+  };
+
+  const handleToggleBrandVisibility = async (id: string) => {
+    const target = brandsList.find((b) => b.id === id);
+    if (!target) return;
+    const updated = { ...target, isVisible: !target.isVisible };
+    setBrandsList((prev) => prev.map((b) => (b.id === id ? updated : b)));
+    await saveBrandInSupabase(updated, user.email);
+    showToast(
+      updated.isVisible ? 'Brand Active' : 'Brand Hidden',
+      `${target.name} is now ${updated.isVisible ? 'visible in' : 'hidden from'} marquee and brands page.`,
+      'info'
+    );
+  };
+
+  const handleMoveBrandUp = async (index: number) => {
+    if (index <= 0) return;
+    const updated = [...brandsList];
+    const temp = updated[index - 1];
+    updated[index - 1] = updated[index];
+    updated[index] = temp;
+    updated.forEach((b, i) => {
+      b.order = i + 1;
+    });
+    setBrandsList(updated);
+    localStorage.setItem('atelier_brands_data', JSON.stringify(updated));
+    window.dispatchEvent(new Event('storage'));
+  };
+
+  const handleMoveBrandDown = async (index: number) => {
+    if (index >= brandsList.length - 1) return;
+    const updated = [...brandsList];
+    const temp = updated[index + 1];
+    updated[index + 1] = updated[index];
+    updated[index] = temp;
+    updated.forEach((b, i) => {
+      b.order = i + 1;
+    });
+    setBrandsList(updated);
+    localStorage.setItem('atelier_brands_data', JSON.stringify(updated));
+    window.dispatchEvent(new Event('storage'));
+  };
+
+  // --- OUR STORY CMS HANDLERS ---
+  const handleSaveStorySettings = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsSavingStorySettings(true);
+    try {
+      const ok = await updateStorySettingsInSupabase(storySettingsForm, user.email);
+      if (ok) {
+        showToast('Our Story Saved', 'Heritage narrative, pillars, milestones, and gallery synced live.', 'success');
+      }
+    } catch (err) {
+      console.warn('Error saving story settings:', err);
+      showToast('Error', 'Failed to save story settings.', 'error');
+    } finally {
+      setIsSavingStorySettings(false);
+    }
+  };
+
+  const handleResetStorySettings = () => {
+    setDeleteModalState({
+      isOpen: true,
+      title: 'Reset Our Story & Heritage Page',
+      itemName: 'All story copy, pillars, milestones, and gallery content',
+      itemType: 'story settings reset',
+      onConfirm: async () => {
+        setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+        setStorySettingsForm(DEFAULT_STORY_SETTINGS);
+        await updateStorySettingsInSupabase(DEFAULT_STORY_SETTINGS, user.email);
+        showToast('Story Reset', 'Our Story page restored to luxury default content.', 'info');
+      }
+    });
+  };
+
+  interface NavItem {
+    id: string;
+    label: string;
+    icon: any;
+    badge?: number;
+    badgeColor?: string;
+  }
+
+  interface NavGroup {
+    category: string;
+    items: NavItem[];
+  }
+
+  const navigationItems: NavGroup[] = [
     {
       category: 'MAIN NAVIGATION',
       items: [
@@ -688,9 +1700,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       ]
     },
     {
+      category: 'SITE IDENTITY & BRANDING',
+      items: [
+        {
+          id: 'site-branding',
+          label: 'Site Branding & Nav',
+          icon: SlidersHorizontal
+        }
+      ]
+    },
+    {
       category: 'ATELIER CATALOG & ORDERS',
       items: [
-        { id: 'products', label: 'Product Catalog', icon: Package, badge: productsList.length },
+        {
+          id: 'products',
+          label: 'Product Catalog',
+          icon: Package,
+          badge: productsList.length,
+          badgeColor: 'bg-[#C9A56A] text-[#0F1714]'
+        },
         {
           id: 'swatches',
           label: 'Swatch Orders',
@@ -698,13 +1726,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           badge: swatchRequests.filter((s) => s.status === 'Pending').length,
           badgeColor: 'bg-[#C9A56A] text-[#0F1714]'
         },
-        { id: 'projects', label: 'Residence Portfolio', icon: Building2 }
+        {
+          id: 'locations-contact',
+          label: 'Locations & Contact',
+          icon: MapPin,
+          badge: showroomsList.length,
+          badgeColor: 'bg-[#C9A56A] text-[#0F1714]'
+        },
+        {
+          id: 'projects',
+          label: 'Residence Portfolio',
+          icon: Building2,
+          badge: projectsList.length,
+          badgeColor: 'bg-[#C9A56A] text-[#0F1714]'
+        }
       ]
     },
     {
       category: 'SECURITY & STAFF',
       items: [
-        { id: 'audit-logs', label: 'Security Audit Logs', icon: ShieldCheck, badge: auditLogs.length },
+        {
+          id: 'audit-logs',
+          label: 'Security Audit Logs',
+          icon: ShieldCheck,
+          badge: auditLogs.length,
+          badgeColor: 'bg-white/10 text-white'
+        },
         { id: 'settings', label: 'Curator Staff', icon: Settings }
       ]
     }
@@ -940,8 +1987,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* --- RIGHT MAIN CONTENT AREA --- */}
-      <main className="grow max-w-7xl w-full mx-auto p-4 sm:p-8 space-y-8">
+      {/* --- RIGHT MAIN CONTENT AREA (FULL-WIDTH WORKSPACE) --- */}
+      <main className="grow w-full p-4 sm:p-8 space-y-8 min-w-0">
         {/* Top Header Title & Quick Actions */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
           <div>
@@ -1745,36 +2792,233 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         {/* ================= PROJECTS TAB ================= */}
         {activeTab === 'projects' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="pb-4 border-b border-white/10">
-              <h2 className="font-serif text-2xl font-bold text-white">Residence & Yacht Portfolio</h2>
-              <p className="text-xs text-[#E9DFD1]">
-                Curate featured interior architecture projects displayed on the public portfolio.
-              </p>
+          <div className="space-y-8 animate-in fade-in duration-300">
+            {/* Header & Quick Summary */}
+            <div className="pb-4 border-b border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white flex items-center gap-2.5">
+                  <Building2 className="w-6 h-6 text-[#C9A56A]" />
+                  <span>Residence & Superyacht Portfolio Control Center</span>
+                </h2>
+                <p className="text-xs text-[#E9DFD1] mt-1">
+                  Curate, edit, and sync bespoke luxury residential, penthouse, coastal villa, and yacht architecture commissions with Supabase Cloud DB.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                <button
+                  onClick={async () => {
+                    const dbProjects = await fetchProjectsFromSupabase();
+                    if (dbProjects && dbProjects.length > 0) setProjectsList(dbProjects);
+                    showToast('Portfolio Synced', 'Latest projects loaded from cloud repository.', 'info');
+                  }}
+                  className="px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs text-white font-semibold flex items-center gap-2 cursor-pointer shadow-md"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-[#C9A56A]" />
+                  <span>Sync Cloud</span>
+                </button>
+
+                <button
+                  onClick={handleOpenAddProject}
+                  className="px-4 py-2.5 rounded-xl bg-[#C9A56A] text-[#0F1714] font-bold text-xs uppercase tracking-wider hover:bg-[#E6C894] transition-all flex items-center justify-center space-x-2 shadow-lg cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Project Commission</span>
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {PROJECTS_DATA.map((prj) => (
-                <div
-                  key={prj.id}
-                  className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl overflow-hidden shadow-xl space-y-3"
-                >
-                  <div className="relative h-44 overflow-hidden">
-                    <img src={prj.heroImage} alt={prj.title} className="w-full h-full object-cover" />
-                    <span className="absolute top-3 left-3 bg-[#0F1714]/80 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-[#C9A56A] border border-[#C9A56A]/30 uppercase">
-                      {prj.category}
-                    </span>
-                  </div>
-                  <div className="p-4 space-y-2">
-                    <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider">
-                      {prj.location} ({prj.year})
-                    </span>
-                    <h4 className="font-serif text-lg text-white font-bold">{prj.title}</h4>
-                    <p className="text-xs text-[#E9DFD1] line-clamp-2">{prj.description}</p>
-                    <span className="text-[11px] text-[#8C9A90] block">Designed by {prj.designer}</span>
-                  </div>
+            {/* Metric Pills */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 space-y-1">
+                <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider font-semibold block">
+                  Total Commissions
+                </span>
+                <div className="flex items-baseline justify-between">
+                  <span className="font-serif text-2xl font-bold text-white">{projectsList.length} Projects</span>
+                  <span className="text-[10px] text-emerald-400 font-semibold font-mono">Live</span>
                 </div>
-              ))}
+                <span className="text-[10px] text-[#8C9A90] block">Publicly Visible Showcase</span>
+              </div>
+
+              <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 space-y-1">
+                <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider font-semibold block">
+                  Categories Active
+                </span>
+                <span className="font-serif text-2xl font-bold text-[#C9A56A]">
+                  {new Set(projectsList.map((p) => p.category)).size} Tiers
+                </span>
+                <span className="text-[10px] text-[#8C9A90] block">Residences, Yachts & Estates</span>
+              </div>
+
+              <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 space-y-1">
+                <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider font-semibold block">
+                  Specified Products
+                </span>
+                <span className="font-serif text-2xl font-bold text-emerald-400">
+                  {projectsList.reduce((acc, p) => acc + (p.productsUsed?.length || 0), 0)} Items
+                </span>
+                <span className="text-[10px] text-[#8C9A90] block">Cross-linked to Catalog</span>
+              </div>
+
+              <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 space-y-1">
+                <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider font-semibold block">
+                  Global Locations
+                </span>
+                <span className="font-serif text-2xl font-bold text-white">
+                  {new Set(projectsList.map((p) => p.location.split(',')[1]?.trim() || p.location)).size} Regions
+                </span>
+                <span className="text-[10px] text-[#8C9A90] block">International Commissions</span>
+              </div>
+            </div>
+
+            {/* Filter & Search Bar */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+              <div className="md:col-span-8 relative">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search projects by title, designer studio, location, or description..."
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/15 focus:border-[#C9A56A] focus:outline-none text-xs text-white placeholder-white/40"
+                />
+                <Search className="w-4 h-4 text-[#C9A56A] absolute left-3.5 top-3" />
+              </div>
+
+              <div className="md:col-span-4">
+                <select
+                  value={projectCategoryFilter}
+                  onChange={(e) => setProjectCategoryFilter(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-[#163129]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none cursor-pointer"
+                >
+                  <option value="All" className="bg-[#163129] text-white">
+                    All Categories ({projectsList.length})
+                  </option>
+                  {Array.from(new Set(projectsList.map((p) => p.category))).map((cat) => (
+                    <option key={cat} value={cat} className="bg-[#163129] text-white">
+                      {cat}
+                    </option>
+                  ))}
+                  <option value="Private Residence" className="bg-[#163129] text-white">Private Residence</option>
+                  <option value="Coastal Estate" className="bg-[#163129] text-white">Coastal Estate</option>
+                  <option value="Penthouse Sanctuary" className="bg-[#163129] text-white">Penthouse Sanctuary</option>
+                  <option value="Bespoke Yacht" className="bg-[#163129] text-white">Bespoke Yacht</option>
+                  <option value="Historic Restoration" className="bg-[#163129] text-white">Historic Restoration</option>
+                  <option value="Hospitality & Hotel" className="bg-[#163129] text-white">Hospitality & Hotel</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Projects Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredProjects.length === 0 ? (
+                <div className="col-span-full p-12 text-center bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl text-[#8C9A90]">
+                  No portfolio projects found matching your search.
+                </div>
+              ) : (
+                filteredProjects.map((prj) => (
+                  <div
+                    key={prj.id}
+                    className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between hover:border-[#C9A56A]/50 transition-all group"
+                  >
+                    <div>
+                      {/* Hero Image & Overlays */}
+                      <div className="relative h-48 overflow-hidden bg-black/40">
+                        <img
+                          src={prj.heroImage}
+                          alt={prj.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent flex flex-col justify-between p-3.5">
+                          <div className="flex items-center justify-between">
+                            <span className="px-2.5 py-0.5 rounded-full bg-[#0F1714]/85 backdrop-blur-md text-[10px] font-mono font-bold text-[#C9A56A] border border-[#C9A56A]/30 uppercase">
+                              {prj.id}
+                            </span>
+                            <span className="px-2.5 py-0.5 rounded-full bg-[#C9A56A] text-[#0F1714] text-[10px] font-bold uppercase tracking-widest shadow-md">
+                              {prj.category}
+                            </span>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-widest text-[#C9A56A]">
+                              <MapPin className="w-3 h-3 text-[#C9A56A]" />
+                              <span>{prj.location} • {prj.year}</span>
+                            </div>
+                            <h4 className="font-serif text-xl font-bold text-white line-clamp-1">{prj.title}</h4>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Content Details */}
+                      <div className="p-4 space-y-3 text-xs text-[#E9DFD1]">
+                        <p className="text-xs text-[#8C9A90] line-clamp-2 leading-relaxed font-light">
+                          {prj.description}
+                        </p>
+
+                        <div className="flex items-center justify-between text-[11px] text-[#C9A56A] pt-1 border-t border-white/5">
+                          <span>Lead Designer:</span>
+                          <strong className="text-white font-medium">{prj.designer}</strong>
+                        </div>
+
+                        {/* Specified Products Tags */}
+                        {prj.productsUsed && prj.productsUsed.length > 0 && (
+                          <div className="space-y-1.5 pt-1">
+                            <span className="text-[10px] uppercase font-bold text-[#8C9A90] block">
+                              Specified Archives ({prj.productsUsed.length}):
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {prj.productsUsed.map((prod, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] text-[#E9DFD1] font-light flex items-center gap-1"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-[#C9A56A]"></span>
+                                  <span>{prod.productName}</span>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Gallery Count */}
+                        {prj.gallery && prj.gallery.length > 0 && (
+                          <div className="flex items-center gap-1.5 text-[10px] text-[#8C9A90]">
+                            <Sparkles className="w-3 h-3 text-[#C9A56A]" />
+                            <span>{prj.gallery.length} High-Res Portfolio Images Attached</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Card Actions */}
+                    <div className="p-3.5 pt-0 border-t border-white/10 bg-[#0F1714]/30 flex items-center justify-between gap-2 mt-2">
+                      <button
+                        onClick={() => handleOpenEditProject(prj)}
+                        className="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#C9A56A] hover:text-white border border-[#C9A56A]/30 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all cursor-pointer"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                        <span>Edit Project</span>
+                      </button>
+
+                      <button
+                        onClick={() => setPreviewProject(prj)}
+                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/15 transition-all cursor-pointer"
+                        title="Quick Preview"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-[#C9A56A]" />
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteProject(prj)}
+                        className="p-2 rounded-xl bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 transition-all cursor-pointer"
+                        title="Delete Portfolio Project"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
@@ -1843,7 +3087,4049 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
         )}
+
+        {/* ================= LOCATIONS & CONTACT SYSTEM TAB ================= */}
+        {activeTab === 'locations-contact' && (
+          <div className="space-y-8 animate-in fade-in duration-300">
+            {/* Header & Quick Summary */}
+            <div className="pb-4 border-b border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white flex items-center gap-2.5">
+                  <MapPin className="w-6 h-6 text-[#C9A56A]" />
+                  <span>Showroom Locations & Dynamic Contact System</span>
+                </h2>
+                <p className="text-xs text-[#E9DFD1] mt-1">
+                  Manage multiple international showrooms/ateliers, mobile numbers, email channels, store operating schedules, and social accounts in real time.
+                </p>
+              </div>
+
+              <button
+                onClick={handleOpenAddLocation}
+                className="px-4 py-2.5 rounded-xl bg-[#C9A56A] text-[#0F1714] font-bold text-xs uppercase tracking-wider hover:bg-[#E6C894] transition-all flex items-center justify-center space-x-2 shadow-lg cursor-pointer shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Showroom Location</span>
+              </button>
+            </div>
+
+            {/* Metric Pills */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 space-y-1">
+                <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider font-semibold block">
+                  Active Showrooms
+                </span>
+                <span className="font-serif text-2xl font-bold text-white">{showroomsList.length} Hubs</span>
+                <span className="text-[10px] text-[#8C9A90] block">Global Atelier Footprint</span>
+              </div>
+
+              <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 space-y-1">
+                <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider font-semibold block">
+                  Flagship Ateliers
+                </span>
+                <span className="font-serif text-2xl font-bold text-emerald-400">
+                  {showroomsList.filter((s) => s.isFlagship).length || 1} Flagships
+                </span>
+                <span className="text-[10px] text-[#8C9A90] block">Premier Showcase Locations</span>
+              </div>
+
+              <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 space-y-1">
+                <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider font-semibold block">
+                  Direct Mobile
+                </span>
+                <span className="font-mono text-sm font-bold text-[#E9DFD1] truncate block">
+                  {contactSettings.mobileNumber || '+44 7911 123456'}
+                </span>
+                <span className="text-[10px] text-[#8C9A90] block">WhatsApp / Concierge</span>
+              </div>
+
+              <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 space-y-1">
+                <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider font-semibold block">
+                  Store Hours (Mon-Fri)
+                </span>
+                <span className="font-mono text-sm font-bold text-[#C9A56A] truncate block">
+                  {contactSettings.scheduleMonFri || '09:30 - 18:30'}
+                </span>
+                <span className="text-[10px] text-[#8C9A90] block">Public Atelier Schedule</span>
+              </div>
+            </div>
+
+            {/* SECTION 1: SHOWROOM LOCATIONS (MULTIPLE LOCATIONS ADD/EDIT/DELETE) */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                <div className="flex items-center space-x-2">
+                  <Building2 className="w-5 h-5 text-[#C9A56A]" />
+                  <h3 className="font-serif text-xl font-bold text-white">Global Showroom Locations ({showroomsList.length})</h3>
+                </div>
+                <span className="text-xs text-[#8C9A90]">
+                  Publicly displayed on Contact page showroom switcher & footer
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {showroomsList.map((shw) => (
+                  <div
+                    key={shw.id}
+                    className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between hover:border-[#C9A56A]/50 transition-all group"
+                  >
+                    <div>
+                      {/* Image header */}
+                      <div className="relative h-44 overflow-hidden">
+                        <img
+                          src={shw.image}
+                          alt={shw.city}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-between p-3.5">
+                          <div className="flex items-center justify-between">
+                            <span className="px-2.5 py-0.5 rounded-full bg-[#0F1714]/80 backdrop-blur-md text-[10px] font-mono font-bold text-[#C9A56A] border border-[#C9A56A]/30 uppercase">
+                              {shw.id}
+                            </span>
+                            {shw.isFlagship && (
+                              <span className="px-2.5 py-0.5 rounded-full bg-[#C9A56A] text-[#0F1714] text-[10px] font-bold uppercase tracking-widest shadow-md">
+                                Flagship
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase font-bold tracking-widest text-[#C9A56A]">
+                              {shw.country}
+                            </span>
+                            <h4 className="font-serif text-xl font-bold text-white">{shw.city} Showroom</h4>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Details */}
+                      <div className="p-4 space-y-2.5 text-xs text-[#E9DFD1]">
+                        <div className="flex items-start space-x-2">
+                          <MapPin className="w-4 h-4 text-[#C9A56A] shrink-0 mt-0.5" />
+                          <span className="line-clamp-2">{shw.address}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Phone className="w-4 h-4 text-[#C9A56A] shrink-0" />
+                          <span className="font-mono">{shw.phone}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Mail className="w-4 h-4 text-[#C9A56A] shrink-0" />
+                          <span className="truncate">{shw.email}</span>
+                        </div>
+                        <div className="flex items-start space-x-2">
+                          <Clock className="w-4 h-4 text-[#C9A56A] shrink-0 mt-0.5" />
+                          <span className="text-[11px] text-[#8C9A90]">{shw.hours}</span>
+                        </div>
+                        {shw.notes && (
+                          <div className="p-2 rounded-lg bg-white/5 text-[11px] text-[#C9A56A] italic border border-white/5">
+                            "{shw.notes}"
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Card Footer Actions */}
+                    <div className="p-3.5 pt-0 border-t border-white/10 bg-[#0F1714]/30 flex items-center justify-between gap-2 mt-2">
+                      <button
+                        onClick={() => handleOpenEditLocation(shw)}
+                        className="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#C9A56A] hover:text-white border border-[#C9A56A]/30 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all cursor-pointer"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                        <span>Edit Location</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteLocation(shw)}
+                        className="p-2 rounded-xl bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 transition-all cursor-pointer"
+                        title="Delete Showroom Location"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* SECTION 2: GLOBAL CONTACT INFO, SOCIALS & STORE OPEN/CLOSE SCHEDULE FORM */}
+            <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-white/10 gap-2">
+                <div>
+                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                    <Settings className="w-5 h-5 text-[#C9A56A]" />
+                    <span>Global Contact Numbers, Emails, Store Schedule & Social Media</span>
+                  </h3>
+                  <p className="text-xs text-[#E9DFD1] mt-0.5">
+                    Configure official contact details, scheduled operating hours, and social media channels across the website.
+                  </p>
+                </div>
+                <span className="text-[11px] font-mono text-[#C9A56A] bg-[#C9A56A]/10 px-3 py-1 rounded-full border border-[#C9A56A]/20 self-start sm:self-auto">
+                  Live Synced
+                </span>
+              </div>
+
+              <form onSubmit={handleSaveContactSettings} className="space-y-6">
+                {/* 1. Phone & Mobile Numbers */}
+                <div className="space-y-3">
+                  <h4 className="font-serif text-base text-[#C9A56A] font-bold flex items-center gap-2">
+                    <Smartphone className="w-4 h-4" />
+                    <span>1. Telephony, Mobile Hotline & WhatsApp Channels</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        Primary Landline / Switchboard
+                      </label>
+                      <input
+                        type="text"
+                        value={contactSettingsForm.primaryPhone}
+                        onChange={(e) =>
+                          setContactSettingsForm({ ...contactSettingsForm, primaryPhone: e.target.value })
+                        }
+                        placeholder="+44 (0)20 7946 0188"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        Mobile Direct Hotline *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={contactSettingsForm.mobileNumber}
+                        onChange={(e) =>
+                          setContactSettingsForm({ ...contactSettingsForm, mobileNumber: e.target.value })
+                        }
+                        placeholder="+44 7911 123456"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        WhatsApp Concierge
+                      </label>
+                      <input
+                        type="text"
+                        value={contactSettingsForm.whatsappNumber || ''}
+                        onChange={(e) =>
+                          setContactSettingsForm({ ...contactSettingsForm, whatsappNumber: e.target.value })
+                        }
+                        placeholder="+44 7911 123456"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Email Channels */}
+                <div className="space-y-3 pt-4 border-t border-white/10">
+                  <h4 className="font-serif text-base text-[#C9A56A] font-bold flex items-center gap-2">
+                    <Mail className="w-4 h-4" />
+                    <span>2. Departmental Email Addresses</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        General Inquiries Email *
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={contactSettingsForm.generalEmail}
+                        onChange={(e) =>
+                          setContactSettingsForm({ ...contactSettingsForm, generalEmail: e.target.value })
+                        }
+                        placeholder="concierge@atelier-living.com"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        VIP Client Services Email
+                      </label>
+                      <input
+                        type="email"
+                        value={contactSettingsForm.vipEmail}
+                        onChange={(e) =>
+                          setContactSettingsForm({ ...contactSettingsForm, vipEmail: e.target.value })
+                        }
+                        placeholder="vip@atelier-living.com"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        Press & Media Email
+                      </label>
+                      <input
+                        type="email"
+                        value={contactSettingsForm.pressEmail || ''}
+                        onChange={(e) =>
+                          setContactSettingsForm({ ...contactSettingsForm, pressEmail: e.target.value })
+                        }
+                        placeholder="press@atelier-living.com"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        Trade & Architects Email
+                      </label>
+                      <input
+                        type="email"
+                        value={contactSettingsForm.tradeEmail || ''}
+                        onChange={(e) =>
+                          setContactSettingsForm({ ...contactSettingsForm, tradeEmail: e.target.value })
+                        }
+                        placeholder="trade@atelier-living.com"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Store Open / Close Time Schedule */}
+                <div className="space-y-3 pt-4 border-t border-white/10">
+                  <h4 className="font-serif text-base text-[#C9A56A] font-bold flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    <span>3. Store Open / Close Timetable & Operating Schedule</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        Monday – Friday Schedule *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={contactSettingsForm.scheduleMonFri}
+                        onChange={(e) =>
+                          setContactSettingsForm({ ...contactSettingsForm, scheduleMonFri: e.target.value })
+                        }
+                        placeholder="09:30 - 18:30"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        Saturday Schedule *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={contactSettingsForm.scheduleSat}
+                        onChange={(e) =>
+                          setContactSettingsForm({ ...contactSettingsForm, scheduleSat: e.target.value })
+                        }
+                        placeholder="10:00 - 17:00"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        Sunday Schedule *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={contactSettingsForm.scheduleSun}
+                        onChange={(e) =>
+                          setContactSettingsForm({ ...contactSettingsForm, scheduleSun: e.target.value })
+                        }
+                        placeholder="By Private Appointment Only"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        Bank Holidays & Special Closures
+                      </label>
+                      <input
+                        type="text"
+                        value={contactSettingsForm.scheduleHolidays}
+                        onChange={(e) =>
+                          setContactSettingsForm({ ...contactSettingsForm, scheduleHolidays: e.target.value })
+                        }
+                        placeholder="Closed on UK & EU Bank Holidays"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Social Media Accounts */}
+                <div className="space-y-3 pt-4 border-t border-white/10">
+                  <h4 className="font-serif text-base text-[#C9A56A] font-bold flex items-center gap-2">
+                    <Share2 className="w-4 h-4" />
+                    <span>4. Official Social Media Channels & Portals</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        Instagram Profile URL
+                      </label>
+                      <input
+                        type="url"
+                        value={contactSettingsForm.instagramUrl || ''}
+                        onChange={(e) =>
+                          setContactSettingsForm({ ...contactSettingsForm, instagramUrl: e.target.value })
+                        }
+                        placeholder="https://instagram.com/atelierliving"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        Pinterest Portfolio URL
+                      </label>
+                      <input
+                        type="url"
+                        value={contactSettingsForm.pinterestUrl || ''}
+                        onChange={(e) =>
+                          setContactSettingsForm({ ...contactSettingsForm, pinterestUrl: e.target.value })
+                        }
+                        placeholder="https://pinterest.com/atelierliving"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        LinkedIn Company URL
+                      </label>
+                      <input
+                        type="url"
+                        value={contactSettingsForm.linkedinUrl || ''}
+                        onChange={(e) =>
+                          setContactSettingsForm({ ...contactSettingsForm, linkedinUrl: e.target.value })
+                        }
+                        placeholder="https://linkedin.com/company/atelier-living"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        YouTube Channel URL
+                      </label>
+                      <input
+                        type="url"
+                        value={contactSettingsForm.youtubeUrl || ''}
+                        onChange={(e) =>
+                          setContactSettingsForm({ ...contactSettingsForm, youtubeUrl: e.target.value })
+                        }
+                        placeholder="https://youtube.com/@atelierliving"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        Twitter / X Profile URL
+                      </label>
+                      <input
+                        type="url"
+                        value={contactSettingsForm.twitterUrl || ''}
+                        onChange={(e) =>
+                          setContactSettingsForm({ ...contactSettingsForm, twitterUrl: e.target.value })
+                        }
+                        placeholder="https://twitter.com/atelierliving"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        Facebook Page URL
+                      </label>
+                      <input
+                        type="url"
+                        value={contactSettingsForm.facebookUrl || ''}
+                        onChange={(e) =>
+                          setContactSettingsForm({ ...contactSettingsForm, facebookUrl: e.target.value })
+                        }
+                        placeholder="https://facebook.com/atelierliving"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit Save Button */}
+                <div className="pt-4 border-t border-white/10 flex items-center justify-between">
+                  <p className="text-xs text-[#8C9A90]">
+                    All contact details sync across the live Contact page, showroom inquiry portal, and site footer.
+                  </p>
+                  <button
+                    type="submit"
+                    disabled={isSavingContactSettings}
+                    className="px-6 py-3 rounded-xl bg-[#C9A56A] text-[#0F1714] font-bold text-xs uppercase tracking-wider hover:bg-[#E6C894] transition-all flex items-center space-x-2 shadow-xl disabled:opacity-50 cursor-pointer"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{isSavingContactSettings ? 'Saving Settings...' : 'Save & Sync Contact Settings'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ================= SITE BRANDING, LOGOS, NAVIGATION & SOCIALS CONTROL CENTER ================= */}
+        {activeTab === 'site-branding' && (
+          <div className="space-y-8 animate-in fade-in duration-300">
+            {/* Top Module Header */}
+            <div className="pb-4 border-b border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white flex items-center gap-2.5">
+                  <SlidersHorizontal className="w-6 h-6 text-[#C9A56A]" />
+                  <span>Site Identity, Header Navigation & Socials Control Center</span>
+                </h2>
+                <p className="text-xs text-[#E9DFD1] mt-1">
+                  Upload and customize Header & Footer logos (with text fallback), edit header menu links & order, and manage dynamic social media icons and contact coordinates.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleResetSiteSettings}
+                  className="px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs text-[#8C9A90] hover:text-white font-semibold flex items-center gap-2 cursor-pointer transition-all"
+                  title="Reset all branding & navigation to Atelier default values"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reset Defaults</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSaveSiteSettings()}
+                  disabled={isSavingSiteSettings}
+                  className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer ${
+                    JSON.stringify(siteSettings) !== JSON.stringify(siteSettingsForm)
+                      ? 'bg-amber-400 text-black animate-pulse shadow-amber-400/30'
+                      : 'bg-gradient-to-r from-[#C9A56A] via-[#E6C894] to-[#C9A56A] text-[#0F1714] hover:brightness-110 shadow-[#C9A56A]/20'
+                  }`}
+                >
+                  <Save className="w-4 h-4" />
+                  <span>
+                    {isSavingSiteSettings
+                      ? 'Saving...'
+                      : JSON.stringify(siteSettings) !== JSON.stringify(siteSettingsForm)
+                      ? 'Save Unsaved Changes'
+                      : 'Save & Publish Live'}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* --- 2-COLUMN WORKSPACE: INNER SIDEBAR + FULL-WIDTH EXPANDED CONTENT --- */}
+            <div className="flex flex-col lg:flex-row items-start gap-6 w-full">
+              {/* --- LEFT: INNER SIDEBAR MENU --- */}
+              <aside className="w-full lg:w-72 shrink-0 space-y-4">
+                <div className="bg-[#163129]/80 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 shadow-xl space-y-2">
+                  <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
+                    <span className="text-[11px] uppercase font-bold tracking-widest text-[#C9A56A] flex items-center gap-1.5">
+                      <SlidersHorizontal className="w-3.5 h-3.5 text-[#C9A56A]" />
+                      <span>Site & CMS Modules</span>
+                    </span>
+                    <span className="text-[10px] text-[#8C9A90] font-mono">8 Active</span>
+                  </div>
+
+                  <nav className="space-y-1.5 pt-1">
+                    {[
+                      {
+                        id: 'nav-links',
+                        label: 'Header Menu Links',
+                        icon: Menu,
+                        desc: 'Items, order & routes',
+                        count: siteSettingsForm.navLinks.length
+                      },
+                      {
+                        id: 'header-styling',
+                        label: 'Header Styling & Layout',
+                        icon: SlidersHorizontal,
+                        desc: 'Typography, gap & themes'
+                      },
+                      {
+                        id: 'logos',
+                        label: 'Logos & Brand Identity',
+                        icon: ImageIcon,
+                        desc: 'Header/Footer logo & mark'
+                      },
+                      {
+                        id: 'testimonials',
+                        label: 'Client Testimonials',
+                        icon: Star,
+                        desc: 'Quotes, stars & reviews',
+                        count: testimonialsList.length
+                      },
+                      {
+                        id: 'brands',
+                        label: 'Brand Partners & Marquee',
+                        icon: Sparkles,
+                        desc: 'Mill houses & live ticker',
+                        count: brandsList.length
+                      },
+                      {
+                        id: 'story-cms',
+                        label: 'Our Story & Heritage CMS',
+                        icon: Compass,
+                        desc: 'Hero, ethos & milestones'
+                      },
+                      {
+                        id: 'socials',
+                        label: 'Social Media Channels',
+                        icon: Share2,
+                        desc: 'Instagram, LinkedIn, X...'
+                      },
+                      {
+                        id: 'contact',
+                        label: 'Contact Details & Hours',
+                        icon: Phone,
+                        desc: 'Telephony, inboxes & hours'
+                      }
+                    ].map((item) => {
+                      const Icon = item.icon;
+                      const isActive = siteSettingsSubtab === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setSiteSettingsSubtab(item.id as any)}
+                          className={`w-full p-3 rounded-xl text-left transition-all flex items-center justify-between group cursor-pointer border ${
+                            isActive
+                              ? 'bg-gradient-to-r from-[#C9A56A] to-[#E6C894] text-[#0F1714] font-bold border-[#E9DFD1]/60 shadow-lg shadow-[#C9A56A]/20'
+                              : 'bg-black/30 hover:bg-white/5 border-white/5 text-[#8C9A90] hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3 min-w-0">
+                            <div
+                              className={`p-2 rounded-lg shrink-0 ${
+                                isActive
+                                  ? 'bg-[#0F1714] text-[#C9A56A]'
+                                  : 'bg-white/5 text-[#C9A56A] group-hover:bg-[#C9A56A]/20'
+                              }`}
+                            >
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="block text-xs truncate leading-tight font-semibold">
+                                {item.label}
+                              </span>
+                              <span
+                                className={`block text-[10px] truncate mt-0.5 ${
+                                  isActive ? 'text-[#0F1714]/80 font-medium' : 'text-[#8C9A90]'
+                                }`}
+                              >
+                                {item.desc}
+                              </span>
+                            </div>
+                          </div>
+
+                          {item.count !== undefined && (
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold shrink-0 ${
+                                isActive ? 'bg-[#0F1714] text-[#C9A56A]' : 'bg-white/10 text-white/80'
+                              }`}
+                            >
+                              {item.count}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </nav>
+                </div>
+
+                {/* Quick Action Box */}
+                <div className="bg-[#163129]/60 border border-[#C9A56A]/20 rounded-2xl p-4 shadow-lg space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[#8C9A90] uppercase tracking-wider font-semibold text-[10px]">
+                      Sync Engine
+                    </span>
+                    <span className="text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Live Ready
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleSaveSiteSettings()}
+                    disabled={isSavingSiteSettings}
+                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#C9A56A] to-[#E6C894] text-[#0F1714] font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>{isSavingSiteSettings ? 'Publishing...' : 'Save & Publish Live'}</span>
+                  </button>
+                </div>
+              </aside>
+
+              {/* --- RIGHT: EXPANDED FULL-WIDTH CONTENT PANEL --- */}
+              <div className="grow min-w-0 space-y-6 w-full">
+
+            {/* --- PERSISTENT LIVE HEADER SIMULATION PREVIEW (For Nav Links, Styling & Logos) --- */}
+            {['nav-links', 'header-styling', 'logos'].includes(siteSettingsSubtab) && (
+              <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 sm:p-6 shadow-xl space-y-3 animate-in fade-in">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-[#C9A56A] uppercase tracking-wider font-bold gap-2">
+                  <span className="flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-[#C9A56A]" />
+                    <span>Live Header Simulation Preview</span>
+                  </span>
+                  <span className="text-[10px] text-[#8C9A90] font-mono">
+                    Font: {siteSettingsForm.headerFontSize || '13px'} &bull; Gap: {siteSettingsForm.headerItemSpacing || '24px'} &bull; Height: {siteSettingsForm.headerHeight || 'standard'} &bull; Theme: {siteSettingsForm.headerBackgroundStyle || 'emerald'}
+                  </span>
+                </div>
+
+                <div className={`rounded-xl overflow-hidden border transition-all duration-300 ${
+                  siteSettingsForm.headerBorderBottom === 'subtle'
+                    ? 'border-white/15'
+                    : siteSettingsForm.headerBorderBottom === 'glow'
+                    ? 'border-[#C9A56A] shadow-[0_0_20px_rgba(201,165,106,0.3)]'
+                    : siteSettingsForm.headerBorderBottom === 'none'
+                    ? 'border-transparent'
+                    : 'border-[#C9A56A]/40'
+                } ${
+                  siteSettingsForm.headerBackgroundStyle === 'obsidian'
+                    ? 'bg-[#0F1714]'
+                    : siteSettingsForm.headerBackgroundStyle === 'glass'
+                    ? 'bg-black/70 backdrop-blur-xl'
+                    : siteSettingsForm.headerBackgroundStyle === 'solid'
+                    ? 'bg-[#0F1714]'
+                    : 'bg-[#163129]'
+                }`}>
+                  {siteSettingsForm.headerTopBarEnabled && siteSettingsForm.headerTopBarText && (
+                    <div className={`py-1 px-3 text-center text-[10px] uppercase font-bold tracking-widest flex items-center justify-center gap-1.5 ${
+                      siteSettingsForm.headerTopBarBg === 'gold'
+                        ? 'bg-[#C9A56A] text-[#0F1714]'
+                        : siteSettingsForm.headerTopBarBg === 'obsidian'
+                        ? 'bg-[#0F1714] text-[#C9A56A] border-b border-[#C9A56A]/30'
+                        : 'bg-[#163129] text-white border-b border-white/10'
+                    }`}>
+                      <Sparkles className="w-2.5 h-2.5 shrink-0" />
+                      <span className="truncate">{siteSettingsForm.headerTopBarText}</span>
+                    </div>
+                  )}
+
+                  <div className={`p-3 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                    siteSettingsForm.headerHeight === 'compact'
+                      ? 'py-2'
+                      : siteSettingsForm.headerHeight === 'luxury'
+                      ? 'py-5'
+                      : 'py-3.5'
+                  }`}>
+                    <div className="flex items-center space-x-3 shrink-0">
+                      {siteSettingsForm.headerLogoImage ? (
+                        <img
+                          src={siteSettingsForm.headerLogoImage}
+                          alt="Logo Preview"
+                          style={{ maxHeight: `${siteSettingsForm.headerLogoHeight || 40}px` }}
+                          className="w-auto object-contain"
+                        />
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <div
+                            style={{
+                              width: `${Math.max(30, siteSettingsForm.headerLogoHeight || 36)}px`,
+                              height: `${Math.max(30, siteSettingsForm.headerLogoHeight || 36)}px`
+                            }}
+                            className="rounded-full border border-[#C9A56A] bg-[#C9A56A]/20 flex items-center justify-center text-[#C9A56A] font-serif font-bold text-xs"
+                          >
+                            {siteSettingsForm.headerLogoMonogram || 'A'}
+                          </div>
+                          <div>
+                            <span className="font-serif text-xs font-bold tracking-wider text-white uppercase block">
+                              {siteSettingsForm.headerLogoTitle || 'Atelier Living'}
+                            </span>
+                            <span className="text-[7px] tracking-widest text-[#C9A56A] uppercase block">
+                              {siteSettingsForm.headerLogoSubtitle || 'Designed For Inspired Living'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div
+                      style={{ gap: siteSettingsForm.headerItemSpacing || '24px' }}
+                      className={`flex flex-wrap items-center ${
+                        siteSettingsForm.headerAlignment === 'left'
+                          ? 'justify-start'
+                          : siteSettingsForm.headerAlignment === 'right'
+                          ? 'justify-end'
+                          : 'justify-center'
+                      }`}
+                    >
+                      {siteSettingsForm.navLinks
+                        .filter((l) => l.isVisible !== false)
+                        .map((l) => (
+                          <span
+                            key={l.id}
+                            style={{
+                              fontSize: siteSettingsForm.headerFontSize || '13px',
+                              fontWeight: Number(siteSettingsForm.headerFontWeight || 600),
+                              letterSpacing:
+                                siteSettingsForm.headerLetterSpacing === 'tight'
+                                  ? '0.025em'
+                                  : siteSettingsForm.headerLetterSpacing === 'normal'
+                                  ? '0.05em'
+                                  : siteSettingsForm.headerLetterSpacing === 'wide'
+                                  ? '0.1em'
+                                  : siteSettingsForm.headerLetterSpacing === 'wider'
+                                  ? '0.15em'
+                                  : '0.2em',
+                              textTransform:
+                                siteSettingsForm.headerTextTransform === 'capitalize'
+                                  ? 'capitalize'
+                                  : siteSettingsForm.headerTextTransform === 'normal-case'
+                                  ? 'none'
+                                  : 'uppercase'
+                            }}
+                            className="text-white font-medium hover:text-[#C9A56A] transition-colors flex items-center gap-1 cursor-default"
+                          >
+                            <span>{l.label}</span>
+                            {l.hasMegaMenu && <Sparkles className="w-2.5 h-2.5 text-[#C9A56A]" />}
+                            {l.isExternal && <ExternalLink className="w-2.5 h-2.5 text-[#8C9A90]" />}
+                          </span>
+                        ))}
+                    </div>
+
+                    <div className="flex items-center space-x-2 shrink-0">
+                      {siteSettingsForm.headerShowSearch && (
+                        <div className="p-1.5 rounded-full bg-white/5 border border-white/10 text-white/80">
+                          <Search className="w-3 h-3" />
+                        </div>
+                      )}
+                      {siteSettingsForm.headerShowConcierge !== false && (
+                        <div className="p-1.5 rounded-full bg-white/5 border border-white/10 text-[#C9A56A]">
+                          <Phone className="w-3 h-3" />
+                        </div>
+                      )}
+                      {siteSettingsForm.headerShowSwatchesBtn !== false && (
+                        <div className="px-3 py-1 rounded-full bg-gradient-to-r from-[#C9A56A] to-[#E6C894] text-[#0F1714] text-[10px] font-bold uppercase tracking-wider">
+                          Swatches
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* --- SUBTAB 1: HEADER MENU LINKS --- */}
+            {siteSettingsSubtab === 'nav-links' && (
+              <div className="space-y-6 animate-in fade-in">
+                {/* Header Menu Items Manager */}
+                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 shadow-xl space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-white/10 gap-2">
+                    <div>
+                      <h3 className="font-serif text-xl font-bold text-white">Header Menu Navigation Items</h3>
+                      <p className="text-xs text-[#8C9A90]">
+                        Reorder items, edit labels, set destination routes, toggle MegaMenu dropdown, or add custom links.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={handleOpenAddLink}
+                      className="px-4 py-2 rounded-xl bg-[#C9A56A] text-[#0F1714] font-bold text-xs uppercase tracking-wider hover:bg-[#E6C894] transition-all flex items-center gap-1.5 shadow-md cursor-pointer self-start sm:self-auto"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Menu Link</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {siteSettingsForm.navLinks.map((link, idx) => (
+                      <div
+                        key={link.id}
+                        className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                          link.isVisible
+                            ? 'bg-white/5 border-white/10 hover:border-[#C9A56A]/40'
+                            : 'bg-black/40 border-dashed border-white/10 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          {/* Order number & Move Buttons */}
+                          <div className="flex items-center space-x-1">
+                            <span className="w-6 h-6 rounded-md bg-[#0F1714] border border-white/15 text-[10px] font-mono font-bold text-[#C9A56A] flex items-center justify-center">
+                              {link.order || idx + 1}
+                            </span>
+                            <div className="flex flex-col">
+                              <button
+                                onClick={() => handleMoveLinkUp(idx)}
+                                disabled={idx === 0}
+                                className="p-0.5 text-[#8C9A90] hover:text-[#C9A56A] disabled:opacity-30 cursor-pointer"
+                                title="Move Up"
+                              >
+                                <ArrowUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleMoveLinkDown(idx)}
+                                disabled={idx === siteSettingsForm.navLinks.length - 1}
+                                className="p-0.5 text-[#8C9A90] hover:text-[#C9A56A] disabled:opacity-30 cursor-pointer"
+                                title="Move Down"
+                              >
+                                <ArrowDown className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <span className="font-bold text-white text-sm">{link.label}</span>
+                              {link.hasMegaMenu && (
+                                <span className="px-2 py-0.5 rounded-full bg-[#C9A56A]/20 text-[#C9A56A] border border-[#C9A56A]/40 text-[9px] font-bold uppercase tracking-widest">
+                                  MegaMenu Dropdown
+                                </span>
+                              )}
+                              {link.isExternal && (
+                                <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[9px] font-bold uppercase tracking-widest">
+                                  External Link
+                                </span>
+                              )}
+                              {!link.isVisible && (
+                                <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/40 text-[9px] font-bold uppercase tracking-widest">
+                                  Hidden from Header
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[11px] text-[#8C9A90] font-mono block">
+                              Target: <strong className="text-[#E9DFD1]">{link.target}</strong>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Item Actions */}
+                        <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
+                          <button
+                            onClick={() => handleToggleLinkVisibility(link.id)}
+                            className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                              link.isVisible
+                                ? 'bg-white/5 border-white/15 text-emerald-400 hover:bg-white/10'
+                                : 'bg-red-950/40 border-red-500/30 text-red-400 hover:bg-red-900/60'
+                            }`}
+                            title={link.isVisible ? 'Hide Link from Navbar' : 'Show Link in Navbar'}
+                          >
+                            {link.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                          </button>
+
+                          <button
+                            onClick={() => handleOpenEditLink(link)}
+                            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#C9A56A] border border-[#C9A56A]/30 transition-all cursor-pointer"
+                            title="Edit Link Configuration"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteLink(link.id, link.label)}
+                            className="p-2 rounded-xl bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 transition-all cursor-pointer"
+                            title="Delete Menu Link"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* --- SUBTAB 2: HEADER STYLING & LAYOUT OPTIONS --- */}
+            {siteSettingsSubtab === 'header-styling' && (
+              <div className="space-y-8 animate-in fade-in">
+                {/* 1. Header Typography & Link Styling */}
+                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+                  <div className="pb-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h3 className="font-serif text-xl font-bold text-white flex items-center gap-2">
+                        <Type className="w-5 h-5 text-[#C9A56A]" />
+                        <span>Header Typography & Navigation Links</span>
+                      </h3>
+                      <p className="text-xs text-[#8C9A90]">
+                        Fine-tune font sizing, item spacing / gap between links, font weight, letter spacing, and casing.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Font Size */}
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                        Font Size: <span className="text-white font-mono">{siteSettingsForm.headerFontSize || '13px'}</span>
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(['11px', '12px', '13px', '14px', '15px', '16px'] as const).map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            onClick={() => setSiteSettingsForm((prev) => ({ ...prev, headerFontSize: size }))}
+                            className={`py-2 px-3 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer ${
+                              (siteSettingsForm.headerFontSize || '13px') === size
+                                ? 'bg-[#C9A56A] text-[#0F1714] shadow-md'
+                                : 'bg-black/40 text-[#8C9A90] border border-white/10 hover:border-[#C9A56A]/40 hover:text-white'
+                            }`}
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Between Space (Item Gap) */}
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                        Between Space / Gap: <span className="text-white font-mono">{siteSettingsForm.headerItemSpacing || '24px'}</span>
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(['12px', '18px', '24px', '32px', '40px', '48px'] as const).map((gap) => (
+                          <button
+                            key={gap}
+                            type="button"
+                            onClick={() => setSiteSettingsForm((prev) => ({ ...prev, headerItemSpacing: gap }))}
+                            className={`py-2 px-3 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer ${
+                              (siteSettingsForm.headerItemSpacing || '24px') === gap
+                                ? 'bg-[#C9A56A] text-[#0F1714] shadow-md'
+                                : 'bg-black/40 text-[#8C9A90] border border-white/10 hover:border-[#C9A56A]/40 hover:text-white'
+                            }`}
+                          >
+                            {gap}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Font Weight */}
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                        Font Weight
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {[
+                          { val: '300', label: '300 Light' },
+                          { val: '400', label: '400 Regular' },
+                          { val: '500', label: '500 Medium' },
+                          { val: '600', label: '600 SemiBold' },
+                          { val: '700', label: '700 Bold' }
+                        ].map((w) => (
+                          <button
+                            key={w.val}
+                            type="button"
+                            onClick={() => setSiteSettingsForm((prev) => ({ ...prev, headerFontWeight: w.val as any }))}
+                            className={`py-2 px-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                              (siteSettingsForm.headerFontWeight || '600') === w.val
+                                ? 'bg-[#C9A56A] text-[#0F1714] font-bold shadow-md'
+                                : 'bg-black/40 text-[#8C9A90] border border-white/10 hover:border-[#C9A56A]/40 hover:text-white'
+                            }`}
+                          >
+                            {w.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Letter Spacing (Kerning) */}
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                        Letter Spacing (Kerning)
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { val: 'tight', label: 'Tight' },
+                          { val: 'normal', label: 'Normal' },
+                          { val: 'wide', label: 'Wide' },
+                          { val: 'wider', label: 'Wider' },
+                          { val: 'widest', label: 'Widest' }
+                        ].map((s) => (
+                          <button
+                            key={s.val}
+                            type="button"
+                            onClick={() => setSiteSettingsForm((prev) => ({ ...prev, headerLetterSpacing: s.val as any }))}
+                            className={`py-2 px-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                              (siteSettingsForm.headerLetterSpacing || 'widest') === s.val
+                                ? 'bg-[#C9A56A] text-[#0F1714] font-bold shadow-md'
+                                : 'bg-black/40 text-[#8C9A90] border border-white/10 hover:border-[#C9A56A]/40 hover:text-white'
+                            }`}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Text Transform / Case */}
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                        Text Transformation
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { val: 'uppercase', label: 'UPPERCASE' },
+                          { val: 'capitalize', label: 'Capitalize' },
+                          { val: 'normal-case', label: 'Sentence' }
+                        ].map((c) => (
+                          <button
+                            key={c.val}
+                            type="button"
+                            onClick={() => setSiteSettingsForm((prev) => ({ ...prev, headerTextTransform: c.val as any }))}
+                            className={`py-2 px-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                              (siteSettingsForm.headerTextTransform || 'uppercase') === c.val
+                                ? 'bg-[#C9A56A] text-[#0F1714] font-bold shadow-md'
+                                : 'bg-black/40 text-[#8C9A90] border border-white/10 hover:border-[#C9A56A]/40 hover:text-white'
+                            }`}
+                          >
+                            {c.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Menu Alignment */}
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                        Menu Positioning / Alignment
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { val: 'left', label: 'Left' },
+                          { val: 'center', label: 'Center' },
+                          { val: 'right', label: 'Right' }
+                        ].map((a) => (
+                          <button
+                            key={a.val}
+                            type="button"
+                            onClick={() => setSiteSettingsForm((prev) => ({ ...prev, headerAlignment: a.val as any }))}
+                            className={`py-2 px-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                              (siteSettingsForm.headerAlignment || 'center') === a.val
+                                ? 'bg-[#C9A56A] text-[#0F1714] font-bold shadow-md'
+                                : 'bg-black/40 text-[#8C9A90] border border-white/10 hover:border-[#C9A56A]/40 hover:text-white'
+                            }`}
+                          >
+                            {a.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Dimensions, Logo Sizing & Behavior */}
+                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+                  <div className="pb-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h3 className="font-serif text-xl font-bold text-white flex items-center gap-2">
+                        <Sliders className="w-5 h-5 text-[#C9A56A]" />
+                        <span>Header Dimensions & Logo Sizing</span>
+                      </h3>
+                      <p className="text-xs text-[#8C9A90]">
+                        Control navbar vertical height, max logo height, and sticky navigation behavior.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Header Height */}
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                        Navbar Vertical Height
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { val: 'compact', label: 'Compact', desc: '60px' },
+                          { val: 'standard', label: 'Standard', desc: '76px' },
+                          { val: 'luxury', label: 'Luxury', desc: '92px' }
+                        ].map((h) => (
+                          <button
+                            key={h.val}
+                            type="button"
+                            onClick={() => setSiteSettingsForm((prev) => ({ ...prev, headerHeight: h.val as any }))}
+                            className={`py-2 px-2.5 rounded-xl text-center transition-all cursor-pointer ${
+                              (siteSettingsForm.headerHeight || 'standard') === h.val
+                                ? 'bg-[#C9A56A] text-[#0F1714] shadow-md'
+                                : 'bg-black/40 text-[#8C9A90] border border-white/10 hover:border-[#C9A56A]/40 hover:text-white'
+                            }`}
+                          >
+                            <span className="block text-xs font-bold">{h.label}</span>
+                            <span className="block text-[10px] opacity-75 font-mono">{h.desc}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Logo Max Height Slider */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                          Logo Max Height
+                        </label>
+                        <span className="text-xs font-mono font-bold text-white bg-black/40 px-2.5 py-0.5 rounded-md border border-white/10">
+                          {siteSettingsForm.headerLogoHeight || 40}px
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="28"
+                        max="64"
+                        step="2"
+                        value={siteSettingsForm.headerLogoHeight || 40}
+                        onChange={(e) =>
+                          setSiteSettingsForm((prev) => ({
+                            ...prev,
+                            headerLogoHeight: parseInt(e.target.value)
+                          }))
+                        }
+                        className="w-full accent-[#C9A56A] cursor-pointer mt-2"
+                      />
+                      <div className="flex justify-between text-[10px] text-[#8C9A90] font-mono">
+                        <span>28px (Sleek)</span>
+                        <span>40px (Default)</span>
+                        <span>64px (Prominent)</span>
+                      </div>
+                    </div>
+
+                    {/* Sticky Header Toggle */}
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                        Sticky Navbar on Scroll
+                      </label>
+                      <div
+                        onClick={() =>
+                          setSiteSettingsForm((prev) => ({
+                            ...prev,
+                            headerSticky: prev.headerSticky === false ? true : false
+                          }))
+                        }
+                        className={`p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                          siteSettingsForm.headerSticky !== false
+                            ? 'bg-[#C9A56A]/15 border-[#C9A56A]/40 text-white'
+                            : 'bg-black/40 border-white/10 text-[#8C9A90]'
+                        }`}
+                      >
+                        <span className="text-xs font-bold">
+                          {siteSettingsForm.headerSticky !== false ? 'Sticky Header Enabled' : 'Static Header (No Sticky)'}
+                        </span>
+                        <div
+                          className={`w-10 h-6 rounded-full transition-colors relative flex items-center px-0.5 ${
+                            siteSettingsForm.headerSticky !== false ? 'bg-[#C9A56A]' : 'bg-white/20'
+                          }`}
+                        >
+                          <div
+                            className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                              siteSettingsForm.headerSticky !== false ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Aesthetic Theme, Glassmorphism & Bottom Border */}
+                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+                  <div className="pb-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h3 className="font-serif text-xl font-bold text-white flex items-center gap-2">
+                        <Layout className="w-5 h-5 text-[#C9A56A]" />
+                        <span>Background Aesthetic & Bottom Border</span>
+                      </h3>
+                      <p className="text-xs text-[#8C9A90]">
+                        Choose background blur styling and luxury trim accents.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Background Aesthetic */}
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                        Background Color & Glass Aesthetic
+                      </label>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {[
+                          { val: 'emerald', label: 'Emerald Deep', desc: '#163129 Atelier Signature' },
+                          { val: 'obsidian', label: 'Obsidian Midnight', desc: '#0F1714 Pure Noir' },
+                          { val: 'glass', label: 'Frosted Glass', desc: 'Ultra Blur & Transparency' },
+                          { val: 'solid', label: 'Solid Black Matte', desc: 'Opaque Minimalist' }
+                        ].map((b) => (
+                          <button
+                            key={b.val}
+                            type="button"
+                            onClick={() => setSiteSettingsForm((prev) => ({ ...prev, headerBackgroundStyle: b.val as any }))}
+                            className={`p-3 rounded-xl text-left transition-all cursor-pointer border ${
+                              (siteSettingsForm.headerBackgroundStyle || 'emerald') === b.val
+                                ? 'bg-[#C9A56A]/20 border-[#C9A56A] text-white shadow-md'
+                                : 'bg-black/40 border-white/10 text-[#8C9A90] hover:border-white/30 hover:text-white'
+                            }`}
+                          >
+                            <span className="block text-xs font-bold">{b.label}</span>
+                            <span className="block text-[10px] opacity-70 mt-0.5">{b.desc}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Bottom Border Accent */}
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                        Bottom Border Accent
+                      </label>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {[
+                          { val: 'gold', label: 'Gold Trim Border', desc: 'Refined 1px #C9A56A' },
+                          { val: 'glow', label: 'Gold Ambient Glow', desc: 'Warm Radiant Aura' },
+                          { val: 'subtle', label: 'Subtle Slate', desc: 'Soft White/15 Line' },
+                          { val: 'none', label: 'Seamless (None)', desc: 'Borderless Edge' }
+                        ].map((border) => (
+                          <button
+                            key={border.val}
+                            type="button"
+                            onClick={() => setSiteSettingsForm((prev) => ({ ...prev, headerBorderBottom: border.val as any }))}
+                            className={`p-3 rounded-xl text-left transition-all cursor-pointer border ${
+                              (siteSettingsForm.headerBorderBottom || 'gold') === border.val
+                                ? 'bg-[#C9A56A]/20 border-[#C9A56A] text-white shadow-md'
+                                : 'bg-black/40 border-white/10 text-[#8C9A90] hover:border-white/30 hover:text-white'
+                            }`}
+                          >
+                            <span className="block text-xs font-bold">{border.label}</span>
+                            <span className="block text-[10px] opacity-70 mt-0.5">{border.desc}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Top Announcement / Promotion Bar */}
+                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+                  <div className="pb-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h3 className="font-serif text-xl font-bold text-white flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-[#C9A56A]" />
+                        <span>Top Announcement / Promo Bar</span>
+                      </h3>
+                      <p className="text-xs text-[#8C9A90]">
+                        Display an announcement banner above the navigation bar for high-priority offers or notices.
+                      </p>
+                    </div>
+
+                    {/* Announcement Bar Toggle */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSiteSettingsForm((prev) => ({
+                          ...prev,
+                          headerTopBarEnabled: !prev.headerTopBarEnabled
+                        }))
+                      }
+                      className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                        siteSettingsForm.headerTopBarEnabled
+                          ? 'bg-[#C9A56A] text-[#0F1714] shadow-md'
+                          : 'bg-black/40 text-[#8C9A90] border border-white/10 hover:text-white'
+                      }`}
+                    >
+                      {siteSettingsForm.headerTopBarEnabled ? (
+                        <>
+                          <Eye className="w-4 h-4" />
+                          <span>Announcement Bar Active</span>
+                        </>
+                      ) : (
+                        <>
+                          <EyeOff className="w-4 h-4" />
+                          <span>Announcement Bar Disabled</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {siteSettingsForm.headerTopBarEnabled && (
+                    <div className="space-y-4 pt-2">
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                        <div className="md:col-span-8 space-y-1.5">
+                          <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                            Announcement Message
+                          </label>
+                          <input
+                            type="text"
+                            value={siteSettingsForm.headerTopBarText || ''}
+                            onChange={(e) =>
+                              setSiteSettingsForm((prev) => ({
+                                ...prev,
+                                headerTopBarText: e.target.value
+                              }))
+                            }
+                            placeholder="e.g. Complimentary White-Glove Delivery Across India on Orders Above ₹5,00,000"
+                            className="w-full bg-[#0F1714] border border-[#C9A56A]/30 rounded-xl px-4 py-2.5 text-white text-xs placeholder:text-[#8C9A90]/50 focus:outline-none focus:border-[#C9A56A]"
+                          />
+                        </div>
+
+                        <div className="md:col-span-4 space-y-1.5">
+                          <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                            Link Destination (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={siteSettingsForm.headerTopBarLink || ''}
+                            onChange={(e) =>
+                              setSiteSettingsForm((prev) => ({
+                                ...prev,
+                                headerTopBarLink: e.target.value
+                              }))
+                            }
+                            placeholder="e.g. /contact or /showrooms"
+                            className="w-full bg-[#0F1714] border border-[#C9A56A]/30 rounded-xl px-4 py-2.5 text-white text-xs placeholder:text-[#8C9A90]/50 focus:outline-none focus:border-[#C9A56A]"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                          Banner Background Color Theme
+                        </label>
+                        <div className="grid grid-cols-3 gap-3">
+                          {[
+                            { val: 'gold', label: 'Radiant Gold', desc: 'High visibility #C9A56A' },
+                            { val: 'emerald', label: 'Deep Emerald', desc: 'Subtle luxury #163129' },
+                            { val: 'obsidian', label: 'Obsidian Black', desc: 'Minimalist #0F1714' }
+                          ].map((theme) => (
+                            <button
+                              key={theme.val}
+                              type="button"
+                              onClick={() =>
+                                setSiteSettingsForm((prev) => ({
+                                  ...prev,
+                                  headerTopBarBg: theme.val as any
+                                }))
+                              }
+                              className={`p-3 rounded-xl text-left transition-all cursor-pointer border ${
+                                (siteSettingsForm.headerTopBarBg || 'gold') === theme.val
+                                  ? 'bg-[#C9A56A]/20 border-[#C9A56A] text-white shadow-md'
+                                  : 'bg-black/40 border-white/10 text-[#8C9A90] hover:border-white/30 hover:text-white'
+                              }`}
+                            >
+                              <span className="block text-xs font-bold">{theme.label}</span>
+                              <span className="block text-[10px] opacity-70 mt-0.5">{theme.desc}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. Header Action Buttons & Utility Icons */}
+                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+                  <div className="pb-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h3 className="font-serif text-xl font-bold text-white flex items-center gap-2">
+                        <PackageCheck className="w-5 h-5 text-[#C9A56A]" />
+                        <span>Header Action Buttons & CTA Toggles</span>
+                      </h3>
+                      <p className="text-xs text-[#8C9A90]">
+                        Toggle visibility for header utility controls (Search, Order Swatches, Concierge Dial, Bag).
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Swatches Button */}
+                    <div
+                      onClick={() =>
+                        setSiteSettingsForm((prev) => ({
+                          ...prev,
+                          headerShowSwatchesBtn: prev.headerShowSwatchesBtn === false ? true : false
+                        }))
+                      }
+                      className={`p-4 rounded-xl border flex flex-col justify-between gap-3 cursor-pointer transition-all ${
+                        siteSettingsForm.headerShowSwatchesBtn !== false
+                          ? 'bg-[#C9A56A]/15 border-[#C9A56A]/50 text-white shadow-md'
+                          : 'bg-black/40 border-white/10 text-[#8C9A90]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-[#C9A56A]" />
+                          <span>Swatches CTA Button</span>
+                        </span>
+                        <div
+                          className={`w-8 h-4 rounded-full transition-colors relative flex items-center px-0.5 ${
+                            siteSettingsForm.headerShowSwatchesBtn !== false ? 'bg-[#C9A56A]' : 'bg-white/20'
+                          }`}
+                        >
+                          <div
+                            className={`w-3.5 h-3.5 rounded-full bg-white transition-transform ${
+                              siteSettingsForm.headerShowSwatchesBtn !== false ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[11px] opacity-80">
+                        {siteSettingsForm.headerShowSwatchesBtn !== false ? 'Visible (Gold Swatches Pill)' : 'Hidden from Header'}
+                      </p>
+                    </div>
+
+                    {/* Search Icon */}
+                    <div
+                      onClick={() =>
+                        setSiteSettingsForm((prev) => ({
+                          ...prev,
+                          headerShowSearch: !prev.headerShowSearch
+                        }))
+                      }
+                      className={`p-4 rounded-xl border flex flex-col justify-between gap-3 cursor-pointer transition-all ${
+                        siteSettingsForm.headerShowSearch
+                          ? 'bg-[#C9A56A]/15 border-[#C9A56A]/50 text-white shadow-md'
+                          : 'bg-black/40 border-white/10 text-[#8C9A90]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold flex items-center gap-1.5">
+                          <Search className="w-4 h-4 text-[#C9A56A]" />
+                          <span>Search Modal Trigger</span>
+                        </span>
+                        <div
+                          className={`w-8 h-4 rounded-full transition-colors relative flex items-center px-0.5 ${
+                            siteSettingsForm.headerShowSearch ? 'bg-[#C9A56A]' : 'bg-white/20'
+                          }`}
+                        >
+                          <div
+                            className={`w-3.5 h-3.5 rounded-full bg-white transition-transform ${
+                              siteSettingsForm.headerShowSearch ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[11px] opacity-80">
+                        {siteSettingsForm.headerShowSearch ? 'Visible in Header' : 'Hidden from Header'}
+                      </p>
+                    </div>
+
+                    {/* Concierge Dial */}
+                    <div
+                      onClick={() =>
+                        setSiteSettingsForm((prev) => ({
+                          ...prev,
+                          headerShowConcierge: prev.headerShowConcierge === false ? true : false
+                        }))
+                      }
+                      className={`p-4 rounded-xl border flex flex-col justify-between gap-3 cursor-pointer transition-all ${
+                        siteSettingsForm.headerShowConcierge !== false
+                          ? 'bg-[#C9A56A]/15 border-[#C9A56A]/50 text-white shadow-md'
+                          : 'bg-black/40 border-white/10 text-[#8C9A90]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold flex items-center gap-1.5">
+                          <Phone className="w-4 h-4 text-[#C9A56A]" />
+                          <span>Concierge Phone Icon</span>
+                        </span>
+                        <div
+                          className={`w-8 h-4 rounded-full transition-colors relative flex items-center px-0.5 ${
+                            siteSettingsForm.headerShowConcierge !== false ? 'bg-[#C9A56A]' : 'bg-white/20'
+                          }`}
+                        >
+                          <div
+                            className={`w-3.5 h-3.5 rounded-full bg-white transition-transform ${
+                              siteSettingsForm.headerShowConcierge !== false ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[11px] opacity-80">
+                        {siteSettingsForm.headerShowConcierge !== false ? 'Visible in Header' : 'Hidden from Header'}
+                      </p>
+                    </div>
+
+                    {/* Inquiry Cart */}
+                    <div
+                      onClick={() =>
+                        setSiteSettingsForm((prev) => ({
+                          ...prev,
+                          headerShowCart: !prev.headerShowCart
+                        }))
+                      }
+                      className={`p-4 rounded-xl border flex flex-col justify-between gap-3 cursor-pointer transition-all ${
+                        siteSettingsForm.headerShowCart
+                          ? 'bg-[#C9A56A]/15 border-[#C9A56A]/50 text-white shadow-md'
+                          : 'bg-black/40 border-white/10 text-[#8C9A90]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold flex items-center gap-1.5">
+                          <PackageCheck className="w-4 h-4 text-[#C9A56A]" />
+                          <span>Inquiry Bag Counter</span>
+                        </span>
+                        <div
+                          className={`w-8 h-4 rounded-full transition-colors relative flex items-center px-0.5 ${
+                            siteSettingsForm.headerShowCart ? 'bg-[#C9A56A]' : 'bg-white/20'
+                          }`}
+                        >
+                          <div
+                            className={`w-3.5 h-3.5 rounded-full bg-white transition-transform ${
+                              siteSettingsForm.headerShowCart ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[11px] opacity-80">
+                        {siteSettingsForm.headerShowCart ? 'Visible in Header' : 'Hidden from Header'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* --- SUBTAB 3: LOGOS & BRAND IDENTITY --- */}
+            {siteSettingsSubtab === 'logos' && (
+              <div className="space-y-8 animate-in fade-in">
+                {/* 1. Header Logo Management */}
+                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+                  <div className="pb-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h3 className="font-serif text-xl font-bold text-white flex items-center gap-2">
+                        <ImageIcon className="w-5 h-5 text-[#C9A56A]" />
+                        <span>Header Logo & Text Fallback</span>
+                      </h3>
+                      <p className="text-xs text-[#8C9A90]">
+                        Upload an image logo. If no image logo is uploaded, the website automatically renders the customized monogram letter and brand typography.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Header Logo Image Mode */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    <div className="lg:col-span-4 space-y-3">
+                      <label className="text-[10px] uppercase font-bold text-[#C9A56A] block">
+                        Header Logo Preview
+                      </label>
+                      <div className="h-32 rounded-2xl bg-[#0F1714] border-2 border-dashed border-[#C9A56A]/40 flex flex-col items-center justify-center p-4 relative overflow-hidden group">
+                        {siteSettingsForm.headerLogoImage ? (
+                          <>
+                            <img
+                              src={siteSettingsForm.headerLogoImage}
+                              alt="Header Logo"
+                              className="max-h-full max-w-full object-contain"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setSiteSettingsForm({ ...siteSettingsForm, headerLogoImage: '' })}
+                              className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-950/80 text-red-300 border border-red-500/40 hover:bg-red-900 transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+                              title="Remove Header Logo Image"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <div className="text-center space-y-1">
+                            <div className="w-10 h-10 rounded-full border border-[#C9A56A] bg-[#C9A56A]/20 flex items-center justify-center mx-auto text-[#C9A56A] font-serif font-bold text-lg">
+                              {siteSettingsForm.headerLogoMonogram || 'A'}
+                            </div>
+                            <span className="text-[11px] font-serif font-bold text-white uppercase block">
+                              {siteSettingsForm.headerLogoTitle || 'Atelier Living'}
+                            </span>
+                            <span className="text-[9px] text-[#C9A56A] block">
+                              Text Fallback Active
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {siteSettingsForm.headerLogoImage && (
+                        <button
+                          type="button"
+                          onClick={() => setSiteSettingsForm({ ...siteSettingsForm, headerLogoImage: '' })}
+                          className="w-full py-2 rounded-xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs font-semibold hover:bg-red-900/60 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Clear Logo Image (Use Text Fallback)</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="lg:col-span-8 space-y-4">
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                          Header Logo Image URL
+                        </label>
+                        <input
+                          type="url"
+                          value={siteSettingsForm.headerLogoImage}
+                          onChange={(e) =>
+                            setSiteSettingsForm({ ...siteSettingsForm, headerLogoImage: e.target.value })
+                          }
+                          placeholder="https://... or upload image below"
+                          className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                        />
+                      </div>
+
+                      <ImageUploader
+                        value={siteSettingsForm.headerLogoImage}
+                        onChange={(url: string) =>
+                          setSiteSettingsForm({ ...siteSettingsForm, headerLogoImage: url })
+                        }
+                        label="Upload Header Logo File (PNG, SVG, Transparent)"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Header Logo Text Fallback Form */}
+                  <div className="pt-6 border-t border-white/10 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-serif text-base text-[#C9A56A] font-bold flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" />
+                        <span>Header Logo Text Fallback (When Image is Not Uploaded)</span>
+                      </h4>
+                      <span className="text-[10px] font-mono text-[#8C9A90]">Custom Typography</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                          Monogram / Lettermark *
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={3}
+                          value={siteSettingsForm.headerLogoMonogram}
+                          onChange={(e) =>
+                            setSiteSettingsForm({ ...siteSettingsForm, headerLogoMonogram: e.target.value })
+                          }
+                          placeholder="A"
+                          className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white font-serif font-bold text-center uppercase focus:border-[#C9A56A] focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                          Brand Title / Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={siteSettingsForm.headerLogoTitle}
+                          onChange={(e) =>
+                            setSiteSettingsForm({ ...siteSettingsForm, headerLogoTitle: e.target.value })
+                          }
+                          placeholder="Atelier Living"
+                          className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-semibold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                          Tagline / Subtitle
+                        </label>
+                        <input
+                          type="text"
+                          value={siteSettingsForm.headerLogoSubtitle}
+                          onChange={(e) =>
+                            setSiteSettingsForm({ ...siteSettingsForm, headerLogoSubtitle: e.target.value })
+                          }
+                          placeholder="Designed For Inspired Living"
+                          className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Footer Logo, Bio & Copyright Management */}
+                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+                  <div className="pb-3 border-b border-white/10">
+                    <h3 className="font-serif text-xl font-bold text-white flex items-center gap-2">
+                      <Globe className="w-5 h-5 text-[#C9A56A]" />
+                      <span>Footer Logo, Brand Story & Copyright Notice</span>
+                    </h3>
+                    <p className="text-xs text-[#8C9A90]">
+                      Configure the footer brand signature, company biography, and legal copyright line.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    <div className="lg:col-span-4 space-y-3">
+                      <label className="text-[10px] uppercase font-bold text-[#C9A56A] block">
+                        Footer Logo Preview
+                      </label>
+                      <div className="h-32 rounded-2xl bg-[#0F1714] border-2 border-dashed border-[#C9A56A]/40 flex flex-col items-center justify-center p-4 relative overflow-hidden group">
+                        {siteSettingsForm.footerLogoImage || siteSettingsForm.headerLogoImage ? (
+                          <img
+                            src={siteSettingsForm.footerLogoImage || siteSettingsForm.headerLogoImage}
+                            alt="Footer Logo"
+                            className="max-h-full max-w-full object-contain"
+                          />
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <div className="w-8 h-8 rounded-full border border-[#C9A56A] bg-[#C9A56A]/20 flex items-center justify-center text-[#C9A56A] font-serif font-bold text-sm">
+                              {siteSettingsForm.footerLogoMonogram || 'A'}
+                            </div>
+                            <span className="font-serif text-sm font-bold tracking-wider text-white uppercase">
+                              {siteSettingsForm.footerLogoTitle || 'Atelier Living'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <ImageUploader
+                        value={siteSettingsForm.footerLogoImage}
+                        onChange={(url: string) =>
+                          setSiteSettingsForm({ ...siteSettingsForm, footerLogoImage: url })
+                        }
+                        label="Upload Dedicated Footer Logo (Optional)"
+                      />
+                    </div>
+
+                    <div className="lg:col-span-8 space-y-4">
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                          Company Description & Atelier Bio (Footer Column 1)
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={siteSettingsForm.footerDescription}
+                          onChange={(e) =>
+                            setSiteSettingsForm({ ...siteSettingsForm, footerDescription: e.target.value })
+                          }
+                          placeholder="Atelier Living is an international interior design house crafting bespoke textiles..."
+                          className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none leading-relaxed"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                          Footer Copyright Text
+                        </label>
+                        <input
+                          type="text"
+                          value={siteSettingsForm.footerCopyright}
+                          onChange={(e) =>
+                            setSiteSettingsForm({ ...siteSettingsForm, footerCopyright: e.target.value })
+                          }
+                          placeholder="© 2026 Atelier Living Ltd. All rights reserved."
+                          className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* --- SUBTAB 4: CLIENT TESTIMONIALS & REVIEWS --- */}
+            {siteSettingsSubtab === 'testimonials' && (
+              <div className="space-y-6 animate-in fade-in">
+                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-white/10 gap-3">
+                    <div>
+                      <h3 className="font-serif text-xl font-bold text-white flex items-center gap-2">
+                        <Star className="w-5 h-5 text-[#C9A56A]" />
+                        <span>Client Testimonials & Curated Reviews</span>
+                      </h3>
+                      <p className="text-xs text-[#8C9A90]">
+                        Manage client endorsements, 5-star ratings, quotes, and project titles displayed on the landing page review carousel.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleOpenAddTestimonial}
+                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A56A] to-[#E6C894] text-[#0F1714] font-bold text-xs uppercase tracking-wider hover:brightness-110 transition-all flex items-center gap-1.5 shadow-md cursor-pointer shrink-0"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add New Review</span>
+                    </button>
+                  </div>
+
+                  {/* Testimonials List */}
+                  <div className="space-y-3">
+                    {testimonialsList.length === 0 ? (
+                      <div className="p-8 text-center text-[#8C9A90] bg-black/30 rounded-2xl border border-white/5">
+                        <Quote className="w-8 h-8 text-[#C9A56A]/40 mx-auto mb-2" />
+                        <p className="text-sm">No client testimonials added yet.</p>
+                        <button
+                          type="button"
+                          onClick={handleOpenAddTestimonial}
+                          className="mt-3 px-4 py-2 rounded-xl bg-[#C9A56A]/20 text-[#C9A56A] border border-[#C9A56A]/40 text-xs font-semibold hover:bg-[#C9A56A]/30 cursor-pointer"
+                        >
+                          Add Your First Testimonial
+                        </button>
+                      </div>
+                    ) : (
+                      testimonialsList.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                            item.isVisible !== false
+                              ? 'bg-[#0F1714]/60 border-white/10 hover:border-[#C9A56A]/40'
+                              : 'bg-black/40 border-dashed border-white/10 opacity-60'
+                          }`}
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                            <div className="flex items-start space-x-3.5 min-w-0">
+                              {/* Avatar / Monogram */}
+                              <div className="w-11 h-11 rounded-full border border-[#C9A56A]/50 bg-[#C9A56A]/20 overflow-hidden shrink-0 flex items-center justify-center text-[#C9A56A] font-serif font-bold text-sm">
+                                {item.avatar ? (
+                                  <img src={item.avatar} alt={item.clientName} className="w-full h-full object-cover" />
+                                ) : (
+                                  item.clientName.split(' ').map((n) => n[0]).join('').slice(0, 2)
+                                )}
+                              </div>
+
+                              <div className="space-y-1 min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="font-serif font-bold text-white text-base">{item.clientName}</span>
+                                  {item.clientRole && (
+                                    <span className="text-[11px] text-[#C9A56A] font-medium">
+                                      &bull; {item.clientRole}
+                                    </span>
+                                  )}
+                                  {item.location && (
+                                    <span className="text-[10px] text-[#8C9A90] font-mono flex items-center gap-1">
+                                      <MapPin className="w-3 h-3 text-[#C9A56A]" /> {item.location}
+                                    </span>
+                                  )}
+                                  {item.isFeatured && (
+                                    <span className="px-2 py-0.5 rounded-full bg-[#C9A56A]/20 text-[#C9A56A] border border-[#C9A56A]/40 text-[9px] font-bold uppercase tracking-wider">
+                                      Featured
+                                    </span>
+                                  )}
+                                  {item.isVisible === false && (
+                                    <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/40 text-[9px] font-bold uppercase tracking-wider">
+                                      Hidden
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Star Rating */}
+                                <div className="flex items-center space-x-1 py-0.5">
+                                  {[1, 2, 3, 4, 5].map((s) => (
+                                    <Star
+                                      key={s}
+                                      className={`w-3.5 h-3.5 ${
+                                        s <= (item.rating || 5)
+                                          ? 'text-[#C9A56A] fill-[#C9A56A]'
+                                          : 'text-white/20'
+                                      }`}
+                                    />
+                                  ))}
+                                  <span className="text-[11px] font-mono text-[#8C9A90] ml-1.5 font-bold">
+                                    {item.rating || 5}.0 / 5.0
+                                  </span>
+                                </div>
+
+                                {/* Quote */}
+                                <p className="text-xs text-[#E9DFD1] font-light italic leading-relaxed pt-1">
+                                  &ldquo;{item.quote}&rdquo;
+                                </p>
+
+                                {item.projectOrProduct && (
+                                  <span className="text-[11px] text-[#8C9A90] block pt-1 font-mono">
+                                    Commission: <strong className="text-[#C9A56A]">{item.projectOrProduct}</strong>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center space-x-2 shrink-0 self-end sm:self-start">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleTestimonialFeatured(item.id)}
+                                className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                                  item.isFeatured
+                                    ? 'bg-[#C9A56A]/20 border-[#C9A56A] text-[#C9A56A]'
+                                    : 'bg-white/5 border-white/10 text-[#8C9A90] hover:text-white'
+                                }`}
+                                title={item.isFeatured ? 'Featured on Top' : 'Mark as Featured'}
+                              >
+                                <Sparkles className="w-4 h-4" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleToggleTestimonialVisibility(item.id)}
+                                className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                                  item.isVisible !== false
+                                    ? 'bg-white/5 border-white/15 text-emerald-400 hover:bg-white/10'
+                                    : 'bg-red-950/40 border-red-500/30 text-red-400 hover:bg-red-900/60'
+                                }`}
+                                title={item.isVisible !== false ? 'Hide Review from Public Site' : 'Show Review'}
+                              >
+                                {item.isVisible !== false ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditTestimonial(item)}
+                                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#C9A56A] border border-[#C9A56A]/30 transition-all cursor-pointer"
+                                title="Edit Review"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteTestimonial(item.id, item.clientName)}
+                                className="p-2 rounded-xl bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 transition-all cursor-pointer"
+                                title="Delete Review"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* --- SUBTAB 5: BRAND PARTNERS & MARQUEE TICKER --- */}
+            {siteSettingsSubtab === 'brands' && (
+              <div className="space-y-6 animate-in fade-in">
+                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-white/10 gap-3">
+                    <div>
+                      <h3 className="font-serif text-xl font-bold text-white flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-[#C9A56A]" />
+                        <span>Brand Partners & Infinite Marquee Ticker</span>
+                      </h3>
+                      <p className="text-xs text-[#8C9A90]">
+                        Manage international mill partners, heritage textile houses, and their marquee typography ticker shown across the landing page and brands showcase.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleOpenAddBrand}
+                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A56A] to-[#E6C894] text-[#0F1714] font-bold text-xs uppercase tracking-wider hover:brightness-110 transition-all flex items-center gap-1.5 shadow-md cursor-pointer shrink-0"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Brand Partner</span>
+                    </button>
+                  </div>
+
+                  {/* Brands List */}
+                  <div className="space-y-3">
+                    {brandsList.map((brand, idx) => (
+                      <div
+                        key={brand.id}
+                        className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                          brand.isVisible !== false
+                            ? 'bg-[#0F1714]/60 border-white/10 hover:border-[#C9A56A]/40'
+                            : 'bg-black/40 border-dashed border-white/10 opacity-60'
+                        }`}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex items-center space-x-4 min-w-0">
+                            {/* Order & Reorder arrows */}
+                            <div className="flex items-center space-x-1 shrink-0">
+                              <span className="w-6 h-6 rounded-md bg-black/40 border border-white/15 text-[10px] font-mono font-bold text-[#C9A56A] flex items-center justify-center">
+                                {brand.order || idx + 1}
+                              </span>
+                              <div className="flex flex-col">
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveBrandUp(idx)}
+                                  disabled={idx === 0}
+                                  className="p-0.5 text-[#8C9A90] hover:text-[#C9A56A] disabled:opacity-30 cursor-pointer"
+                                  title="Move Up"
+                                >
+                                  <ArrowUp className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveBrandDown(idx)}
+                                  disabled={idx === brandsList.length - 1}
+                                  className="p-0.5 text-[#8C9A90] hover:text-[#C9A56A] disabled:opacity-30 cursor-pointer"
+                                  title="Move Down"
+                                >
+                                  <ArrowDown className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Brand Image Preview */}
+                            <div className="w-16 h-12 rounded-xl bg-black/40 border border-white/10 overflow-hidden shrink-0">
+                              <img src={brand.image} alt={brand.name} className="w-full h-full object-cover" />
+                            </div>
+
+                            <div className="space-y-0.5 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-serif font-bold text-white text-base">{brand.name}</span>
+                                <span className="px-2 py-0.5 rounded-full bg-[#C9A56A]/20 text-[#C9A56A] border border-[#C9A56A]/40 text-[9px] font-mono font-bold uppercase">
+                                  {brand.logoText}
+                                </span>
+                                {brand.isVisible === false && (
+                                  <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/40 text-[9px] font-bold uppercase">
+                                    Hidden
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[11px] text-[#8C9A90] block">
+                                {brand.country} &bull; Est. {brand.established} &bull; <span className="text-[#E9DFD1]">{brand.specialty}</span>
+                              </span>
+                              <p className="text-[11px] text-[#8C9A90] truncate max-w-xl">
+                                {brand.tagline || brand.description}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleBrandVisibility(brand.id)}
+                              className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                                brand.isVisible !== false
+                                  ? 'bg-white/5 border-white/15 text-emerald-400 hover:bg-white/10'
+                                  : 'bg-red-950/40 border-red-500/30 text-red-400 hover:bg-red-900/60'
+                              }`}
+                              title={brand.isVisible !== false ? 'Hide from Marquee & Brands Page' : 'Show Brand'}
+                            >
+                              {brand.isVisible !== false ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditBrand(brand)}
+                              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#C9A56A] border border-[#C9A56A]/30 transition-all cursor-pointer"
+                              title="Edit Brand Partner"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteBrand(brand.id, brand.name)}
+                              className="p-2 rounded-xl bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 transition-all cursor-pointer"
+                              title="Delete Brand Partner"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* --- SUBTAB 6: OUR STORY & HERITAGE CMS --- */}
+            {siteSettingsSubtab === 'story-cms' && (
+              <div className="space-y-6 animate-in fade-in">
+                {/* Story CMS Sub-navigation Tabs */}
+                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-white/10 gap-3">
+                    <div>
+                      <h3 className="font-serif text-xl font-bold text-white flex items-center gap-2">
+                        <Compass className="w-5 h-5 text-[#C9A56A]" />
+                        <span>Our Story & Heritage Page Content Manager</span>
+                      </h3>
+                      <p className="text-xs text-[#8C9A90]">
+                        Customize Hero introduction, Founder ethos & philosophy, 4 Craft Pillars, Historical Milestones, Workshop Gallery, and Global Statistics.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center space-x-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleResetStorySettings}
+                        className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs text-[#8C9A90] hover:text-white font-semibold flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Reset Story</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSaveStorySettings()}
+                        disabled={isSavingStorySettings}
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#C9A56A] to-[#E6C894] text-[#0F1714] font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>{isSavingStorySettings ? 'Saving...' : 'Save Story Page'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Section Switcher Pills */}
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { id: 'hero', label: '1. Hero & Header', icon: Sparkles },
+                      { id: 'founder', label: '2. Founder Ethos', icon: User },
+                      { id: 'pillars', label: '3. Craft Pillars (4)', icon: Award },
+                      { id: 'timeline', label: '4. Heritage Milestones', icon: History },
+                      { id: 'gallery', label: '5. Atelier Gallery', icon: ImageIcon },
+                      { id: 'stats', label: '6. Heritage Statistics', icon: TrendingUp }
+                    ].map((sec) => {
+                      const SecIcon = sec.icon;
+                      const isActive = storyCmsSection === sec.id;
+                      return (
+                        <button
+                          key={sec.id}
+                          type="button"
+                          onClick={() => setStoryCmsSection(sec.id as any)}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                            isActive
+                              ? 'bg-[#C9A56A] text-[#0F1714] font-bold border-[#C9A56A] shadow-md'
+                              : 'bg-black/30 border-white/10 text-[#8C9A90] hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          <SecIcon className="w-3.5 h-3.5" />
+                          <span>{sec.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Section 1: Hero */}
+                {storyCmsSection === 'hero' && (
+                  <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-5 animate-in fade-in">
+                    <h4 className="font-serif text-lg font-bold text-white flex items-center gap-2 border-b border-white/10 pb-3">
+                      <Sparkles className="w-4 h-4 text-[#C9A56A]" />
+                      <span>Hero Section Copy & Imagery</span>
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                          Hero Badge / Pill
+                        </label>
+                        <input
+                          type="text"
+                          value={storySettingsForm.heroBadge}
+                          onChange={(e) =>
+                            setStorySettingsForm({ ...storySettingsForm, heroBadge: e.target.value })
+                          }
+                          placeholder="OUR STORY &amp; HERITAGE"
+                          className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-semibold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                          Heritage Year Badge
+                        </label>
+                        <input
+                          type="text"
+                          value={storySettingsForm.heroYear}
+                          onChange={(e) =>
+                            setStorySettingsForm({ ...storySettingsForm, heroYear: e.target.value })
+                          }
+                          placeholder="EST. 1989"
+                          className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        Hero Main Headline *
+                      </label>
+                      <input
+                        type="text"
+                        value={storySettingsForm.heroHeading}
+                        onChange={(e) =>
+                          setStorySettingsForm({ ...storySettingsForm, heroHeading: e.target.value })
+                        }
+                        placeholder="Crafting Timeless Architecture Through Haute Living Textiles"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-serif font-bold text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        Hero Subheading Narrative
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={storySettingsForm.heroSubheading}
+                        onChange={(e) =>
+                          setStorySettingsForm({ ...storySettingsForm, heroSubheading: e.target.value })
+                        }
+                        placeholder="For nearly four decades, Atelier Living has partnered with the world's most distinguished weaving mills..."
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none leading-relaxed"
+                      />
+                    </div>
+
+                    <ImageUploader
+                      label="Hero Background / Banner Photography"
+                      value={storySettingsForm.heroImage || ''}
+                      onChange={(img) => setStorySettingsForm({ ...storySettingsForm, heroImage: img })}
+                      aspectRatio="video"
+                    />
+                  </div>
+                )}
+
+                {/* Section 2: Founder Ethos */}
+                {storyCmsSection === 'founder' && (
+                  <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-5 animate-in fade-in">
+                    <h4 className="font-serif text-lg font-bold text-white flex items-center gap-2 border-b border-white/10 pb-3">
+                      <User className="w-4 h-4 text-[#C9A56A]" />
+                      <span>Founder Ethos & Craft Philosophy</span>
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                          Section Pill Badge
+                        </label>
+                        <input
+                          type="text"
+                          value={storySettingsForm.ethosBadge}
+                          onChange={(e) =>
+                            setStorySettingsForm({ ...storySettingsForm, ethosBadge: e.target.value })
+                          }
+                          placeholder="FOUNDER'S ETHOS"
+                          className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                          Founder Name
+                        </label>
+                        <input
+                          type="text"
+                          value={storySettingsForm.ethosAuthor}
+                          onChange={(e) =>
+                            setStorySettingsForm({ ...storySettingsForm, ethosAuthor: e.target.value })
+                          }
+                          placeholder="Lady Vivienne Sterling"
+                          className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-serif font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                          Founder Title / Role
+                        </label>
+                        <input
+                          type="text"
+                          value={storySettingsForm.ethosRole}
+                          onChange={(e) =>
+                            setStorySettingsForm({ ...storySettingsForm, ethosRole: e.target.value })
+                          }
+                          placeholder="Founder &amp; Principal Creative Director"
+                          className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                        Founder Philosophical Quote *
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={storySettingsForm.ethosQuote}
+                        onChange={(e) =>
+                          setStorySettingsForm({ ...storySettingsForm, ethosQuote: e.target.value })
+                        }
+                        placeholder="True luxury is not loud. It is the silent dialogue between raw organic fibers and architectural light."
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none italic"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                          Ethos Paragraph 1
+                        </label>
+                        <textarea
+                          rows={4}
+                          value={storySettingsForm.ethosDescription1}
+                          onChange={(e) =>
+                            setStorySettingsForm({ ...storySettingsForm, ethosDescription1: e.target.value })
+                          }
+                          placeholder="Founded in 1989 in the heart of Mayfair, Atelier Living began with a singular vision..."
+                          className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none leading-relaxed"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                          Ethos Paragraph 2
+                        </label>
+                        <textarea
+                          rows={4}
+                          value={storySettingsForm.ethosDescription2}
+                          onChange={(e) =>
+                            setStorySettingsForm({ ...storySettingsForm, ethosDescription2: e.target.value })
+                          }
+                          placeholder="Over three decades, our collections have graced private embassies, Michelin-starred sanctuaries..."
+                          className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none leading-relaxed"
+                        />
+                      </div>
+                    </div>
+
+                    <ImageUploader
+                      label="Founder Portrait / Atelier Studio Photography"
+                      value={storySettingsForm.ethosImage}
+                      onChange={(img) => setStorySettingsForm({ ...storySettingsForm, ethosImage: img })}
+                      aspectRatio="video"
+                    />
+                  </div>
+                )}
+
+                {/* Section 3: Craft Pillars */}
+                {storyCmsSection === 'pillars' && (
+                  <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-5 animate-in fade-in">
+                    <h4 className="font-serif text-lg font-bold text-white flex items-center gap-2 border-b border-white/10 pb-3">
+                      <Award className="w-4 h-4 text-[#C9A56A]" />
+                      <span>The 4 Craft Pillars</span>
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                          Pillars Section Title
+                        </label>
+                        <input
+                          type="text"
+                          value={storySettingsForm.pillarsTitle}
+                          onChange={(e) =>
+                            setStorySettingsForm({ ...storySettingsForm, pillarsTitle: e.target.value })
+                          }
+                          placeholder="Our Four Guiding Pillars"
+                          className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                          Pillars Subtitle
+                        </label>
+                        <input
+                          type="text"
+                          value={storySettingsForm.pillarsSubtitle}
+                          onChange={(e) =>
+                            setStorySettingsForm({ ...storySettingsForm, pillarsSubtitle: e.target.value })
+                          }
+                          placeholder="Uncompromising dedication to heritage standards"
+                          className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                      {storySettingsForm.pillars.map((pillar, idx) => (
+                        <div key={pillar.id || idx} className="p-4 rounded-xl bg-[#0F1714]/60 border border-white/10 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-mono font-bold text-[#C9A56A]">Pillar {idx + 1}</span>
+                            <span className="text-[10px] font-mono text-[#8C9A90]">Icon: {pillar.icon}</span>
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">Title</label>
+                            <input
+                              type="text"
+                              value={pillar.title}
+                              onChange={(e) => {
+                                const updated = [...storySettingsForm.pillars];
+                                updated[idx] = { ...pillar, title: e.target.value };
+                                setStorySettingsForm({ ...storySettingsForm, pillars: updated });
+                              }}
+                              className="w-full p-2.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white font-bold focus:border-[#C9A56A] focus:outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">Description</label>
+                            <textarea
+                              rows={3}
+                              value={pillar.description}
+                              onChange={(e) => {
+                                const updated = [...storySettingsForm.pillars];
+                                updated[idx] = { ...pillar, description: e.target.value };
+                                setStorySettingsForm({ ...storySettingsForm, pillars: updated });
+                              }}
+                              className="w-full p-2.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white focus:border-[#C9A56A] focus:outline-none leading-relaxed"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Section 4: Heritage Milestones */}
+                {storyCmsSection === 'timeline' && (
+                  <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-5 animate-in fade-in">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                      <h4 className="font-serif text-lg font-bold text-white flex items-center gap-2">
+                        <History className="w-4 h-4 text-[#C9A56A]" />
+                        <span>Chronological Heritage Milestones</span>
+                      </h4>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newM: StoryMilestone = {
+                            year: '2027',
+                            title: 'New Chapter',
+                            description: 'Expanding our atelier presence...',
+                            location: 'Global'
+                          };
+                          setStorySettingsForm({
+                            ...storySettingsForm,
+                            milestones: [...storySettingsForm.milestones, newM]
+                          });
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-[#C9A56A]/20 text-[#C9A56A] border border-[#C9A56A]/40 text-xs font-bold hover:bg-[#C9A56A]/30 cursor-pointer flex items-center gap-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Milestone</span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {storySettingsForm.milestones.map((m, idx) => (
+                        <div key={idx} className="p-4 rounded-xl bg-[#0F1714]/60 border border-white/10 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="text"
+                                value={m.year}
+                                onChange={(e) => {
+                                  const updated = [...storySettingsForm.milestones];
+                                  updated[idx] = { ...m, year: e.target.value };
+                                  setStorySettingsForm({ ...storySettingsForm, milestones: updated });
+                                }}
+                                placeholder="1989"
+                                className="w-20 p-2 rounded-lg bg-black/40 border border-white/15 text-xs text-[#C9A56A] font-serif font-bold text-center"
+                              />
+                              <input
+                                type="text"
+                                value={m.title}
+                                onChange={(e) => {
+                                  const updated = [...storySettingsForm.milestones];
+                                  updated[idx] = { ...m, title: e.target.value };
+                                  setStorySettingsForm({ ...storySettingsForm, milestones: updated });
+                                }}
+                                placeholder="Milestone Title"
+                                className="w-64 p-2 rounded-lg bg-black/40 border border-white/15 text-xs text-white font-bold"
+                              />
+                              <input
+                                type="text"
+                                value={m.location}
+                                onChange={(e) => {
+                                  const updated = [...storySettingsForm.milestones];
+                                  updated[idx] = { ...m, location: e.target.value };
+                                  setStorySettingsForm({ ...storySettingsForm, milestones: updated });
+                                }}
+                                placeholder="Location"
+                                className="w-40 p-2 rounded-lg bg-black/40 border border-white/15 text-xs text-[#8C9A90]"
+                              />
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStorySettingsForm({
+                                  ...storySettingsForm,
+                                  milestones: storySettingsForm.milestones.filter((_, i) => i !== idx)
+                                });
+                              }}
+                              className="p-1.5 rounded-lg bg-red-950/60 text-red-300 border border-red-500/30 hover:bg-red-900 cursor-pointer"
+                              title="Delete Milestone"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <textarea
+                            rows={2}
+                            value={m.description}
+                            onChange={(e) => {
+                              const updated = [...storySettingsForm.milestones];
+                              updated[idx] = { ...m, description: e.target.value };
+                              setStorySettingsForm({ ...storySettingsForm, milestones: updated });
+                            }}
+                            placeholder="Milestone narrative..."
+                            className="w-full p-2.5 rounded-lg bg-black/40 border border-white/10 text-xs text-[#E9DFD1] focus:border-[#C9A56A] focus:outline-none leading-relaxed"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Section 5: Atelier Workshop Gallery */}
+                {storyCmsSection === 'gallery' && (
+                  <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-5 animate-in fade-in">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                      <h4 className="font-serif text-lg font-bold text-white flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4 text-[#C9A56A]" />
+                        <span>Workshop & Loom Craft Gallery</span>
+                      </h4>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newG: StoryGalleryItem = {
+                            image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=85',
+                            caption: 'Master Craftsman at Work',
+                            category: 'Atelier'
+                          };
+                          setStorySettingsForm({
+                            ...storySettingsForm,
+                            gallery: [...storySettingsForm.gallery, newG]
+                          });
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-[#C9A56A]/20 text-[#C9A56A] border border-[#C9A56A]/40 text-xs font-bold hover:bg-[#C9A56A]/30 cursor-pointer flex items-center gap-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Gallery Photo</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {storySettingsForm.gallery.map((g, idx) => (
+                        <div key={idx} className="p-4 rounded-xl bg-[#0F1714]/60 border border-white/10 space-y-3">
+                          <div className="h-40 rounded-lg overflow-hidden bg-black relative group">
+                            <img src={g.image} alt={g.caption} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStorySettingsForm({
+                                  ...storySettingsForm,
+                                  gallery: storySettingsForm.gallery.filter((_, i) => i !== idx)
+                                });
+                              }}
+                              className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-950/80 text-red-200 border border-red-500/40 hover:bg-red-900 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Remove Photo"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <input
+                              type="text"
+                              value={g.caption}
+                              onChange={(e) => {
+                                const updated = [...storySettingsForm.gallery];
+                                updated[idx] = { ...g, caption: e.target.value };
+                                setStorySettingsForm({ ...storySettingsForm, gallery: updated });
+                              }}
+                              placeholder="Photo Caption"
+                              className="p-2 rounded-lg bg-black/40 border border-white/10 text-white"
+                            />
+                            <input
+                              type="text"
+                              value={g.category}
+                              onChange={(e) => {
+                                const updated = [...storySettingsForm.gallery];
+                                updated[idx] = { ...g, category: e.target.value };
+                                setStorySettingsForm({ ...storySettingsForm, gallery: updated });
+                              }}
+                              placeholder="Category (e.g. Mill, Loom, Dyeing)"
+                              className="p-2 rounded-lg bg-black/40 border border-white/10 text-[#C9A56A]"
+                            />
+                          </div>
+
+                          <input
+                            type="url"
+                            value={g.image}
+                            onChange={(e) => {
+                              const updated = [...storySettingsForm.gallery];
+                              updated[idx] = { ...g, image: e.target.value };
+                              setStorySettingsForm({ ...storySettingsForm, gallery: updated });
+                            }}
+                            placeholder="Image URL"
+                            className="w-full p-2 rounded-lg bg-black/40 border border-white/10 text-xs text-[#8C9A90] font-mono"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Section 6: Heritage Statistics */}
+                {storyCmsSection === 'stats' && (
+                  <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-5 animate-in fade-in">
+                    <h4 className="font-serif text-lg font-bold text-white flex items-center gap-2 border-b border-white/10 pb-3">
+                      <TrendingUp className="w-4 h-4 text-[#C9A56A]" />
+                      <span>Heritage Numerical Statistics</span>
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {storySettingsForm.stats.map((st, idx) => (
+                        <div key={idx} className="p-4 rounded-xl bg-[#0F1714]/60 border border-white/10 space-y-2 text-xs">
+                          <div>
+                            <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                              Value / Number *
+                            </label>
+                            <input
+                              type="text"
+                              value={st.value}
+                              onChange={(e) => {
+                                const updated = [...storySettingsForm.stats];
+                                updated[idx] = { ...st, value: e.target.value };
+                                setStorySettingsForm({ ...storySettingsForm, stats: updated });
+                              }}
+                              placeholder="38+"
+                              className="w-full p-2 rounded-lg bg-black/40 border border-white/10 text-white font-mono font-bold text-center text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                              Label / Metric *
+                            </label>
+                            <input
+                              type="text"
+                              value={st.label}
+                              onChange={(e) => {
+                                const updated = [...storySettingsForm.stats];
+                                updated[idx] = { ...st, label: e.target.value };
+                                setStorySettingsForm({ ...storySettingsForm, stats: updated });
+                              }}
+                              placeholder="Years of Craft"
+                              className="w-full p-2 rounded-lg bg-black/40 border border-white/10 text-white font-semibold"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                              Description Subtext
+                            </label>
+                            <input
+                              type="text"
+                              value={st.description}
+                              onChange={(e) => {
+                                const updated = [...storySettingsForm.stats];
+                                updated[idx] = { ...st, description: e.target.value };
+                                setStorySettingsForm({ ...storySettingsForm, stats: updated });
+                              }}
+                              placeholder="Continuous family stewardship"
+                              className="w-full p-2 rounded-lg bg-black/40 border border-white/10 text-[#8C9A90] text-[11px]"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* --- SUBTAB 7: SOCIAL MEDIA CHANNELS --- */}
+            {siteSettingsSubtab === 'socials' && (
+              <div className="space-y-6 animate-in fade-in">
+                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+                  <div className="pb-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h3 className="font-serif text-xl font-bold text-white flex items-center gap-2">
+                        <Share2 className="w-5 h-5 text-[#C9A56A]" />
+                        <span>Social Media Channels (Contact Page & Footer)</span>
+                      </h3>
+                      <p className="text-xs text-[#8C9A90]">
+                        Enable or disable social media channels and customize direct links. Changes update both the Contact Page social card and the Footer icon bar instantly.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Instagram */}
+                    <div className="p-4 rounded-xl bg-[#0F1714]/60 border border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-pink-500/20 text-pink-400 border border-pink-500/30 flex items-center justify-center">
+                            <InstagramIcon className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="font-bold text-white text-xs block">Instagram Profile</span>
+                            <span className="text-[10px] text-[#8C9A90]">Photo archives & installations</span>
+                          </div>
+                        </div>
+
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={siteSettingsForm.socialLinks.instagram?.enabled ?? true}
+                            onChange={(e) =>
+                              setSiteSettingsForm({
+                                ...siteSettingsForm,
+                                socialLinks: {
+                                  ...siteSettingsForm.socialLinks,
+                                  instagram: {
+                                    ...siteSettingsForm.socialLinks.instagram,
+                                    enabled: e.target.checked
+                                  }
+                                }
+                              })
+                            }
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#C9A56A]"></div>
+                        </label>
+                      </div>
+
+                      <input
+                        type="url"
+                        value={siteSettingsForm.socialLinks.instagram?.url || ''}
+                        onChange={(e) =>
+                          setSiteSettingsForm({
+                            ...siteSettingsForm,
+                            socialLinks: {
+                              ...siteSettingsForm.socialLinks,
+                              instagram: {
+                                ...siteSettingsForm.socialLinks.instagram,
+                                url: e.target.value
+                              }
+                            }
+                          })
+                        }
+                        placeholder="https://instagram.com/atelierliving"
+                        className="w-full p-2.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Pinterest */}
+                    <div className="p-4 rounded-xl bg-[#0F1714]/60 border border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center">
+                            <PinterestIcon className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="font-bold text-white text-xs block">Pinterest Moodboards</span>
+                            <span className="text-[10px] text-[#8C9A90]">Textile palettes & lookbooks</span>
+                          </div>
+                        </div>
+
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={siteSettingsForm.socialLinks.pinterest?.enabled ?? true}
+                            onChange={(e) =>
+                              setSiteSettingsForm({
+                                ...siteSettingsForm,
+                                socialLinks: {
+                                  ...siteSettingsForm.socialLinks,
+                                  pinterest: {
+                                    ...siteSettingsForm.socialLinks.pinterest,
+                                    enabled: e.target.checked
+                                  }
+                                }
+                              })
+                            }
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#C9A56A]"></div>
+                        </label>
+                      </div>
+
+                      <input
+                        type="url"
+                        value={siteSettingsForm.socialLinks.pinterest?.url || ''}
+                        onChange={(e) =>
+                          setSiteSettingsForm({
+                            ...siteSettingsForm,
+                            socialLinks: {
+                              ...siteSettingsForm.socialLinks,
+                              pinterest: {
+                                ...siteSettingsForm.socialLinks.pinterest,
+                                url: e.target.value
+                              }
+                            }
+                          })
+                        }
+                        placeholder="https://pinterest.com/atelierliving"
+                        className="w-full p-2.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+
+                    {/* LinkedIn */}
+                    <div className="p-4 rounded-xl bg-[#0F1714]/60 border border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-600/30 flex items-center justify-center">
+                            <LinkedInIcon className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="font-bold text-white text-xs block">LinkedIn Company</span>
+                            <span className="text-[10px] text-[#8C9A90]">Architect & designer network</span>
+                          </div>
+                        </div>
+
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={siteSettingsForm.socialLinks.linkedin?.enabled ?? true}
+                            onChange={(e) =>
+                              setSiteSettingsForm({
+                                ...siteSettingsForm,
+                                socialLinks: {
+                                  ...siteSettingsForm.socialLinks,
+                                  linkedin: {
+                                    ...siteSettingsForm.socialLinks.linkedin,
+                                    enabled: e.target.checked
+                                  }
+                                }
+                              })
+                            }
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#C9A56A]"></div>
+                        </label>
+                      </div>
+
+                      <input
+                        type="url"
+                        value={siteSettingsForm.socialLinks.linkedin?.url || ''}
+                        onChange={(e) =>
+                          setSiteSettingsForm({
+                            ...siteSettingsForm,
+                            socialLinks: {
+                              ...siteSettingsForm.socialLinks,
+                              linkedin: {
+                                ...siteSettingsForm.socialLinks.linkedin,
+                                url: e.target.value
+                              }
+                            }
+                          })
+                        }
+                        placeholder="https://linkedin.com/company/atelier-living"
+                        className="w-full p-2.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+
+                    {/* YouTube */}
+                    <div className="p-4 rounded-xl bg-[#0F1714]/60 border border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-red-600/20 text-red-400 border border-red-600/30 flex items-center justify-center">
+                            <YouTubeIcon className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="font-bold text-white text-xs block">YouTube Channel</span>
+                            <span className="text-[10px] text-[#8C9A90]">Documentaries & weaving craft</span>
+                          </div>
+                        </div>
+
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={siteSettingsForm.socialLinks.youtube?.enabled ?? true}
+                            onChange={(e) =>
+                              setSiteSettingsForm({
+                                ...siteSettingsForm,
+                                socialLinks: {
+                                  ...siteSettingsForm.socialLinks,
+                                  youtube: {
+                                    ...siteSettingsForm.socialLinks.youtube,
+                                    enabled: e.target.checked
+                                  }
+                                }
+                              })
+                            }
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#C9A56A]"></div>
+                        </label>
+                      </div>
+
+                      <input
+                        type="url"
+                        value={siteSettingsForm.socialLinks.youtube?.url || ''}
+                        onChange={(e) =>
+                          setSiteSettingsForm({
+                            ...siteSettingsForm,
+                            socialLinks: {
+                              ...siteSettingsForm.socialLinks,
+                              youtube: {
+                                ...siteSettingsForm.socialLinks.youtube,
+                                url: e.target.value
+                              }
+                            }
+                          })
+                        }
+                        placeholder="https://youtube.com/@atelierliving"
+                        className="w-full p-2.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Facebook */}
+                    <div className="p-4 rounded-xl bg-[#0F1714]/60 border border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center">
+                            <FacebookIcon className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="font-bold text-white text-xs block">Facebook Page</span>
+                            <span className="text-[10px] text-[#8C9A90]">Global announcements</span>
+                          </div>
+                        </div>
+
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={siteSettingsForm.socialLinks.facebook?.enabled ?? true}
+                            onChange={(e) =>
+                              setSiteSettingsForm({
+                                ...siteSettingsForm,
+                                socialLinks: {
+                                  ...siteSettingsForm.socialLinks,
+                                  facebook: {
+                                    ...siteSettingsForm.socialLinks.facebook,
+                                    enabled: e.target.checked
+                                  }
+                                }
+                              })
+                            }
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#C9A56A]"></div>
+                        </label>
+                      </div>
+
+                      <input
+                        type="url"
+                        value={siteSettingsForm.socialLinks.facebook?.url || ''}
+                        onChange={(e) =>
+                          setSiteSettingsForm({
+                            ...siteSettingsForm,
+                            socialLinks: {
+                              ...siteSettingsForm.socialLinks,
+                              facebook: {
+                                ...siteSettingsForm.socialLinks.facebook,
+                                url: e.target.value
+                              }
+                            }
+                          })
+                        }
+                        placeholder="https://facebook.com/atelierliving"
+                        className="w-full p-2.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Twitter / X */}
+                    <div className="p-4 rounded-xl bg-[#0F1714]/60 border border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-gray-500/20 text-gray-300 border border-gray-500/30 flex items-center justify-center">
+                            <TwitterIcon className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="font-bold text-white text-xs block">X / Twitter</span>
+                            <span className="text-[10px] text-[#8C9A90]">Industry news & press</span>
+                          </div>
+                        </div>
+
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={siteSettingsForm.socialLinks.twitter?.enabled ?? false}
+                            onChange={(e) =>
+                              setSiteSettingsForm({
+                                ...siteSettingsForm,
+                                socialLinks: {
+                                  ...siteSettingsForm.socialLinks,
+                                  twitter: {
+                                    ...siteSettingsForm.socialLinks.twitter,
+                                    enabled: e.target.checked
+                                  }
+                                }
+                              })
+                            }
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#C9A56A]"></div>
+                        </label>
+                      </div>
+
+                      <input
+                        type="url"
+                        value={siteSettingsForm.socialLinks.twitter?.url || ''}
+                        onChange={(e) =>
+                          setSiteSettingsForm({
+                            ...siteSettingsForm,
+                            socialLinks: {
+                              ...siteSettingsForm.socialLinks,
+                              twitter: {
+                                ...siteSettingsForm.socialLinks.twitter,
+                                url: e.target.value
+                              }
+                            }
+                          })
+                        }
+                        placeholder="https://twitter.com/atelierliving"
+                        className="w-full p-2.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+
+                    {/* WhatsApp */}
+                    <div className="p-4 rounded-xl bg-[#0F1714]/60 border border-white/10 space-y-2 md:col-span-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+                            <WhatsAppIcon className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="font-bold text-white text-xs block">WhatsApp VIP Concierge</span>
+                            <span className="text-[10px] text-[#8C9A90]">Direct instant chat for architects & clients</span>
+                          </div>
+                        </div>
+
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={siteSettingsForm.socialLinks.whatsapp?.enabled ?? true}
+                            onChange={(e) =>
+                              setSiteSettingsForm({
+                                ...siteSettingsForm,
+                                socialLinks: {
+                                  ...siteSettingsForm.socialLinks,
+                                  whatsapp: {
+                                    ...siteSettingsForm.socialLinks.whatsapp,
+                                    enabled: e.target.checked
+                                  }
+                                }
+                              })
+                            }
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#C9A56A]"></div>
+                        </label>
+                      </div>
+
+                      <input
+                        type="url"
+                        value={siteSettingsForm.socialLinks.whatsapp?.url || ''}
+                        onChange={(e) =>
+                          setSiteSettingsForm({
+                            ...siteSettingsForm,
+                            socialLinks: {
+                              ...siteSettingsForm.socialLinks,
+                              whatsapp: {
+                                ...siteSettingsForm.socialLinks.whatsapp,
+                                url: e.target.value
+                              }
+                            }
+                          })
+                        }
+                        placeholder="https://wa.me/447911123456"
+                        className="w-full p-2.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* --- SUBTAB 4: CONTACT COORDINATES & OPERATING TIMETABLE --- */}
+            {siteSettingsSubtab === 'contact' && (
+              <div className="space-y-6 animate-in fade-in">
+                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+                  <div className="pb-3 border-b border-white/10">
+                    <h3 className="font-serif text-xl font-bold text-white flex items-center gap-2">
+                      <Phone className="w-5 h-5 text-[#C9A56A]" />
+                      <span>Atelier Contact Coordinates & Timetable</span>
+                    </h3>
+                    <p className="text-xs text-[#8C9A90]">
+                      Official telephone numbers, departmental routing inboxes, and store operating hours.
+                    </p>
+                  </div>
+
+                  <div className="space-y-6">
+                    {/* Phones */}
+                    <div className="space-y-3">
+                      <h4 className="font-serif text-sm text-[#C9A56A] font-bold">1. Telephony & Hotlines</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                            Primary Switchboard
+                          </label>
+                          <input
+                            type="text"
+                            value={siteSettingsForm.primaryPhone}
+                            onChange={(e) =>
+                              setSiteSettingsForm({ ...siteSettingsForm, primaryPhone: e.target.value })
+                            }
+                            placeholder="+44 (0)20 7946 0188"
+                            className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-mono"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                            Direct Mobile Hotline *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={siteSettingsForm.mobileNumber}
+                            onChange={(e) =>
+                              setSiteSettingsForm({ ...siteSettingsForm, mobileNumber: e.target.value })
+                            }
+                            placeholder="+44 7911 123456"
+                            className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-mono font-semibold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                            WhatsApp Number
+                          </label>
+                          <input
+                            type="text"
+                            value={siteSettingsForm.whatsappNumber}
+                            onChange={(e) =>
+                              setSiteSettingsForm({ ...siteSettingsForm, whatsappNumber: e.target.value })
+                            }
+                            placeholder="+44 7911 123456"
+                            className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Departmental Emails */}
+                    <div className="space-y-3 pt-4 border-t border-white/10">
+                      <h4 className="font-serif text-sm text-[#C9A56A] font-bold">2. Departmental Email Inboxes</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                            General Inquiries *
+                          </label>
+                          <input
+                            type="email"
+                            required
+                            value={siteSettingsForm.generalEmail}
+                            onChange={(e) =>
+                              setSiteSettingsForm({ ...siteSettingsForm, generalEmail: e.target.value })
+                            }
+                            placeholder="concierge@atelier-living.com"
+                            className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                            VIP & Bespoke Clients
+                          </label>
+                          <input
+                            type="email"
+                            value={siteSettingsForm.vipEmail}
+                            onChange={(e) =>
+                              setSiteSettingsForm({ ...siteSettingsForm, vipEmail: e.target.value })
+                            }
+                            placeholder="vip@atelier-living.com"
+                            className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                            Press & Media
+                          </label>
+                          <input
+                            type="email"
+                            value={siteSettingsForm.pressEmail}
+                            onChange={(e) =>
+                              setSiteSettingsForm({ ...siteSettingsForm, pressEmail: e.target.value })
+                            }
+                            placeholder="press@atelier-living.com"
+                            className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                            Trade & Architecture
+                          </label>
+                          <input
+                            type="email"
+                            value={siteSettingsForm.tradeEmail}
+                            onChange={(e) =>
+                              setSiteSettingsForm({ ...siteSettingsForm, tradeEmail: e.target.value })
+                            }
+                            placeholder="trade@atelier-living.com"
+                            className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Flagship Address */}
+                    <div className="space-y-3 pt-4 border-t border-white/10">
+                      <h4 className="font-serif text-sm text-[#C9A56A] font-bold">3. Flagship Head Atelier Address</h4>
+                      <div>
+                        <input
+                          type="text"
+                          value={siteSettingsForm.flagshipAddress}
+                          onChange={(e) =>
+                            setSiteSettingsForm({ ...siteSettingsForm, flagshipAddress: e.target.value })
+                          }
+                          placeholder="48 Berkeley Square, Mayfair, London W1J 5AW"
+                          className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Operating Timetable */}
+                    <div className="space-y-3 pt-4 border-t border-white/10">
+                      <h4 className="font-serif text-sm text-[#C9A56A] font-bold">4. Store Operating Schedule</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                            Monday – Friday *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={siteSettingsForm.scheduleMonFri}
+                            onChange={(e) =>
+                              setSiteSettingsForm({ ...siteSettingsForm, scheduleMonFri: e.target.value })
+                            }
+                            placeholder="09:30 - 18:30"
+                            className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-mono"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                            Saturday *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={siteSettingsForm.scheduleSat}
+                            onChange={(e) =>
+                              setSiteSettingsForm({ ...siteSettingsForm, scheduleSat: e.target.value })
+                            }
+                            placeholder="10:00 - 17:00"
+                            className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-mono"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                            Sunday *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={siteSettingsForm.scheduleSun}
+                            onChange={(e) =>
+                              setSiteSettingsForm({ ...siteSettingsForm, scheduleSun: e.target.value })
+                            }
+                            placeholder="By Private Appointment Only"
+                            className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                            Bank Holidays
+                          </label>
+                          <input
+                            type="text"
+                            value={siteSettingsForm.scheduleHolidays}
+                            onChange={(e) =>
+                              setSiteSettingsForm({ ...siteSettingsForm, scheduleHolidays: e.target.value })
+                            }
+                            placeholder="Closed on UK & EU Bank Holidays"
+                            className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
+
+      {/* --- ADD / EDIT TESTIMONIAL MODAL --- */}
+      {showTestimonialModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+          <div className="bg-[#163129] border border-[#C9A56A]/40 rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-5 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div>
+                <h3 className="font-serif text-2xl font-bold text-white">
+                  {editingTestimonialId ? 'Edit Client Testimonial' : 'Add Client Testimonial'}
+                </h3>
+                <p className="text-xs text-[#E9DFD1]">
+                  Review will display on the landing page testimonial section and client showcases.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTestimonialModal(false)}
+                className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTestimonial} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                    Client Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={testimonialForm.clientName}
+                    onChange={(e) => setTestimonialForm({ ...testimonialForm, clientName: e.target.value })}
+                    placeholder="e.g. Lady Vivienne Sterling"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                    Role / Title
+                  </label>
+                  <input
+                    type="text"
+                    value={testimonialForm.clientRole}
+                    onChange={(e) => setTestimonialForm({ ...testimonialForm, clientRole: e.target.value })}
+                    placeholder="e.g. Principal Architect, Private Client"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                    Location / City
+                  </label>
+                  <input
+                    type="text"
+                    value={testimonialForm.location}
+                    onChange={(e) => setTestimonialForm({ ...testimonialForm, location: e.target.value })}
+                    placeholder="e.g. Mayfair, London"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                    Commission / Project Name
+                  </label>
+                  <input
+                    type="text"
+                    value={testimonialForm.projectOrProduct || ''}
+                    onChange={(e) => setTestimonialForm({ ...testimonialForm, projectOrProduct: e.target.value })}
+                    placeholder="e.g. The Belgravia Penthouse"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                  Star Rating (1 - 5 Stars) *
+                </label>
+                <div className="flex items-center space-x-2 p-2 rounded-xl bg-[#0F1714]/60 border border-white/10">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setTestimonialForm({ ...testimonialForm, rating: star })}
+                      className="p-1 cursor-pointer transition-transform hover:scale-110"
+                    >
+                      <Star
+                        className={`w-5 h-5 ${
+                          star <= (testimonialForm.rating || 5)
+                            ? 'text-[#C9A56A] fill-[#C9A56A]'
+                            : 'text-white/20'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                  <span className="text-xs font-mono font-bold text-[#C9A56A] ml-2">
+                    {testimonialForm.rating || 5} Stars
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                  Testimonial Quote Text *
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  value={testimonialForm.quote}
+                  onChange={(e) => setTestimonialForm({ ...testimonialForm, quote: e.target.value })}
+                  placeholder="The silk velvet drapes and acoustic sheers brought an undeniable timeless elegance to our drawing room..."
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none leading-relaxed"
+                />
+              </div>
+
+              <ImageUploader
+                label="Client Avatar / Photo (Optional)"
+                helpText="Square portrait photo (JPG, PNG, WEBP). If left blank, elegant monogram letters will be generated automatically."
+                value={testimonialForm.avatar || ''}
+                onChange={(img) => setTestimonialForm({ ...testimonialForm, avatar: img })}
+                aspectRatio="square"
+              />
+
+              <div className="p-3.5 rounded-xl bg-[#0F1714]/50 border border-white/10 space-y-2.5">
+                <label className="flex items-center space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={testimonialForm.isFeatured ?? true}
+                    onChange={(e) => setTestimonialForm({ ...testimonialForm, isFeatured: e.target.checked })}
+                    className="rounded border-white/20 text-[#C9A56A] focus:ring-[#C9A56A]"
+                  />
+                  <div>
+                    <span className="font-semibold text-white block">Featured Review</span>
+                    <span className="text-[10px] text-[#8C9A90]">Prioritizes this review at the front of the carousel</span>
+                  </div>
+                </label>
+
+                <label className="flex items-center space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={testimonialForm.isVisible ?? true}
+                    onChange={(e) => setTestimonialForm({ ...testimonialForm, isVisible: e.target.checked })}
+                    className="rounded border-white/20 text-[#C9A56A] focus:ring-[#C9A56A]"
+                  />
+                  <div>
+                    <span className="font-semibold text-white block">Visible on Website</span>
+                    <span className="text-[10px] text-[#8C9A90]">Uncheck to hide review without deleting it</span>
+                  </div>
+                </label>
+              </div>
+
+              <div className="pt-3 border-t border-white/10 flex items-center justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowTestimonialModal(false)}
+                  className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A56A] to-[#E6C894] text-[#0F1714] font-bold uppercase tracking-wider hover:brightness-110 transition-all cursor-pointer shadow-lg"
+                >
+                  {editingTestimonialId ? 'Update Review' : 'Add Review'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- ADD / EDIT BRAND PARTNER MODAL --- */}
+      {showBrandModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+          <div className="bg-[#163129] border border-[#C9A56A]/40 rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-5 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div>
+                <h3 className="font-serif text-2xl font-bold text-white">
+                  {editingBrandId ? 'Edit Brand Partner' : 'Add Brand Partner'}
+                </h3>
+                <p className="text-xs text-[#E9DFD1]">
+                  Partner will appear in the scrolling marquee ticker and the dedicated Brands page.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBrandModal(false)}
+                className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBrand} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                    Brand / Mill Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={brandForm.name}
+                    onChange={(e) => setBrandForm({ ...brandForm, name: e.target.value })}
+                    placeholder="e.g. Tessitura D'Oro"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                    Marquee Logo Text *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={brandForm.logoText}
+                    onChange={(e) => setBrandForm({ ...brandForm, logoText: e.target.value })}
+                    placeholder="e.g. TESSITURA D'ORO COMO"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-mono font-bold uppercase"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                    Country of Origin *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={brandForm.country}
+                    onChange={(e) => setBrandForm({ ...brandForm, country: e.target.value })}
+                    placeholder="e.g. Italy, Belgium, France"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                    Established Year *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={brandForm.established}
+                    onChange={(e) => setBrandForm({ ...brandForm, established: e.target.value })}
+                    placeholder="e.g. 1892"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                    Craft Specialty *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={brandForm.specialty}
+                    onChange={(e) => setBrandForm({ ...brandForm, specialty: e.target.value })}
+                    placeholder="e.g. Como Silk Damask"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                  Tagline / Motto
+                </label>
+                <input
+                  type="text"
+                  value={brandForm.tagline}
+                  onChange={(e) => setBrandForm({ ...brandForm, tagline: e.target.value })}
+                  placeholder="e.g. Master Silk Weavers of Lake Como Since 1892"
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                  Brand Heritage Description
+                </label>
+                <textarea
+                  rows={3}
+                  value={brandForm.description}
+                  onChange={(e) => setBrandForm({ ...brandForm, description: e.target.value })}
+                  placeholder="Nestled in the historic textile quarter along Lake Como, Tessitura D'Oro combines ancestral jacquard loom craft..."
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none leading-relaxed"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                  Official Website URL (Optional)
+                </label>
+                <input
+                  type="url"
+                  value={brandForm.websiteUrl || ''}
+                  onChange={(e) => setBrandForm({ ...brandForm, websiteUrl: e.target.value })}
+                  placeholder="https://tessituradoro.it"
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-mono"
+                />
+              </div>
+
+              <ImageUploader
+                label="Brand Showcase Photography *"
+                helpText="Upload mill weaving workshop, loom, or textile archive photography (JPG, PNG, WEBP)"
+                value={brandForm.image}
+                onChange={(img) => setBrandForm({ ...brandForm, image: img })}
+                aspectRatio="video"
+                presetSuggestions={[
+                  { label: 'Como Silk Loom', url: 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&w=800&q=80' },
+                  { label: 'Belgian Linen Flax', url: 'https://images.unsplash.com/photo-1507652313519-d4e9174996dd?auto=format&fit=crop&w=800&q=80' },
+                  { label: 'Florentine Velvet', url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80' },
+                  { label: 'Alpaca Weavery', url: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=800&q=80' }
+                ]}
+                required
+              />
+
+              <div className="p-3.5 rounded-xl bg-[#0F1714]/50 border border-white/10">
+                <label className="flex items-center space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={brandForm.isVisible ?? true}
+                    onChange={(e) => setBrandForm({ ...brandForm, isVisible: e.target.checked })}
+                    className="rounded border-white/20 text-[#C9A56A] focus:ring-[#C9A56A]"
+                  />
+                  <div>
+                    <span className="font-semibold text-white block">Active in Marquee Ticker &amp; Brands Page</span>
+                    <span className="text-[10px] text-[#8C9A90]">Uncheck to hide brand without removing historical archives</span>
+                  </div>
+                </label>
+              </div>
+
+              <div className="pt-3 border-t border-white/10 flex items-center justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowBrandModal(false)}
+                  className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A56A] to-[#E6C894] text-[#0F1714] font-bold uppercase tracking-wider hover:brightness-110 transition-all cursor-pointer shadow-lg"
+                >
+                  {editingBrandId ? 'Update Brand' : 'Add Brand'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- ADD / EDIT HEADER MENU LINK MODAL --- */}
+      {showLinkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+          <div className="bg-[#163129] border border-[#C9A56A]/40 rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-5 text-white shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div>
+                <h3 className="font-serif text-2xl font-bold text-white">
+                  {editingLinkId ? 'Edit Header Menu Link' : 'Add Header Navigation Link'}
+                </h3>
+                <p className="text-xs text-[#E9DFD1]">
+                  Configure navigation label, destination tab or URL, and special features.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowLinkModal(false)}
+                className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveLink} className="space-y-4 text-xs">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                  Menu Label / Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={linkForm.label}
+                  onChange={(e) => setLinkForm({ ...linkForm, label: e.target.value })}
+                  placeholder="e.g. Product Catalogue, Private Projects, Lookbook"
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                  Destination Tab or URL Route *
+                </label>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  {[
+                    { id: 'home', label: 'Home Page' },
+                    { id: 'story', label: 'Our Story' },
+                    { id: 'catalogue', label: 'Product Catalogue' },
+                    { id: 'projects', label: 'Our Projects' },
+                    { id: 'brands', label: 'Brands With Us' },
+                    { id: 'contact', label: 'Contact Us' }
+                  ].map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => setLinkForm({ ...linkForm, target: preset.id })}
+                      className={`p-2 rounded-lg text-left text-[11px] border transition-all cursor-pointer ${
+                        linkForm.target === preset.id
+                          ? 'bg-[#C9A56A] text-[#0F1714] font-bold border-[#C9A56A]'
+                          : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={linkForm.target}
+                  onChange={(e) => setLinkForm({ ...linkForm, target: e.target.value })}
+                  placeholder="e.g. home, story, catalogue, projects, or https://..."
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-mono"
+                />
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#0F1714]/50 border border-white/10 space-y-3">
+                <label className="flex items-center space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={linkForm.hasMegaMenu}
+                    onChange={(e) => setLinkForm({ ...linkForm, hasMegaMenu: e.target.checked })}
+                    className="rounded border-white/20 text-[#C9A56A] focus:ring-[#C9A56A]"
+                  />
+                  <div>
+                    <span className="font-semibold text-white block">Attach MegaMenu Dropdown</span>
+                    <span className="text-[10px] text-[#8C9A90]">Displays the 8-category archives panel on hover</span>
+                  </div>
+                </label>
+
+                <label className="flex items-center space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={linkForm.isExternal}
+                    onChange={(e) => setLinkForm({ ...linkForm, isExternal: e.target.checked })}
+                    className="rounded border-white/20 text-[#C9A56A] focus:ring-[#C9A56A]"
+                  />
+                  <div>
+                    <span className="font-semibold text-white block">External Link Target</span>
+                    <span className="text-[10px] text-[#8C9A90]">Opens destination in a new browser tab</span>
+                  </div>
+                </label>
+
+                <label className="flex items-center space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={linkForm.isVisible}
+                    onChange={(e) => setLinkForm({ ...linkForm, isVisible: e.target.checked })}
+                    className="rounded border-white/20 text-[#C9A56A] focus:ring-[#C9A56A]"
+                  />
+                  <div>
+                    <span className="font-semibold text-white block">Visible in Website Header</span>
+                    <span className="text-[10px] text-[#8C9A90]">Uncheck to hide link without deleting it</span>
+                  </div>
+                </label>
+              </div>
+
+              <div className="pt-3 border-t border-white/10 flex items-center justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowLinkModal(false)}
+                  className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-[#C9A56A] text-[#0F1714] font-bold uppercase tracking-wider hover:bg-[#E6C894] transition-all cursor-pointer shadow-lg"
+                >
+                  {editingLinkId ? 'Update Link' : 'Add Link'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- ADD / EDIT LOCATION MODAL --- */}
+      {showLocationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+          <div className="bg-[#163129] border border-[#C9A56A]/40 rounded-3xl p-6 sm:p-8 max-w-xl w-full space-y-5 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div>
+                <h3 className="font-serif text-2xl font-bold text-white">
+                  {editingLocationId ? 'Edit Showroom Location' : 'Add New Showroom Location'}
+                </h3>
+                <p className="text-xs text-[#E9DFD1]">
+                  Location will appear dynamically in the public Contact showroom switcher and directory.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowLocationModal(false)}
+                className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveLocation} className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                    City / Atelier Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={locationForm.city}
+                    onChange={(e) => setLocationForm({ ...locationForm, city: e.target.value })}
+                    placeholder="e.g. Tokyo Ginza"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Country *</label>
+                  <input
+                    type="text"
+                    required
+                    value={locationForm.country}
+                    onChange={(e) => setLocationForm({ ...locationForm, country: e.target.value })}
+                    placeholder="e.g. Japan"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                  Full Street Address *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={locationForm.address}
+                  onChange={(e) => setLocationForm({ ...locationForm, address: e.target.value })}
+                  placeholder="e.g. 6-10-1 Ginza, Chuo-ku, Tokyo 104-0061"
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Direct Phone *</label>
+                  <input
+                    type="text"
+                    required
+                    value={locationForm.phone}
+                    onChange={(e) => setLocationForm({ ...locationForm, phone: e.target.value })}
+                    placeholder="+81 3 5555 0199"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Direct Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={locationForm.email}
+                    onChange={(e) => setLocationForm({ ...locationForm, email: e.target.value })}
+                    placeholder="ginza@atelier-living.com"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                  Operating Hours / Timetable *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={locationForm.hours}
+                  onChange={(e) => setLocationForm({ ...locationForm, hours: e.target.value })}
+                  placeholder="Mon - Sat: 10:00 - 19:00 | Sun: By Private Appointment"
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                />
+              </div>
+
+              <ImageUploader
+                label="Showroom Atelier Photography *"
+                helpText="Upload storefront facade, private salon, or architectural interior photo (JPG, PNG, WEBP)"
+                value={locationForm.image}
+                onChange={(img) => setLocationForm({ ...locationForm, image: img })}
+                aspectRatio="video"
+                presetSuggestions={[
+                  { label: 'Mayfair Townhouse', url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=85' },
+                  { label: 'Parisian Haussmann', url: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1000&q=85' },
+                  { label: 'Milanese Palazzo', url: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1000&q=85' },
+                  { label: 'Madison Gallery', url: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1000&q=85' }
+                ]}
+                required
+              />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Latitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={locationForm.lat}
+                    onChange={(e) => setLocationForm({ ...locationForm, lat: parseFloat(e.target.value) || 0 })}
+                    placeholder="35.6719"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Longitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={locationForm.lng}
+                    onChange={(e) => setLocationForm({ ...locationForm, lng: parseFloat(e.target.value) || 0 })}
+                    placeholder="139.765"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="flagshipCheckbox"
+                  checked={locationForm.isFlagship}
+                  onChange={(e) => setLocationForm({ ...locationForm, isFlagship: e.target.checked })}
+                  className="w-4 h-4 rounded text-[#C9A56A] focus:ring-[#C9A56A] bg-[#0F1714] border-white/20 cursor-pointer"
+                />
+                <label htmlFor="flagshipCheckbox" className="text-xs text-white font-medium cursor-pointer">
+                  Mark as Primary Flagship Atelier
+                </label>
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                  Internal Notes / Highlights
+                </label>
+                <input
+                  type="text"
+                  value={locationForm.notes}
+                  onChange={(e) => setLocationForm({ ...locationForm, notes: e.target.value })}
+                  placeholder="e.g. Dedicated private VIP salon with material library"
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowLocationModal(false)}
+                  className="px-4 py-2.5 rounded-xl bg-white/10 text-xs font-bold hover:bg-white/20 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-[#C9A56A] text-[#0F1714] text-xs font-bold uppercase tracking-wider hover:bg-[#D4AF37] transition-all shadow-lg cursor-pointer"
+                >
+                  {editingLocationId ? 'Update Showroom Location' : 'Save Showroom Location'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* --- ADD PRODUCT MODAL --- */}
       {showAddProductModal && (
@@ -1932,15 +7218,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Image URL</label>
-                <input
-                  type="url"
-                  value={newProductForm.image}
-                  onChange={(e) => setNewProductForm({ ...newProductForm, image: e.target.value })}
-                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                />
-              </div>
+              <ImageUploader
+                label="Product Photography / Material Image *"
+                helpText="Upload luxury textile swatch or furniture photography (JPG, PNG, WEBP)"
+                value={newProductForm.image}
+                onChange={(img) => setNewProductForm({ ...newProductForm, image: img })}
+                aspectRatio="video"
+                presetSuggestions={[
+                  { label: 'Raw Silk Jacquard', url: 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&q=80&w=1200' },
+                  { label: 'Florentine Velvet', url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&q=80&w=1200' },
+                  { label: 'Sculpted Bouclé', url: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&q=80&w=1200' },
+                  { label: 'Cashmere Throw', url: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&q=80&w=1200' }
+                ]}
+                required
+              />
 
               <div className="flex justify-end space-x-3 pt-3 border-t border-white/10">
                 <button
@@ -2013,6 +7304,322 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- ADD / EDIT PROJECT MODAL --- */}
+      {showProjectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+          <div className="bg-[#163129] border border-[#C9A56A]/40 rounded-3xl p-6 sm:p-8 max-w-2xl w-full space-y-5 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div>
+                <h3 className="font-serif text-2xl font-bold text-white">
+                  {editingProjectId ? 'Edit Project Commission' : 'Add New Project Commission'}
+                </h3>
+                <p className="text-xs text-[#E9DFD1]">
+                  Commission will appear live on the public Residence & Yacht Portfolio and featured showcases.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowProjectModal(false)}
+                className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProject} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                    Project Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={projectForm.title}
+                    onChange={(e) => setProjectForm({ ...projectForm, title: e.target.value })}
+                    placeholder="e.g. The Belgravia Townhouse"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                    Project Category *
+                  </label>
+                  <select
+                    value={projectForm.category}
+                    onChange={(e) => setProjectForm({ ...projectForm, category: e.target.value })}
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none cursor-pointer"
+                  >
+                    <option value="Private Residence" className="bg-[#163129]">Private Residence</option>
+                    <option value="Coastal Estate" className="bg-[#163129]">Coastal Estate</option>
+                    <option value="Penthouse Sanctuary" className="bg-[#163129]">Penthouse Sanctuary</option>
+                    <option value="Bespoke Yacht" className="bg-[#163129]">Bespoke Yacht</option>
+                    <option value="Historic Restoration" className="bg-[#163129]">Historic Restoration</option>
+                    <option value="Luxury Villa" className="bg-[#163129]">Luxury Villa</option>
+                    <option value="Hospitality & Hotel" className="bg-[#163129]">Hospitality & Hotel</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                    Location *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={projectForm.location}
+                    onChange={(e) => setProjectForm({ ...projectForm, location: e.target.value })}
+                    placeholder="e.g. Belgravia, London"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                    Completion Year *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={projectForm.year}
+                    onChange={(e) => setProjectForm({ ...projectForm, year: e.target.value })}
+                    placeholder="e.g. 2026"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                    Interior Designer / Studio *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={projectForm.designer}
+                    onChange={(e) => setProjectForm({ ...projectForm, designer: e.target.value })}
+                    placeholder="e.g. Studio Harrison & Co."
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                  Architectural Narrative & Scope *
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={projectForm.description}
+                  onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
+                  placeholder="Describe the architectural concept, tactile drape installations, upholstery, and custom rugs specified..."
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                />
+              </div>
+
+              {/* Hero Image Uploader */}
+              <ImageUploader
+                label="Primary Hero Project Photography *"
+                helpText="Upload luxury architectural photoshoot image (JPG, PNG, WEBP)"
+                value={projectForm.heroImage}
+                onChange={(img) => setProjectForm({ ...projectForm, heroImage: img })}
+                aspectRatio="video"
+                presetSuggestions={[
+                  { label: 'Belgravia Townhouse', url: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=85' },
+                  { label: 'French Riviera Villa', url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=85' },
+                  { label: 'Tribeca Penthouse', url: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1600&q=85' },
+                  { label: 'Monaco Superyacht', url: 'https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=1600&q=85' },
+                  { label: 'Milanese Palazzo', url: 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1600&q=85' }
+                ]}
+                required
+              />
+
+              {/* Multi-Image Gallery Manager */}
+              <div className="space-y-2.5 pt-2 border-t border-white/10">
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block">
+                  Gallery Photos ({projectForm.gallery.length} Images)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={newGalleryUrl}
+                    onChange={(e) => setNewGalleryUrl(e.target.value)}
+                    placeholder="Paste additional gallery image URL (https://...)"
+                    className="w-full p-2.5 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddGalleryUrl}
+                    className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-[#C9A56A] hover:text-[#0F1714] text-xs font-bold uppercase transition-all shrink-0 cursor-pointer"
+                  >
+                    Add Image
+                  </button>
+                </div>
+
+                {projectForm.gallery.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-1">
+                    {projectForm.gallery.map((img, idx) => (
+                      <div key={idx} className="relative rounded-xl overflow-hidden border border-white/10 group h-20 bg-black">
+                        <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveGalleryImage(idx)}
+                          className="absolute top-1 right-1 p-1 rounded-md bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-500/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                          title="Remove image"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Products Specified Tag Builder */}
+              <div className="space-y-2.5 pt-2 border-t border-white/10">
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block">
+                  Key Furnishing Products Specified
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                  <div className="sm:col-span-6">
+                    <input
+                      type="text"
+                      value={newProjectProdName}
+                      onChange={(e) => setNewProjectProdName(e.target.value)}
+                      placeholder="Product Name (e.g. Symphony Acoustic Linen)"
+                      className="w-full p-2.5 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                    />
+                  </div>
+                  <div className="sm:col-span-4">
+                    <select
+                      value={newProjectProdCategory}
+                      onChange={(e) => setNewProjectProdCategory(e.target.value as CategorySlug)}
+                      className="w-full p-2.5 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none cursor-pointer"
+                    >
+                      {Object.values(CATEGORIES_DATA).map((cat) => (
+                        <option key={cat.id} value={cat.id} className="bg-[#163129]">
+                          {cat.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <button
+                      type="button"
+                      onClick={handleAddProductToProject}
+                      className="w-full py-2.5 rounded-xl bg-[#C9A56A] text-[#0F1714] text-xs font-bold uppercase tracking-wider hover:bg-[#E6C894] transition-all cursor-pointer"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+
+                {projectForm.productsUsed.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {projectForm.productsUsed.map((prod, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-xs text-white flex items-center gap-2"
+                      >
+                        <span className="text-[#C9A56A] font-medium">{prod.productName}</span>
+                        <span className="text-[10px] text-[#8C9A90]">({prod.categorySlug})</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveProductFromProject(idx)}
+                          className="text-red-400 hover:text-red-200 cursor-pointer"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex justify-end space-x-3 pt-4 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowProjectModal(false)}
+                  className="px-4 py-2.5 rounded-xl bg-white/10 text-xs font-bold hover:bg-white/20 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-[#C9A56A] text-[#0F1714] text-xs font-bold uppercase tracking-wider hover:bg-[#D4AF37] transition-all shadow-lg cursor-pointer"
+                >
+                  {editingProjectId ? 'Update Project Commission' : 'Save Project to Portfolio'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- PROJECT PREVIEW MODAL --- */}
+      {previewProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
+          <div className="bg-[#0F1714] border border-[#C9A56A]/40 rounded-3xl p-6 sm:p-8 max-w-2xl w-full space-y-5 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div>
+                <span className="text-[10px] uppercase tracking-widest text-[#C9A56A] font-bold block">
+                  {previewProject.category}
+                </span>
+                <h3 className="font-serif text-2xl font-bold text-white">{previewProject.title}</h3>
+                <span className="text-xs text-[#8C9A90]">{previewProject.location} • {previewProject.year}</span>
+              </div>
+              <button
+                onClick={() => setPreviewProject(null)}
+                className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="relative h-64 rounded-2xl overflow-hidden bg-black">
+              <img src={previewProject.heroImage} alt={previewProject.title} className="w-full h-full object-cover" />
+            </div>
+
+            <div className="space-y-3 text-xs text-[#E9DFD1]">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Architectural Narrative</span>
+                <p className="text-[#8C9A90] leading-relaxed font-light">{previewProject.description}</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+                <span>Lead Designer:</span>
+                <strong className="text-white">{previewProject.designer}</strong>
+              </div>
+
+              {previewProject.productsUsed && previewProject.productsUsed.length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="text-[10px] uppercase font-bold text-[#C9A56A] block">Products Specified:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {previewProject.productsUsed.map((p, idx) => (
+                      <span key={idx} className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] text-white">
+                        {p.productName} ({p.categorySlug})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-white/10">
+              <button
+                onClick={() => setPreviewProject(null)}
+                className="px-5 py-2.5 rounded-xl bg-[#C9A56A] text-[#0F1714] text-xs font-bold uppercase tracking-wider cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
           </div>
         </div>
       )}

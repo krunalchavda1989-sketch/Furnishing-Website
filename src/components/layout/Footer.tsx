@@ -1,20 +1,83 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CATEGORIES_DATA } from '../../data/categoriesData';
-import type { CategorySlug } from '../../types';
-import { Mail, CheckCircle2, ArrowRight, MapPin, Phone, Globe, Share2, Compass } from 'lucide-react';
-import { subscribeNewsletterInSupabase } from '../../lib/supabase';
+import { SHOWROOMS_DATA } from '../../data/brandsData';
+import type { CategorySlug, Showroom, SiteSettings } from '../../types';
+import {
+  Mail,
+  CheckCircle2,
+  ArrowRight,
+  MapPin,
+  Phone,
+  Compass,
+  Smartphone
+} from 'lucide-react';
+import {
+  InstagramIcon,
+  PinterestIcon,
+  LinkedInIcon,
+  YouTubeIcon,
+  FacebookIcon,
+  TwitterIcon,
+  WhatsAppIcon
+} from '../ui/SocialIcons';
+import {
+  subscribeNewsletterInSupabase,
+  fetchSiteSettingsFromSupabase,
+  fetchShowroomsFromSupabase,
+  DEFAULT_SITE_SETTINGS
+} from '../../lib/supabase';
 import { useToast } from '../ui/ToastNotification';
 
 interface FooterProps {
+  siteSettings?: SiteSettings;
   onNavigate: (tab: string, categorySlug?: CategorySlug) => void;
   onRequestSwatches: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onNavigate, onRequestSwatches }) => {
+export const Footer: React.FC<FooterProps> = ({
+  siteSettings: initialSettings,
+  onNavigate,
+  onRequestSwatches
+}) => {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSettings || DEFAULT_SITE_SETTINGS);
+  const [primaryShowroom, setPrimaryShowroom] = useState<Showroom>(SHOWROOMS_DATA[0]);
   const { showToast } = useToast();
+
+  useEffect(() => {
+    if (initialSettings) {
+      setSiteSettings(initialSettings);
+    }
+  }, [initialSettings]);
+
+  useEffect(() => {
+    const loadFooterData = async () => {
+      try {
+        const [settings, shws] = await Promise.all([
+          fetchSiteSettingsFromSupabase(),
+          fetchShowroomsFromSupabase()
+        ]);
+        if (settings) setSiteSettings(settings);
+        if (shws && shws.length > 0) {
+          const flagship = shws.find((s) => s.isFlagship) || shws[0];
+          setPrimaryShowroom(flagship);
+        }
+      } catch (e) {
+        console.warn('Error loading footer contact data:', e);
+      }
+    };
+    loadFooterData();
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'atelier_site_settings' || e.key === 'atelier_contact_settings') {
+        loadFooterData();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +90,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onRequestSwatches })
     setIsSubmitting(false);
     setTimeout(() => setSubscribed(false), 5000);
   };
+
+  const hasFooterLogoImage = Boolean(
+    (siteSettings.footerLogoImage && siteSettings.footerLogoImage.trim() !== '') ||
+    (siteSettings.headerLogoImage && siteSettings.headerLogoImage.trim() !== '')
+  );
+  const footerLogoSrc = siteSettings.footerLogoImage || siteSettings.headerLogoImage;
+
+  const socials = siteSettings.socialLinks || DEFAULT_SITE_SETTINGS.socialLinks;
 
   return (
     <footer className="bg-[#0F1714] text-[#E9DFD1] pt-20 pb-12 border-t border-[#C9A56A]/30 relative overflow-hidden">
@@ -71,7 +142,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onRequestSwatches })
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-[#C9A56A] text-[#0F1714] px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider hover:bg-[#E6C894] transition-all flex items-center space-x-1 disabled:opacity-50"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-[#C9A56A] text-[#0F1714] px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider hover:bg-[#E6C894] transition-all flex items-center space-x-1 disabled:opacity-50 cursor-pointer"
                   >
                     <span>{isSubmitting ? 'Joining...' : 'Join'}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -82,31 +153,142 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onRequestSwatches })
           </div>
         </div>
 
-        {/* Navigation Grid */}
+        {/* Navigation & Branding Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-16 border-b border-white/10">
           {/* Brand Col */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-full border border-[#C9A56A] flex items-center justify-center bg-[#C9A56A]/10">
-                <span className="font-serif font-bold text-base text-[#C9A56A]">A</span>
-              </div>
-              <span className="font-serif tracking-widest text-xl font-semibold uppercase text-[#E9DFD1]">
-                Atelier Living
-              </span>
-            </div>
+            <button
+              onClick={() => onNavigate('home')}
+              className="flex items-center space-x-3 group text-left focus:outline-none cursor-pointer"
+            >
+              {hasFooterLogoImage ? (
+                <div className="h-10 flex items-center">
+                  <img
+                    src={footerLogoSrc}
+                    alt={siteSettings.footerLogoTitle || 'Atelier Living'}
+                    className="max-h-full w-auto object-contain"
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="w-9 h-9 rounded-full border border-[#C9A56A] flex items-center justify-center bg-[#C9A56A]/10 group-hover:bg-[#C9A56A] transition-colors">
+                    <span className="font-serif font-bold text-base text-[#C9A56A] group-hover:text-[#0F1714] transition-colors">
+                      {siteSettings.footerLogoMonogram || 'A'}
+                    </span>
+                  </div>
+                  <span className="font-serif tracking-widest text-xl font-semibold uppercase text-[#E9DFD1] group-hover:text-[#C9A56A] transition-colors">
+                    {siteSettings.footerLogoTitle || 'Atelier Living'}
+                  </span>
+                </>
+              )}
+            </button>
+
             <p className="text-xs text-[#8C9A90] leading-relaxed font-light pr-6">
-              Atelier Living is an international interior design house crafting bespoke textiles, architectural drapes, structural upholstery, hand-knotted rugs, and limited-edition atelier artifacts for fine private residences, superyachts, and boutique luxury hotels.
+              {siteSettings.footerDescription ||
+                'Atelier Living is an international interior design house crafting bespoke textiles, architectural drapes, structural upholstery, hand-knotted rugs, and limited-edition atelier artifacts for fine private residences, superyachts, and boutique luxury hotels.'}
             </p>
-            <div className="pt-2 flex items-center space-x-4">
-              <a href="#globe" aria-label="Global Showrooms" className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-[#8C9A90] hover:text-[#C9A56A] hover:border-[#C9A56A] transition-all">
-                <Globe className="w-4 h-4" />
-              </a>
-              <a href="#share" aria-label="Social Atelier" className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-[#8C9A90] hover:text-[#C9A56A] hover:border-[#C9A56A] transition-all">
-                <Share2 className="w-4 h-4" />
-              </a>
-              <a href="#compass" aria-label="Navigation Hub" className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-[#8C9A90] hover:text-[#C9A56A] hover:border-[#C9A56A] transition-all">
+
+            {/* Managed Social Media Icons */}
+            <div className="pt-2 flex flex-wrap items-center gap-2.5">
+              {socials.instagram?.enabled && socials.instagram?.url && (
+                <a
+                  href={socials.instagram.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Instagram Atelier"
+                  className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-[#8C9A90] hover:text-[#0F1714] hover:bg-[#C9A56A] hover:border-[#C9A56A] transition-all"
+                  title="Instagram"
+                >
+                  <InstagramIcon className="w-4 h-4" />
+                </a>
+              )}
+
+              {socials.pinterest?.enabled && socials.pinterest?.url && (
+                <a
+                  href={socials.pinterest.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Pinterest Archives"
+                  className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-[#8C9A90] hover:text-[#0F1714] hover:bg-[#C9A56A] hover:border-[#C9A56A] transition-all"
+                  title="Pinterest"
+                >
+                  <PinterestIcon className="w-4 h-4" />
+                </a>
+              )}
+
+              {socials.linkedin?.enabled && socials.linkedin?.url && (
+                <a
+                  href={socials.linkedin.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="LinkedIn Atelier"
+                  className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-[#8C9A90] hover:text-[#0F1714] hover:bg-[#C9A56A] hover:border-[#C9A56A] transition-all"
+                  title="LinkedIn"
+                >
+                  <LinkedInIcon className="w-4 h-4" />
+                </a>
+              )}
+
+              {socials.youtube?.enabled && socials.youtube?.url && (
+                <a
+                  href={socials.youtube.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="YouTube Channel"
+                  className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-[#8C9A90] hover:text-[#0F1714] hover:bg-[#C9A56A] hover:border-[#C9A56A] transition-all"
+                  title="YouTube"
+                >
+                  <YouTubeIcon className="w-4 h-4" />
+                </a>
+              )}
+
+              {socials.facebook?.enabled && socials.facebook?.url && (
+                <a
+                  href={socials.facebook.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Facebook Atelier"
+                  className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-[#8C9A90] hover:text-[#0F1714] hover:bg-[#C9A56A] hover:border-[#C9A56A] transition-all"
+                  title="Facebook"
+                >
+                  <FacebookIcon className="w-4 h-4" />
+                </a>
+              )}
+
+              {socials.twitter?.enabled && socials.twitter?.url && (
+                <a
+                  href={socials.twitter.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="X / Twitter"
+                  className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-[#8C9A90] hover:text-[#0F1714] hover:bg-[#C9A56A] hover:border-[#C9A56A] transition-all"
+                  title="X / Twitter"
+                >
+                  <TwitterIcon className="w-4 h-4" />
+                </a>
+              )}
+
+              {socials.whatsapp?.enabled && socials.whatsapp?.url && (
+                <a
+                  href={socials.whatsapp.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="WhatsApp Concierge"
+                  className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-[#8C9A90] hover:text-[#0F1714] hover:bg-[#C9A56A] hover:border-[#C9A56A] transition-all"
+                  title="WhatsApp Concierge"
+                >
+                  <WhatsAppIcon className="w-4 h-4" />
+                </a>
+              )}
+
+              <button
+                onClick={() => onNavigate('contact')}
+                aria-label="Navigation Hub"
+                className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-[#8C9A90] hover:text-[#0F1714] hover:bg-[#C9A56A] hover:border-[#C9A56A] transition-all cursor-pointer"
+                title="Atelier Directory"
+              >
                 <Compass className="w-4 h-4" />
-              </a>
+              </button>
             </div>
           </div>
 
@@ -120,7 +302,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onRequestSwatches })
                 <li key={cat.id}>
                   <button
                     onClick={() => onNavigate('category', cat.id as CategorySlug)}
-                    className="hover:text-[#C9A56A] transition-colors"
+                    className="hover:text-[#C9A56A] transition-colors cursor-pointer"
                   >
                     {cat.title}
                   </button>
@@ -138,7 +320,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onRequestSwatches })
                 <li key={cat.id}>
                   <button
                     onClick={() => onNavigate('category', cat.id as CategorySlug)}
-                    className="hover:text-[#C9A56A] transition-colors"
+                    className="hover:text-[#C9A56A] transition-colors cursor-pointer"
                   >
                     {cat.title}
                   </button>
@@ -147,23 +329,27 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onRequestSwatches })
             </ul>
           </div>
 
-          {/* Showroom Snippet */}
+          {/* Showroom & Contact Coordinates */}
           <div>
             <h4 className="font-serif text-sm uppercase tracking-widest text-[#C9A56A] mb-4 font-semibold">
-              Mayfair Showroom
+              {primaryShowroom.city} Atelier
             </h4>
             <div className="space-y-3 text-xs text-[#8C9A90]">
               <div className="flex items-start space-x-2">
                 <MapPin className="w-4 h-4 text-[#C9A56A] shrink-0 mt-0.5" />
-                <span>42 Mayfair Square, London W1K 2PB</span>
+                <span>{siteSettings.flagshipAddress || primaryShowroom.address}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Phone className="w-4 h-4 text-[#C9A56A] shrink-0" />
-                <span>+44 20 7946 0188</span>
+                <span>{siteSettings.primaryPhone || primaryShowroom.phone}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Smartphone className="w-4 h-4 text-[#C9A56A] shrink-0" />
+                <span>{siteSettings.mobileNumber || '+44 7911 123456'}</span>
               </div>
               <button
                 onClick={onRequestSwatches}
-                className="w-full mt-2 py-2 rounded-lg bg-[#C9A56A]/10 border border-[#C9A56A]/40 text-[#C9A56A] text-[11px] font-semibold tracking-wider uppercase hover:bg-[#C9A56A] hover:text-[#0F1714] transition-all"
+                className="w-full mt-2 py-2 rounded-lg bg-[#C9A56A]/10 border border-[#C9A56A]/40 text-[#C9A56A] text-[11px] font-semibold tracking-wider uppercase hover:bg-[#C9A56A] hover:text-[#0F1714] transition-all cursor-pointer"
               >
                 Order Material Swatches
               </button>
@@ -171,17 +357,17 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onRequestSwatches })
           </div>
         </div>
 
-        {/* Bottom Copyright */}
+        {/* Bottom Copyright & System Links */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#8C9A90] gap-4">
-          <p>© {new Date().getFullYear()} Atelier Living Ltd. All rights reserved.</p>
+          <p>{siteSettings.footerCopyright || `© ${new Date().getFullYear()} Atelier Living Ltd. All rights reserved.`}</p>
           <div className="flex items-center space-x-6">
-            <button onClick={() => onNavigate('story')} className="hover:text-[#C9A56A]">
+            <button onClick={() => onNavigate('story')} className="hover:text-[#C9A56A] cursor-pointer">
               Craft Philosophy
             </button>
-            <button onClick={() => onNavigate('contact')} className="hover:text-[#C9A56A]">
+            <button onClick={() => onNavigate('contact')} className="hover:text-[#C9A56A] cursor-pointer">
               Private Consultation
             </button>
-            <button onClick={() => onNavigate('admin')} className="text-[#C9A56A] font-bold hover:underline flex items-center gap-1">
+            <button onClick={() => onNavigate('admin')} className="text-[#C9A56A] font-bold hover:underline flex items-center gap-1 cursor-pointer">
               <span>Master Admin Portal</span>
             </button>
           </div>

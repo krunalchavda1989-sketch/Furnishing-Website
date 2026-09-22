@@ -5,22 +5,26 @@ import type { Project, CategorySlug } from '../types';
 import { MapPin, ArrowUpRight, Compass, Filter } from 'lucide-react';
 
 interface ProjectsPageProps {
+  projects?: Project[];
   onOpenProject: (project: Project) => void;
   onNavigateToCategory: (categorySlug: CategorySlug) => void;
 }
 
 export const ProjectsPage: React.FC<ProjectsPageProps> = ({
+  projects,
   onOpenProject,
   onNavigateToCategory
 }) => {
   const [selectedTag, setSelectedTag] = useState<string>('All');
 
-  const tags = ['All', 'Private Residence', 'Coastal Estate', 'Penthouse Sanctuary', 'Bespoke Yacht'];
+  const currentProjects = projects && projects.length > 0 ? projects : PROJECTS_DATA;
+  const dynamicCategories = Array.from(new Set(currentProjects.map((p) => p.category)));
+  const tags = ['All', ...dynamicCategories];
 
   const filteredProjects =
     selectedTag === 'All'
-      ? PROJECTS_DATA
-      : PROJECTS_DATA.filter((p) => p.category.toLowerCase().includes(selectedTag.toLowerCase()));
+      ? currentProjects
+      : currentProjects.filter((p) => p.category.toLowerCase().includes(selectedTag.toLowerCase()));
 
   return (
     <div className="pt-28 sm:pt-36 pb-24 space-y-16">

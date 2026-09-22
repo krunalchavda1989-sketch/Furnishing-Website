@@ -28,13 +28,20 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
   return (
     <div className="pt-28 sm:pt-36 pb-24 space-y-16">
       {/* Back Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         <button
-          onClick={() => onNavigate('projects')}
+          onClick={() => onNavigate('home')}
           className="inline-flex items-center space-x-2 text-xs uppercase tracking-widest font-semibold text-[#8C9A90] hover:text-[#C9A56A] transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to All Categories & Projects</span>
+          <span>Back to Home</span>
+        </button>
+
+        <button
+          onClick={() => onNavigate('projects')}
+          className="inline-flex items-center space-x-2 text-xs uppercase tracking-widest font-semibold text-[#C9A56A] hover:underline transition-colors cursor-pointer"
+        >
+          <span>View Projects Portfolio &rarr;</span>
         </button>
       </div>
 

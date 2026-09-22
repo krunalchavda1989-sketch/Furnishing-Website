@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import { BRANDS_DATA } from '../data/brandsData';
 import type { BrandPartner } from '../types';
-import { X } from 'lucide-react';
+import { X, ExternalLink, Globe } from 'lucide-react';
 
-export const BrandsPage: React.FC = () => {
+interface BrandsPageProps {
+  brands?: BrandPartner[];
+}
+
+export const BrandsPage: React.FC<BrandsPageProps> = ({ brands }) => {
   const [selectedBrand, setSelectedBrand] = useState<BrandPartner | null>(null);
+  const activeBrands = (brands && brands.length > 0 ? brands.filter((b) => b.isVisible !== false) : BRANDS_DATA);
 
   return (
     <div className="pt-28 sm:pt-36 pb-24 space-y-16">
@@ -24,7 +29,7 @@ export const BrandsPage: React.FC = () => {
       {/* Brands Grid */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {BRANDS_DATA.map((brand) => (
+          {activeBrands.map((brand) => (
             <div
               key={brand.id}
               onClick={() => setSelectedBrand(brand)}
@@ -78,7 +83,7 @@ export const BrandsPage: React.FC = () => {
       {/* Brand Detail Modal */}
       {selectedBrand && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative w-full max-w-2xl bg-[#0F1714] border border-[#C9A56A]/40 rounded-3xl p-6 sm:p-8 text-[#E9DFD1] shadow-2xl space-y-6">
+          <div className="relative w-full max-w-2xl bg-[#0F1714] border border-[#C9A56A]/40 rounded-3xl p-6 sm:p-8 text-[#E9DFD1] shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setSelectedBrand(null)}
               className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-[#C9A56A] hover:text-[#0F1714] transition-all cursor-pointer"
@@ -101,16 +106,33 @@ export const BrandsPage: React.FC = () => {
                 {selectedBrand.description}
               </p>
 
-              <div className="bg-[#163129] p-4 rounded-xl border border-[#C9A56A]/20 space-y-2">
-                <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-medium block">
-                  Featured Archive Products Distributed:
-                </span>
-                <ul className="list-disc list-inside text-xs text-[#E9DFD1] space-y-1">
-                  {selectedBrand.featuredProducts.map((prod, idx) => (
-                    <li key={idx}>{prod}</li>
-                  ))}
-                </ul>
-              </div>
+              {selectedBrand.featuredProducts && selectedBrand.featuredProducts.length > 0 && (
+                <div className="bg-[#163129] p-4 rounded-xl border border-[#C9A56A]/20 space-y-2">
+                  <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-medium block">
+                    Featured Archive Products Distributed:
+                  </span>
+                  <ul className="list-disc list-inside text-xs text-[#E9DFD1] space-y-1">
+                    {selectedBrand.featuredProducts.map((prod, idx) => (
+                      <li key={idx}>{prod}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {selectedBrand.websiteUrl && (
+                <div className="pt-2">
+                  <a
+                    href={selectedBrand.websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-[#C9A56A] text-[#0F1714] font-bold text-xs uppercase tracking-wider hover:brightness-110 transition-all shadow-md"
+                  >
+                    <Globe className="w-4 h-4" />
+                    <span>Visit Official Maison Website</span>
+                    <ExternalLink className="w-3.5 h-3.5 ml-1" />
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -118,3 +140,4 @@ export const BrandsPage: React.FC = () => {
     </div>
   );
 };
+

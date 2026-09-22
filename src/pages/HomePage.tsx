@@ -1,23 +1,55 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { HeroCanvas } from '../components/3d/HeroCanvas';
 import { CategoryTile } from '../components/ui/CategoryTile';
 import { CATEGORIES_DATA } from '../data/categoriesData';
 import { PROJECTS_DATA } from '../data/projectsData';
 import { BRANDS_DATA } from '../data/brandsData';
-import type { CategorySlug, Project } from '../types';
-import { ArrowRight, Sparkles, Star } from 'lucide-react';
+import { DEFAULT_TESTIMONIALS } from '../lib/supabase';
+import type { CategorySlug, Project, BrandPartner, Testimonial } from '../types';
+import { ArrowRight, Sparkles, Star, ChevronLeft, ChevronRight, Quote, MapPin } from 'lucide-react';
 
 interface HomePageProps {
+  projects?: Project[];
+  brands?: BrandPartner[];
+  testimonials?: Testimonial[];
   onNavigate: (tab: string, categorySlug?: CategorySlug) => void;
   onOpenProject: (project: Project) => void;
   onRequestSwatches: () => void;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
+  projects,
+  brands,
+  testimonials,
   onNavigate,
   onOpenProject,
   onRequestSwatches
 }) => {
+  const featuredProjects = (projects && projects.length > 0 ? projects : PROJECTS_DATA).slice(0, 3);
+  const activeBrands = (brands && brands.length > 0 ? brands.filter((b) => b.isVisible !== false) : BRANDS_DATA);
+  const activeTestimonials = (testimonials && testimonials.length > 0 ? testimonials.filter((t) => t.isVisible !== false) : DEFAULT_TESTIMONIALS);
+
+  const [activeReviewIdx, setActiveReviewIdx] = useState(0);
+
+  // Auto cycle testimonials every 7 seconds
+  useEffect(() => {
+    if (activeTestimonials.length <= 1) return;
+    const timer = setInterval(() => {
+      setActiveReviewIdx((prev) => (prev + 1) % activeTestimonials.length);
+    }, 7000);
+    return () => clearInterval(timer);
+  }, [activeTestimonials.length]);
+
+  const currentReview = activeTestimonials[activeReviewIdx] || activeTestimonials[0];
+
+  const handlePrevReview = () => {
+    setActiveReviewIdx((prev) => (prev - 1 + activeTestimonials.length) % activeTestimonials.length);
+  };
+
+  const handleNextReview = () => {
+    setActiveReviewIdx((prev) => (prev + 1) % activeTestimonials.length);
+  };
+
   return (
     <div className="space-y-24 sm:space-y-32 pb-24">
       {/* --- HERO SECTION --- */}
@@ -27,7 +59,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           <div className="lg:col-span-5 space-y-6">
             <div className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-full border border-[#C9A56A]/40 bg-[#C9A56A]/10 text-xs text-[#C9A56A] uppercase tracking-widest font-semibold">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Haute Furnishings & Bespoke Drapes</span>
+              <span>Haute Furnishings &amp; Bespoke Drapes</span>
             </div>
 
             <h1 className="font-serif text-4xl sm:text-6xl text-[#0F1714] leading-[1.1] font-normal">
@@ -112,7 +144,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               onClick={() => onNavigate('story')}
               className="px-8 py-3.5 rounded-full border border-[#C9A56A] text-[#C9A56A] hover:bg-[#C9A56A] hover:text-[#0F1714] transition-all text-xs font-bold uppercase tracking-widest inline-flex items-center space-x-2 cursor-pointer"
             >
-              <span>Explore Our Heritage & Story</span>
+              <span>Explore Our Heritage &amp; Story</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -151,7 +183,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
           <div>
             <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-medium block mb-1">
-              Curated Residences & Superyachts
+              Curated Residences &amp; Superyachts
             </span>
             <h2 className="font-serif text-3xl sm:text-5xl text-[#0F1714] font-normal">
               Featured Interior Projects
@@ -167,7 +199,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {PROJECTS_DATA.slice(0, 3).map((project) => (
+          {featuredProjects.map((project) => (
             <div
               key={project.id}
               onClick={() => onOpenProject(project)}
@@ -204,11 +236,11 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* --- BRANDS WITH US MARQUEE --- */}
+      {/* --- DYNAMIC BRANDS WITH US MARQUEE --- */}
       <section className="bg-[#163129] text-[#E9DFD1] py-16 border-y border-[#C9A56A]/20 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 text-center">
           <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-medium block mb-1">
-            Global Partners & Mill Houses
+            Global Partners &amp; Mill Houses
           </span>
           <h3 className="font-serif text-2xl text-[#E9DFD1]">
             Distributing World-Renowned Textile Archives
@@ -218,17 +250,17 @@ export const HomePage: React.FC<HomePageProps> = ({
         {/* Marquee Track */}
         <div className="relative w-full overflow-hidden">
           <div className="animate-marquee flex items-center space-x-16">
-            {[...BRANDS_DATA, ...BRANDS_DATA].map((brand, idx) => (
+            {[...activeBrands, ...activeBrands].map((brand, idx) => (
               <div
-                key={idx}
+                key={`${brand.id}-${idx}`}
                 onClick={() => onNavigate('brands')}
-                className="shrink-0 cursor-pointer flex flex-col items-center group px-4"
+                className="shrink-0 cursor-pointer flex flex-col items-center group px-4 transition-transform hover:scale-105"
               >
                 <span className="font-serif text-2xl sm:text-3xl font-bold tracking-widest text-[#E9DFD1]/70 group-hover:text-[#C9A56A] transition-colors uppercase">
                   {brand.logoText}
                 </span>
                 <span className="text-[10px] text-[#8C9A90] uppercase tracking-widest mt-1">
-                  {brand.country} • Est. {brand.established}
+                  {brand.country} &bull; Est. {brand.established}
                 </span>
               </div>
             ))}
@@ -236,21 +268,109 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* --- EDITORIAL TESTIMONIAL QUOTE --- */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
-        <div className="w-12 h-12 rounded-full border border-[#C9A56A] flex items-center justify-center mx-auto text-[#C9A56A]">
-          <Star className="w-5 h-5 fill-[#C9A56A]" />
-        </div>
-        <blockquote className="font-serif text-2xl sm:text-4xl text-[#0F1714] italic leading-relaxed font-subserif">
-          "Working with Atelier Living on our Belgravia townhouse was transformative. Their acoustic sheer drapes and hand-knotted Himalayan rugs brought an understated quiet luxury that defines our home."
-        </blockquote>
-        <div>
-          <cite className="not-italic text-xs font-bold uppercase tracking-widest text-[#0F1714] block">
-            Lady Clarissa Montgomery
-          </cite>
-          <span className="text-xs text-[#8C9A90]">Belgravia Residence, London</span>
-        </div>
-      </section>
+      {/* --- DYNAMIC INTERACTIVE TESTIMONIAL CAROUSEL --- */}
+      {currentReview && (
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-[#163129] border border-[#C9A56A]/30 rounded-3xl p-8 sm:p-14 shadow-2xl relative overflow-hidden text-center">
+            {/* Background Ambient Glow */}
+            <div className="absolute top-0 right-1/2 translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#C9A56A]/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative z-10 space-y-6">
+              {/* Star Rating */}
+              <div className="flex items-center justify-center space-x-1.5">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star
+                    key={s}
+                    className={`w-5 h-5 ${
+                      s <= (currentReview.rating || 5)
+                        ? 'text-[#C9A56A] fill-[#C9A56A]'
+                        : 'text-white/20'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Quote Text */}
+              <div className="relative max-w-3xl mx-auto">
+                <Quote className="w-10 h-10 text-[#C9A56A]/20 absolute -top-5 -left-4 sm:-left-8 pointer-events-none" />
+                <blockquote className="font-serif text-xl sm:text-3xl text-white italic leading-relaxed font-subserif">
+                  &ldquo;{currentReview.quote}&rdquo;
+                </blockquote>
+              </div>
+
+              {/* Client Profile */}
+              <div className="pt-4 flex flex-col items-center justify-center space-y-2">
+                <div className="w-12 h-12 rounded-full border border-[#C9A56A] bg-[#C9A56A]/20 overflow-hidden flex items-center justify-center text-[#C9A56A] font-serif font-bold text-base shadow-lg">
+                  {currentReview.avatar ? (
+                    <img src={currentReview.avatar} alt={currentReview.clientName} className="w-full h-full object-cover" />
+                  ) : (
+                    currentReview.clientName.split(' ').map((n) => n[0]).join('').slice(0, 2)
+                  )}
+                </div>
+
+                <div>
+                  <cite className="not-italic text-sm font-bold uppercase tracking-widest text-white block">
+                    {currentReview.clientName}
+                  </cite>
+                  <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-[#8C9A90] mt-0.5">
+                    {currentReview.clientRole && <span>{currentReview.clientRole}</span>}
+                    {currentReview.location && (
+                      <span className="flex items-center gap-1 font-mono text-[#C9A56A]">
+                        &bull; <MapPin className="w-3 h-3 inline" /> {currentReview.location}
+                      </span>
+                    )}
+                    {currentReview.projectOrProduct && (
+                      <span className="text-[#E9DFD1]/70 font-mono">
+                        &bull; {currentReview.projectOrProduct}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Carousel Controls & Dot Indicators */}
+              {activeTestimonials.length > 1 && (
+                <div className="pt-4 flex items-center justify-center space-x-6">
+                  <button
+                    type="button"
+                    onClick={handlePrevReview}
+                    className="p-2.5 rounded-full bg-white/5 hover:bg-[#C9A56A] text-[#C9A56A] hover:text-[#0F1714] border border-[#C9A56A]/30 transition-all cursor-pointer shadow-md"
+                    title="Previous Review"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+
+                  <div className="flex items-center space-x-2">
+                    {activeTestimonials.map((_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setActiveReviewIdx(i)}
+                        className={`h-2 rounded-full transition-all cursor-pointer ${
+                          i === activeReviewIdx
+                            ? 'w-8 bg-[#C9A56A]'
+                            : 'w-2 bg-white/20 hover:bg-white/40'
+                        }`}
+                        title={`Review ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleNextReview}
+                    className="p-2.5 rounded-full bg-white/5 hover:bg-[#C9A56A] text-[#C9A56A] hover:text-[#0F1714] border border-[#C9A56A]/30 transition-all cursor-pointer shadow-md"
+                    title="Next Review"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 };
+

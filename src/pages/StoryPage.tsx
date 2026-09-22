@@ -1,121 +1,73 @@
 import React, { useState } from 'react';
-import { Compass, Feather, HeartHandshake, Sparkles } from 'lucide-react';
+import { Compass, Feather, HeartHandshake, Sparkles, Award, BookOpen, ShieldCheck, History, TrendingUp } from 'lucide-react';
+import type { StorySettings } from '../types';
+import { DEFAULT_STORY_SETTINGS } from '../lib/supabase';
 
-export const StoryPage: React.FC = () => {
+interface StoryPageProps {
+  storySettings?: StorySettings;
+}
+
+const ICON_MAP: Record<string, any> = {
+  Feather,
+  Sparkles,
+  Compass,
+  HeartHandshake,
+  Award,
+  BookOpen,
+  ShieldCheck,
+  History,
+  TrendingUp
+};
+
+export const StoryPage: React.FC<StoryPageProps> = ({ storySettings }) => {
   const [selectedGalleryImage, setSelectedGalleryImage] = useState<string | null>(null);
-
-  const timelineMilestones = [
-    {
-      year: '1898',
-      title: 'Foundation in Mayfair',
-      description: 'Master weaver Henri Drape established a small silk drapery atelier servicing London and Parisian aristocracy.'
-    },
-    {
-      year: '1948',
-      title: 'Expansion into Como Silk Looms',
-      description: 'Acquired exclusive historical jacquard weaving looms along Lake Como, establishing custom silk pattern archives.'
-    },
-    {
-      year: '1985',
-      title: 'Flax & Mohair Sourcing Alliance',
-      description: 'Pioneered direct organic flax farming partnerships with Kortrijk farmers in Belgium and Angora mohair mills in Florence.'
-    },
-    {
-      year: '2012',
-      title: 'Acoustic Sheer Innovation',
-      description: 'Engineered micro-flax acoustic sheer weaves in St. Gallen, combining sound absorption with transparent light diffusion.'
-    },
-    {
-      year: '2026',
-      title: 'The 3D Atelier Digital Studio',
-      description: 'Launched real-time material simulation enabling interior architects to inspect drape physics and custom colorways remotely.'
-    }
-  ];
-
-  const craftPillars = [
-    {
-      icon: Feather,
-      title: 'Flanders Organic Flax',
-      origin: 'Kortrijk, Belgium',
-      description: 'Grown without pesticides in rich river silt, our flax is enzyme-washed to achieve a fluid architectural drape.'
-    },
-    {
-      icon: Sparkles,
-      title: 'Como Raw Silk Jacquard',
-      origin: 'Lake Como, Italy',
-      description: 'Woven on slow shuttle looms that preserve yarn elasticity, resulting in luminous depth under changing daylight.'
-    },
-    {
-      icon: Compass,
-      title: 'Florentine Mohair Velvet',
-      origin: 'Florence, Italy',
-      description: 'Dyed in small artisan kettles using natural pigments, producing a dense pile that ages with an extraordinary patina.'
-    },
-    {
-      icon: HeartHandshake,
-      title: 'Himalayan Hand-Knotted Silk',
-      origin: 'Kathmandu, Nepal',
-      description: 'Crafted at 150 knots per square inch using hand-carded high-altitude wool and wild mulberry silk.'
-    }
-  ];
-
-  const galleryImages = [
-    {
-      url: 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&w=1200&q=85',
-      caption: 'Artisanal Jacquard Shuttle Loom in Como, Italy'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=85',
-      caption: 'Hand-sorting Flanders Flax Fibers in Kortrijk'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=1200&q=85',
-      caption: 'Kettle-Dyeing Mohair Velvet in Florence'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1600121848594-d8644e57abab?auto=format&fit=crop&w=1200&q=85',
-      caption: 'Master Weaver Hand-Carving Relief Rug Contours in Nepal'
-    }
-  ];
+  const data = storySettings || DEFAULT_STORY_SETTINGS;
 
   return (
     <div className="pt-28 sm:pt-36 pb-24 space-y-24">
       {/* Hero Header */}
       <section className="max-w-4xl mx-auto px-4 text-center space-y-6">
-        <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-medium block">
-          Our Heritage & Craftsmanship
+        <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-semibold block">
+          {data.heroBadge || 'Our Heritage & Craftsmanship'}
         </span>
         <h1 className="font-serif text-4xl sm:text-6xl text-[#0F1714] font-normal leading-tight">
-          A Century of <span className="italic font-subserif gold-gradient-text">Tactile Mastery</span> & Spatial Poetry
+          {data.heroHeading || 'A Century of Tactile Mastery & Spatial Poetry'}
         </h1>
         <p className="text-base text-[#2C3A33] font-light leading-relaxed max-w-2xl mx-auto font-subserif text-lg">
-          For over 120 years, Atelier Living has stood at the intersection of artisanal weaving traditions and modern architectural living. We believe that true interior luxury is defined by materials that honor the senses and endure across generations.
+          {data.heroSubheading}
         </p>
+
+        {data.heroYear && (
+          <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full border border-[#C9A56A]/40 bg-[#C9A56A]/10 text-xs font-mono font-bold text-[#C9A56A] uppercase tracking-widest">
+            <span>{data.heroYear}</span>
+          </div>
+        )}
       </section>
 
-      {/* Main Narrative Split */}
+      {/* Main Narrative Split / Founder Ethos */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center bg-[#E9DFD1] rounded-3xl p-8 lg:p-12 border border-[#C9A56A]/20 shadow-xl">
           <div className="space-y-6">
             <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-semibold">
-              The Founder’s Ethos
+              {data.ethosBadge || 'The Founder’s Ethos'}
             </span>
-            <h2 className="font-serif text-3xl sm:text-4xl text-[#0F1714] font-normal">
-              "We do not decorate rooms. We curate light, acoustic serenity, and human touch."
+            <h2 className="font-serif text-3xl sm:text-4xl text-[#0F1714] font-normal leading-snug">
+              &ldquo;{data.ethosQuote}&rdquo;
             </h2>
-            <p className="text-xs sm:text-sm text-[#2C3A33] leading-relaxed font-light">
-              Founded in Mayfair in 1898, our atelier began as a private commission house for discerning collectors seeking unyielding textile perfection. Today, under the creative direction of Julian & Beatrice Drape, we continue to preserve centuries-old European weaving techniques while engineering modern sustainable textiles.
-            </p>
+            <div className="space-y-3 text-xs sm:text-sm text-[#2C3A33] leading-relaxed font-light">
+              <p>{data.ethosDescription1}</p>
+              {data.ethosDescription2 && <p>{data.ethosDescription2}</p>}
+            </div>
             <div className="pt-4 border-t border-[#DFD5C5]">
-              <strong className="block font-serif text-base text-[#0F1714]">Beatrice & Julian Drape</strong>
-              <span className="text-xs text-[#8C9A90]">Fourth-Generation Managing Directors</span>
+              <strong className="block font-serif text-base text-[#0F1714]">{data.ethosAuthor}</strong>
+              <span className="text-xs text-[#8C9A90]">{data.ethosRole}</span>
             </div>
           </div>
 
-          <div className="relative h-[420px] rounded-2xl overflow-hidden shadow-2xl">
+          <div className="relative h-[420px] rounded-2xl overflow-hidden shadow-2xl border border-[#C9A56A]/20">
             <img
-              src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85"
-              alt="Atelier Directors"
+              src={data.ethosImage || 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85'}
+              alt={data.ethosAuthor}
               className="w-full h-full object-cover filter brightness-95"
             />
           </div>
@@ -129,24 +81,25 @@ export const StoryPage: React.FC = () => {
             Material Integrity
           </span>
           <h2 className="font-serif text-3xl sm:text-4xl text-[#0F1714]">
-            Four Cornerstones of Our Sourcing
+            {data.pillarsTitle || 'Four Cornerstones of Our Sourcing'}
           </h2>
+          {data.pillarsSubtitle && (
+            <p className="text-xs text-[#8C9A90]">{data.pillarsSubtitle}</p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {craftPillars.map((pillar, idx) => {
-            const Icon = pillar.icon;
+          {(data.pillars || []).map((pillar, idx) => {
+            const iconKey = pillar.icon || pillar.iconName || 'Award';
+            const Icon = (iconKey && ICON_MAP[iconKey]) || Award;
             return (
               <div
-                key={idx}
+                key={pillar.id || idx}
                 className="bg-[#0F1714] text-[#E9DFD1] p-6 rounded-3xl border border-[#C9A56A]/30 shadow-xl space-y-4 hover:border-[#C9A56A] transition-all"
               >
                 <div className="w-10 h-10 rounded-full bg-[#C9A56A]/20 border border-[#C9A56A] flex items-center justify-center text-[#C9A56A]">
                   <Icon className="w-5 h-5" />
                 </div>
-                <span className="text-[10px] uppercase tracking-widest text-[#C9A56A] font-semibold block">
-                  {pillar.origin}
-                </span>
                 <h3 className="font-serif text-xl text-[#E9DFD1]">{pillar.title}</h3>
                 <p className="text-xs text-[#8C9A90] font-light leading-relaxed">
                   {pillar.description}
@@ -157,19 +110,22 @@ export const StoryPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Timeline Section */}
+      {/* Heritage Timeline Milestones */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+        <div className="text-center mb-16 space-y-1">
           <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-medium">
             Chronology of Excellence
           </span>
-          <h2 className="font-serif text-3xl sm:text-4xl text-[#0F1714] mt-1">
-            Our Historic Milestones
+          <h2 className="font-serif text-3xl sm:text-4xl text-[#0F1714]">
+            {data.timelineTitle || 'Our Historic Milestones'}
           </h2>
+          {data.timelineSubtitle && (
+            <p className="text-xs text-[#8C9A90]">{data.timelineSubtitle}</p>
+          )}
         </div>
 
         <div className="relative border-l border-[#C9A56A]/40 ml-4 sm:ml-32 space-y-12">
-          {timelineMilestones.map((m, idx) => (
+          {(data.milestones || []).map((m, idx) => (
             <div key={idx} className="relative pl-8 sm:pl-10">
               {/* Dot */}
               <div className="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-[#0F1714] border-2 border-[#C9A56A]" />
@@ -180,9 +136,16 @@ export const StoryPage: React.FC = () => {
               </div>
 
               <div className="bg-[#E9DFD1] p-6 rounded-2xl border border-[#C9A56A]/20 shadow-md">
-                <span className="sm:hidden font-serif text-xl text-[#C9A56A] font-bold block mb-1">
-                  {m.year}
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="sm:hidden font-serif text-xl text-[#C9A56A] font-bold block mb-1">
+                    {m.year}
+                  </span>
+                  {m.location && (
+                    <span className="text-[10px] uppercase tracking-wider text-[#C9A56A] font-mono">
+                      {m.location}
+                    </span>
+                  )}
+                </div>
                 <h3 className="font-serif text-xl text-[#0F1714]">{m.title}</h3>
                 <p className="text-xs text-[#2C3A33] mt-2 font-light leading-relaxed">
                   {m.description}
@@ -195,35 +158,46 @@ export const StoryPage: React.FC = () => {
 
       {/* Workshop Gallery Lightbox */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-12">
+        <div className="text-center max-w-2xl mx-auto mb-12 space-y-1">
           <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-medium">
             Inside The Atelier
           </span>
           <h2 className="font-serif text-3xl sm:text-4xl text-[#0F1714]">
-            Workshop & Mill Imagery
+            {data.galleryTitle || 'Workshop & Loom Craft Gallery'}
           </h2>
+          {data.gallerySubtitle && (
+            <p className="text-xs text-[#8C9A90]">{data.gallerySubtitle}</p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {galleryImages.map((img, idx) => (
-            <div
-              key={idx}
-              onClick={() => setSelectedGalleryImage(img.url)}
-              className="group relative h-64 rounded-2xl overflow-hidden cursor-pointer border border-[#C9A56A]/30 shadow-lg"
-            >
-              <img
-                src={img.url}
-                alt={img.caption}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-              <div className="absolute bottom-3 left-3 right-3 text-[#E9DFD1]">
+          {(data.gallery || []).map((img, idx) => {
+            const imgSrc = img.image || img.url || '';
+            return (
+              <div
+                key={idx}
+                onClick={() => imgSrc && setSelectedGalleryImage(imgSrc)}
+                className="group relative h-64 rounded-2xl overflow-hidden cursor-pointer border border-[#C9A56A]/30 shadow-lg"
+              >
+                <img
+                  src={imgSrc}
+                  alt={img.caption}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                <div className="absolute bottom-3 left-3 right-3 text-[#E9DFD1]">
+                  {img.category && (
+                    <span className="text-[9px] uppercase tracking-widest text-[#C9A56A] font-mono block mb-0.5">
+                      {img.category}
+                    </span>
+                  )}
                 <p className="text-[11px] font-medium text-[#E9DFD1] group-hover:text-[#C9A56A] transition-colors">
-                  {img.caption}
-                </p>
+                    {img.caption}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Modal Lightbox for Gallery */}
@@ -245,6 +219,30 @@ export const StoryPage: React.FC = () => {
           </div>
         )}
       </section>
+
+      {/* Heritage Numerical Statistics */}
+      {data.stats && data.stats.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-[#163129] border border-[#C9A56A]/30 rounded-3xl p-8 sm:p-12 shadow-2xl">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center divide-y lg:divide-y-0 lg:divide-x divide-white/10">
+              {data.stats.map((st, idx) => (
+                <div key={idx} className="space-y-2 pt-4 lg:pt-0 px-4">
+                  <span className="font-serif text-4xl sm:text-5xl font-bold gold-gradient-text block">
+                    {st.value}
+                  </span>
+                  <strong className="text-xs uppercase tracking-widest text-white font-bold block">
+                    {st.label}
+                  </strong>
+                  <p className="text-[11px] text-[#8C9A90] font-light">
+                    {st.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 };
+
