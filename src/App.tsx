@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
 import { SmoothScrollProvider } from './components/layout/SmoothScrollProvider';
@@ -40,9 +40,43 @@ import type {
 } from './types';
 import type { AdminUser } from './types/adminTypes';
 
+/**
+ * Route parser helper to resolve URL pathname to application tab & category slug
+ */
+const parseRouteFromLocation = (): { tab: string; categorySlug?: CategorySlug } => {
+  const pathname = window.location.pathname.replace(/\/+$/, '') || '/';
+  const lowerPath = pathname.toLowerCase();
+
+  if (lowerPath === '/admin' || lowerPath.startsWith('/admin/')) {
+    return { tab: 'admin' };
+  }
+  if (lowerPath === '/story' || lowerPath === '/our-story' || lowerPath === '/about') {
+    return { tab: 'story' };
+  }
+  if (lowerPath === '/projects' || lowerPath === '/portfolio' || lowerPath === '/our-projects') {
+    return { tab: 'projects' };
+  }
+  if (lowerPath === '/brands' || lowerPath === '/partners' || lowerPath === '/brands-with-us') {
+    return { tab: 'brands' };
+  }
+  if (lowerPath === '/contact' || lowerPath === '/contact-us') {
+    return { tab: 'contact' };
+  }
+  if (lowerPath.startsWith('/category/') || lowerPath.startsWith('/catalogue/')) {
+    const parts = lowerPath.split('/');
+    const rawSlug = parts[2] || 'fabrics';
+    return { tab: 'category', categorySlug: rawSlug as CategorySlug };
+  }
+  if (lowerPath === '/category' || lowerPath === '/catalogue') {
+    return { tab: 'category', categorySlug: 'fabrics' };
+  }
+  return { tab: 'home' };
+};
+
 export function App() {
-  const [activeTab, setActiveTab] = useState<string>('home');
-  const [activeCategorySlug, setActiveCategorySlug] = useState<CategorySlug>('fabrics');
+  const initialRoute = parseRouteFromLocation();
+  const [activeTab, setActiveTab] = useState<string>(initialRoute.tab);
+  const [activeCategorySlug, setActiveCategorySlug] = useState<CategorySlug>(initialRoute.categorySlug || 'fabrics');
   const [selectedProjectModal, setSelectedProjectModal] = useState<Project | null>(null);
   const [isSampleModalOpen, setIsSampleModalOpen] = useState<boolean>(false);
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
@@ -119,20 +153,21 @@ export function App() {
     }
   };
 
-  const loadAllData = () => {
+  const loadAllData = useCallback(() => {
     loadLiveProjects();
     loadLiveSiteSettings();
     loadLiveTestimonials();
     loadLiveBrands();
     loadLiveStorySettings();
     loadLiveHeroSlides();
-  };
+  }, []);
 
-  // Check URL pathname for /admin & restore saved admin session on initial load
+  // Sync state from location on initial load and restore admin session
   useEffect(() => {
-    const path = window.location.pathname;
-    if (path.startsWith('/admin') || path.startsWith('/admin/login')) {
-      setActiveTab('admin');
+    const route = parseRouteFromLocation();
+    setActiveTab(route.tab);
+    if (route.categorySlug) {
+      setActiveCategorySlug(route.categorySlug);
     }
 
     const savedSession = localStorage.getItem('atelier_admin_session') || localStorage.getItem('maison_admin_session');
@@ -146,12 +181,12 @@ export function App() {
     }
 
     loadAllData();
-  }, []);
+  }, [loadAllData]);
 
-  // Reload projects & settings whenever returning from admin or tab changes
+  // Reload data whenever activeTab changes
   useEffect(() => {
     loadAllData();
-  }, [activeTab]);
+  }, [activeTab, loadAllData]);
 
   // Listen to cross-tab / master admin storage updates for projects, site settings, testimonials, brands, story, hero slides
   useEffect(() => {
@@ -179,11 +214,13 @@ export function App() {
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  // Listen to popstate / URL changes
+  // Listen to popstate (browser Back / Forward buttons) to seamlessly sync tab & view
   useEffect(() => {
     const handlePopState = () => {
-      if (window.location.pathname.startsWith('/admin')) {
-        setActiveTab('admin');
+      const route = parseRouteFromLocation();
+      setActiveTab(route.tab);
+      if (route.categorySlug) {
+        setActiveCategorySlug(route.categorySlug);
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -196,38 +233,43 @@ export function App() {
   }, [activeTab, activeCategorySlug]);
 
   const handleNavigate = (tab: string, categorySlug?: CategorySlug) => {
-    if (tab === 'catalogue') {
+    let targetPath = '/';
+    if (tab === 'admin') {
+      targetPath = '/admin';
+      setActiveTab('admin');
+    } else if (tab === 'catalogue' || tab === 'category') {
       const targetSlug = categorySlug || activeCategorySlug || 'fabrics';
       setActiveCategorySlug(targetSlug);
       setActiveTab('category');
-      window.history.pushState({}, '', `/category/${targetSlug}`);
-      return;
-    }
-
-    if (categorySlug) {
-      setActiveCategorySlug(categorySlug);
-      setActiveTab('category');
-      window.history.pushState({}, '', `/category/${categorySlug}`);
+      targetPath = `/category/${targetSlug}`;
+    } else if (tab === 'home') {
+      setActiveTab('home');
+      targetPath = '/';
     } else {
       setActiveTab(tab);
-      if (tab === 'admin') {
-        window.history.pushState({}, '', '/admin');
-      } else {
-        window.history.pushState({}, '', tab === 'home' ? '/' : `/${tab}`);
-      }
+      targetPath = `/${tab}`;
+    }
+
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({}, '', targetPath);
     }
   };
 
   const handleNavigateToCategory = (catSlug: CategorySlug) => {
     setActiveCategorySlug(catSlug);
     setActiveTab('category');
-    window.history.pushState({}, '', `/category/${catSlug}`);
+    const targetPath = `/category/${catSlug}`;
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({}, '', targetPath);
+    }
   };
 
   const handleAdminLoginSuccess = (user: AdminUser) => {
     setAdminUser(user);
     setActiveTab('admin');
-    window.history.pushState({}, '', '/admin');
+    if (window.location.pathname !== '/admin') {
+      window.history.pushState({}, '', '/admin');
+    }
   };
 
   const handleAdminLogout = () => {
