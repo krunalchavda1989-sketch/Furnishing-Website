@@ -63,7 +63,6 @@ import type {
   Product,
   CategorySlug,
   Showroom,
-  ContactSettings,
   Project,
   SiteSettings,
   HeaderNavLink,
@@ -71,7 +70,9 @@ import type {
   BrandPartner,
   StorySettings,
   StoryMilestone,
-  StoryGalleryItem
+  StoryGalleryItem,
+  FurnishingScene,
+  HeroHotspot
 } from '../../types';
 import { CATEGORIES_DATA } from '../../data/categoriesData';
 import { PRODUCTS_DATA } from '../../data/productsData';
@@ -103,15 +104,13 @@ import {
   fetchShowroomsFromSupabase,
   createOrUpdateShowroomInSupabase,
   deleteShowroomInSupabase,
-  fetchContactSettingsFromSupabase,
-  updateContactSettingsInSupabase,
-  DEFAULT_CONTACT_SETTINGS,
   fetchSiteSettingsFromSupabase,
   updateSiteSettingsInSupabase,
   DEFAULT_SITE_SETTINGS,
   DEFAULT_TESTIMONIALS,
   DEFAULT_BRANDS_DATA,
   DEFAULT_STORY_SETTINGS,
+  DEFAULT_HERO_SLIDES,
   fetchTestimonialsFromSupabase,
   saveTestimonialInSupabase,
   deleteTestimonialInSupabase,
@@ -119,7 +118,10 @@ import {
   saveBrandInSupabase,
   deleteBrandInSupabase,
   fetchStorySettingsFromSupabase,
-  updateStorySettingsInSupabase
+  updateStorySettingsInSupabase,
+  fetchHeroSlidesFromSupabase,
+  saveHeroSlideInSupabase,
+  deleteHeroSlideInSupabase
 } from '../../lib/supabase';
 import { useToast } from '../ui/ToastNotification';
 import { ConfirmDeleteModal } from '../ui/ConfirmDeleteModal';
@@ -238,7 +240,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onReturnToSite
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'inquiries' | 'products' | 'swatches' | 'audit-logs' | 'projects' | 'settings' | 'newsletter' | 'locations-contact' | 'site-branding'
+    'overview' | 'inquiries' | 'products' | 'swatches' | 'audit-logs' | 'projects' | 'settings' | 'newsletter' | 'site-branding'
   >('overview');
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -261,9 +263,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   });
 
   const [siteSettingsSubtab, setSiteSettingsSubtab] = useState<
-    'nav-links' | 'header-styling' | 'logos' | 'testimonials' | 'brands' | 'story-cms' | 'socials' | 'contact'
+    'nav-links' | 'header-styling' | 'logos' | 'hero-slides' | 'testimonials' | 'brands' | 'story-cms' | 'socials' | 'contact'
   >('nav-links');
   const [isSavingSiteSettings, setIsSavingSiteSettings] = useState(false);
+
+  // Homepage Hero Showcase Slider State
+  const [heroSlidesList, setHeroSlidesList] = useState<FurnishingScene[]>(() => {
+    const deleted = getDeletedKeys('atelier_deleted_hero_slides');
+    try {
+      const saved = localStorage.getItem('atelier_hero_slides');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.filter((s: FurnishingScene) => !deleted.includes(s.id));
+        }
+      }
+    } catch {}
+    return DEFAULT_HERO_SLIDES.filter((s) => !deleted.includes(s.id));
+  });
+  const [showHeroSlideModal, setShowHeroSlideModal] = useState(false);
+  const [editingHeroSlideId, setEditingHeroSlideId] = useState<string | null>(null);
+  const [selectedHotspotIdx, setSelectedHotspotIdx] = useState<number | null>(0);
+  const [heroSlideForm, setHeroSlideForm] = useState<FurnishingScene>({
+    id: `scene-${Date.now()}`,
+    title: '',
+    location: '',
+    image: '',
+    tagline: '',
+    order: 1,
+    isVisible: true,
+    hotspots: []
+  });
 
   // Testimonials State
   const [testimonialsList, setTestimonialsList] = useState<Testimonial[]>(() => {
@@ -376,28 +406,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
     return SHOWROOMS_DATA.filter((s) => !deleted.includes(s.id));
   });
-
-  const [contactSettings, setContactSettings] = useState<ContactSettings>(() => {
-    try {
-      const saved = localStorage.getItem('atelier_contact_settings');
-      if (saved) return { ...DEFAULT_CONTACT_SETTINGS, ...JSON.parse(saved) };
-    } catch {
-      // fallback
-    }
-    return DEFAULT_CONTACT_SETTINGS;
-  });
-
-  const [contactSettingsForm, setContactSettingsForm] = useState<ContactSettings>(() => {
-    try {
-      const saved = localStorage.getItem('atelier_contact_settings');
-      if (saved) return { ...DEFAULT_CONTACT_SETTINGS, ...JSON.parse(saved) };
-    } catch {
-      // fallback
-    }
-    return DEFAULT_CONTACT_SETTINGS;
-  });
-
-  const [isSavingContactSettings, setIsSavingContactSettings] = useState(false);
 
   // Showroom modal state
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -615,12 +623,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setShowroomsList(shws);
     }
 
-    // 8. Fetch Contact Settings
-    const cSettings = await fetchContactSettingsFromSupabase();
-    if (cSettings) {
-      setContactSettings(cSettings);
-      setContactSettingsForm(cSettings);
-    }
 
     // 9. Fetch Projects
     const dbProjects = await fetchProjectsFromSupabase();
@@ -651,6 +653,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const story = await fetchStorySettingsFromSupabase();
     if (story) {
       setStorySettingsForm(story);
+    }
+
+    // 14. Fetch Homepage Hero Slides
+    const slides = await fetchHeroSlidesFromSupabase();
+    if (slides && slides.length > 0) {
+      setHeroSlidesList(slides);
     }
   };
 
@@ -976,24 +984,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     });
   };
 
-  // Save/Update Global Contact Settings Handler
-  const handleSaveContactSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSavingContactSettings(true);
-    setContactSettings(contactSettingsForm);
-    await updateContactSettingsInSupabase(contactSettingsForm, user.email);
-    setIsSavingContactSettings(false);
-    showToast(
-      'Contact Settings Saved',
-      'Global phone numbers, emails, operating hours, and social accounts synced.',
-      'success'
-    );
-    if (isSupabaseConfigured) {
-      const updatedLogs = await fetchAdminAuditLogsFromSupabase();
-      setAuditLogs(updatedLogs);
-    }
-  };
-
   // Open Add Showroom Modal
   const handleOpenAddLocation = () => {
     setEditingLocationId(null);
@@ -1067,6 +1057,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     });
 
     await createOrUpdateShowroomInSupabase(newShowroom, user.email);
+    window.dispatchEvent(new Event('storage'));
     setShowLocationModal(false);
     showToast(
       editingLocationId ? 'Location Updated' : 'New Location Added',
@@ -1093,6 +1084,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         setShowroomsList((prev) => prev.filter((s) => s.id !== shw.id));
 
         await deleteShowroomInSupabase(shw.id, user.email);
+        window.dispatchEvent(new Event('storage'));
         if (isSupabaseConfigured) {
           const updatedLogs = await fetchAdminAuditLogsFromSupabase();
           setAuditLogs(updatedLogs);
@@ -1633,6 +1625,165 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     window.dispatchEvent(new Event('storage'));
   };
 
+  // --- HOMEPAGE HERO SHOWCASE SLIDER HANDLERS ---
+  const handleOpenAddHeroSlide = () => {
+    setEditingHeroSlideId(null);
+    setSelectedHotspotIdx(0);
+    setHeroSlideForm({
+      id: `scene-${Date.now()}`,
+      title: '',
+      location: '',
+      image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1800&q=85',
+      tagline: '',
+      order: heroSlidesList.length + 1,
+      isVisible: true,
+      hotspots: [
+        {
+          id: `hs-${Date.now()}-1`,
+          x: 35,
+          y: 45,
+          label: 'Bespoke Craft Detail',
+          detail: 'Master weaver artisanal detail handcrafted to order.',
+          origin: 'London, UK'
+        }
+      ]
+    });
+    setShowHeroSlideModal(true);
+  };
+
+  const handleOpenEditHeroSlide = (slide: FurnishingScene) => {
+    setEditingHeroSlideId(slide.id);
+    setSelectedHotspotIdx(slide.hotspots && slide.hotspots.length > 0 ? 0 : null);
+    setHeroSlideForm({
+      ...slide,
+      hotspots: slide.hotspots ? [...slide.hotspots] : []
+    });
+    setShowHeroSlideModal(true);
+  };
+
+  const handleSaveHeroSlide = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!heroSlideForm.title.trim() || !heroSlideForm.image.trim()) {
+      showToast('Validation Error', 'Please enter a slide title and background image URL.', 'error');
+      return;
+    }
+
+    const itemToSave: FurnishingScene = {
+      ...heroSlideForm,
+      id: editingHeroSlideId || heroSlideForm.id || `scene-${Date.now()}`
+    };
+
+    setHeroSlidesList((prev) => {
+      const idx = prev.findIndex((s) => s.id === itemToSave.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = itemToSave;
+        return next;
+      }
+      return [...prev, itemToSave];
+    });
+
+    await saveHeroSlideInSupabase(itemToSave, user.email);
+    setShowHeroSlideModal(false);
+    showToast(
+      editingHeroSlideId ? 'Hero Scene Updated' : 'Hero Scene Added',
+      `Homepage showcase scene "${itemToSave.title}" has been saved live.`,
+      'success'
+    );
+  };
+
+  const handleDeleteHeroSlide = (id: string, title: string) => {
+    setDeleteModalState({
+      isOpen: true,
+      title: 'Delete Hero Slider Scene',
+      itemName: `Showcase Scene: "${title}"`,
+      itemType: 'hero slider scene',
+      onConfirm: async () => {
+        setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+        setHeroSlidesList((prev) => prev.filter((s) => s.id !== id));
+        await deleteHeroSlideInSupabase(id, user.email);
+        showToast('Scene Deleted', `Hero scene "${title}" removed from homepage slider.`, 'delete');
+      }
+    });
+  };
+
+  const handleToggleHeroSlideVisibility = async (id: string) => {
+    const target = heroSlidesList.find((s) => s.id === id);
+    if (!target) return;
+    const updated = { ...target, isVisible: !target.isVisible };
+    setHeroSlidesList((prev) => prev.map((s) => (s.id === id ? updated : s)));
+    await saveHeroSlideInSupabase(updated, user.email);
+    showToast(
+      updated.isVisible ? 'Scene Active' : 'Scene Hidden',
+      `"${target.title}" is now ${updated.isVisible ? 'visible on' : 'hidden from'} the homepage slider.`,
+      'info'
+    );
+  };
+
+  const handleMoveHeroSlideUp = async (index: number) => {
+    if (index <= 0) return;
+    const updated = [...heroSlidesList];
+    const temp = updated[index - 1];
+    updated[index - 1] = updated[index];
+    updated[index] = temp;
+    updated.forEach((s, i) => {
+      s.order = i + 1;
+    });
+    setHeroSlidesList(updated);
+    localStorage.setItem('atelier_hero_slides', JSON.stringify(updated));
+    window.dispatchEvent(new Event('storage'));
+  };
+
+  const handleMoveHeroSlideDown = async (index: number) => {
+    if (index >= heroSlidesList.length - 1) return;
+    const updated = [...heroSlidesList];
+    const temp = updated[index + 1];
+    updated[index + 1] = updated[index];
+    updated[index] = temp;
+    updated.forEach((s, i) => {
+      s.order = i + 1;
+    });
+    setHeroSlidesList(updated);
+    localStorage.setItem('atelier_hero_slides', JSON.stringify(updated));
+    window.dispatchEvent(new Event('storage'));
+  };
+
+  const handleAddHotspotToSlide = () => {
+    const newHotspot: HeroHotspot = {
+      id: `hs-${Date.now()}`,
+      x: 50,
+      y: 50,
+      label: 'New Material Specification',
+      detail: 'Architectural textile precision engineered with master craftsmen.',
+      origin: 'Milan, Italy'
+    };
+    setHeroSlideForm((prev) => ({
+      ...prev,
+      hotspots: [...prev.hotspots, newHotspot]
+    }));
+    setSelectedHotspotIdx(heroSlideForm.hotspots.length);
+  };
+
+  const handleRemoveHotspotFromSlide = (index: number) => {
+    setHeroSlideForm((prev) => ({
+      ...prev,
+      hotspots: prev.hotspots.filter((_, i) => i !== index)
+    }));
+    if (selectedHotspotIdx === index) {
+      setSelectedHotspotIdx(null);
+    } else if (selectedHotspotIdx !== null && selectedHotspotIdx > index) {
+      setSelectedHotspotIdx(selectedHotspotIdx - 1);
+    }
+  };
+
+  const handleUpdateHotspotInSlide = (index: number, field: keyof HeroHotspot, val: any) => {
+    setHeroSlideForm((prev) => {
+      const nextHotspots = [...prev.hotspots];
+      nextHotspots[index] = { ...nextHotspots[index], [field]: val };
+      return { ...prev, hotspots: nextHotspots };
+    });
+  };
+
   // --- OUR STORY CMS HANDLERS ---
   const handleSaveStorySettings = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -1724,13 +1875,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           label: 'Swatch Orders',
           icon: Layers,
           badge: swatchRequests.filter((s) => s.status === 'Pending').length,
-          badgeColor: 'bg-[#C9A56A] text-[#0F1714]'
-        },
-        {
-          id: 'locations-contact',
-          label: 'Locations & Contact',
-          icon: MapPin,
-          badge: showroomsList.length,
           badgeColor: 'bg-[#C9A56A] text-[#0F1714]'
         },
         {
@@ -3088,486 +3232,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         )}
 
-        {/* ================= LOCATIONS & CONTACT SYSTEM TAB ================= */}
-        {activeTab === 'locations-contact' && (
-          <div className="space-y-8 animate-in fade-in duration-300">
-            {/* Header & Quick Summary */}
-            <div className="pb-4 border-b border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white flex items-center gap-2.5">
-                  <MapPin className="w-6 h-6 text-[#C9A56A]" />
-                  <span>Showroom Locations & Dynamic Contact System</span>
-                </h2>
-                <p className="text-xs text-[#E9DFD1] mt-1">
-                  Manage multiple international showrooms/ateliers, mobile numbers, email channels, store operating schedules, and social accounts in real time.
-                </p>
-              </div>
-
-              <button
-                onClick={handleOpenAddLocation}
-                className="px-4 py-2.5 rounded-xl bg-[#C9A56A] text-[#0F1714] font-bold text-xs uppercase tracking-wider hover:bg-[#E6C894] transition-all flex items-center justify-center space-x-2 shadow-lg cursor-pointer shrink-0"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Showroom Location</span>
-              </button>
-            </div>
-
-            {/* Metric Pills */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 space-y-1">
-                <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider font-semibold block">
-                  Active Showrooms
-                </span>
-                <span className="font-serif text-2xl font-bold text-white">{showroomsList.length} Hubs</span>
-                <span className="text-[10px] text-[#8C9A90] block">Global Atelier Footprint</span>
-              </div>
-
-              <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 space-y-1">
-                <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider font-semibold block">
-                  Flagship Ateliers
-                </span>
-                <span className="font-serif text-2xl font-bold text-emerald-400">
-                  {showroomsList.filter((s) => s.isFlagship).length || 1} Flagships
-                </span>
-                <span className="text-[10px] text-[#8C9A90] block">Premier Showcase Locations</span>
-              </div>
-
-              <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 space-y-1">
-                <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider font-semibold block">
-                  Direct Mobile
-                </span>
-                <span className="font-mono text-sm font-bold text-[#E9DFD1] truncate block">
-                  {contactSettings.mobileNumber || '+44 7911 123456'}
-                </span>
-                <span className="text-[10px] text-[#8C9A90] block">WhatsApp / Concierge</span>
-              </div>
-
-              <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 space-y-1">
-                <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider font-semibold block">
-                  Store Hours (Mon-Fri)
-                </span>
-                <span className="font-mono text-sm font-bold text-[#C9A56A] truncate block">
-                  {contactSettings.scheduleMonFri || '09:30 - 18:30'}
-                </span>
-                <span className="text-[10px] text-[#8C9A90] block">Public Atelier Schedule</span>
-              </div>
-            </div>
-
-            {/* SECTION 1: SHOWROOM LOCATIONS (MULTIPLE LOCATIONS ADD/EDIT/DELETE) */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-white/10">
-                <div className="flex items-center space-x-2">
-                  <Building2 className="w-5 h-5 text-[#C9A56A]" />
-                  <h3 className="font-serif text-xl font-bold text-white">Global Showroom Locations ({showroomsList.length})</h3>
-                </div>
-                <span className="text-xs text-[#8C9A90]">
-                  Publicly displayed on Contact page showroom switcher & footer
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {showroomsList.map((shw) => (
-                  <div
-                    key={shw.id}
-                    className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between hover:border-[#C9A56A]/50 transition-all group"
-                  >
-                    <div>
-                      {/* Image header */}
-                      <div className="relative h-44 overflow-hidden">
-                        <img
-                          src={shw.image}
-                          alt={shw.city}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-between p-3.5">
-                          <div className="flex items-center justify-between">
-                            <span className="px-2.5 py-0.5 rounded-full bg-[#0F1714]/80 backdrop-blur-md text-[10px] font-mono font-bold text-[#C9A56A] border border-[#C9A56A]/30 uppercase">
-                              {shw.id}
-                            </span>
-                            {shw.isFlagship && (
-                              <span className="px-2.5 py-0.5 rounded-full bg-[#C9A56A] text-[#0F1714] text-[10px] font-bold uppercase tracking-widest shadow-md">
-                                Flagship
-                              </span>
-                            )}
-                          </div>
-                          <div>
-                            <span className="text-[10px] uppercase font-bold tracking-widest text-[#C9A56A]">
-                              {shw.country}
-                            </span>
-                            <h4 className="font-serif text-xl font-bold text-white">{shw.city} Showroom</h4>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Details */}
-                      <div className="p-4 space-y-2.5 text-xs text-[#E9DFD1]">
-                        <div className="flex items-start space-x-2">
-                          <MapPin className="w-4 h-4 text-[#C9A56A] shrink-0 mt-0.5" />
-                          <span className="line-clamp-2">{shw.address}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Phone className="w-4 h-4 text-[#C9A56A] shrink-0" />
-                          <span className="font-mono">{shw.phone}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Mail className="w-4 h-4 text-[#C9A56A] shrink-0" />
-                          <span className="truncate">{shw.email}</span>
-                        </div>
-                        <div className="flex items-start space-x-2">
-                          <Clock className="w-4 h-4 text-[#C9A56A] shrink-0 mt-0.5" />
-                          <span className="text-[11px] text-[#8C9A90]">{shw.hours}</span>
-                        </div>
-                        {shw.notes && (
-                          <div className="p-2 rounded-lg bg-white/5 text-[11px] text-[#C9A56A] italic border border-white/5">
-                            "{shw.notes}"
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Card Footer Actions */}
-                    <div className="p-3.5 pt-0 border-t border-white/10 bg-[#0F1714]/30 flex items-center justify-between gap-2 mt-2">
-                      <button
-                        onClick={() => handleOpenEditLocation(shw)}
-                        className="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#C9A56A] hover:text-white border border-[#C9A56A]/30 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all cursor-pointer"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                        <span>Edit Location</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleDeleteLocation(shw)}
-                        className="p-2 rounded-xl bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 transition-all cursor-pointer"
-                        title="Delete Showroom Location"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* SECTION 2: GLOBAL CONTACT INFO, SOCIALS & STORE OPEN/CLOSE SCHEDULE FORM */}
-            <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-white/10 gap-2">
-                <div>
-                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-                    <Settings className="w-5 h-5 text-[#C9A56A]" />
-                    <span>Global Contact Numbers, Emails, Store Schedule & Social Media</span>
-                  </h3>
-                  <p className="text-xs text-[#E9DFD1] mt-0.5">
-                    Configure official contact details, scheduled operating hours, and social media channels across the website.
-                  </p>
-                </div>
-                <span className="text-[11px] font-mono text-[#C9A56A] bg-[#C9A56A]/10 px-3 py-1 rounded-full border border-[#C9A56A]/20 self-start sm:self-auto">
-                  Live Synced
-                </span>
-              </div>
-
-              <form onSubmit={handleSaveContactSettings} className="space-y-6">
-                {/* 1. Phone & Mobile Numbers */}
-                <div className="space-y-3">
-                  <h4 className="font-serif text-base text-[#C9A56A] font-bold flex items-center gap-2">
-                    <Smartphone className="w-4 h-4" />
-                    <span>1. Telephony, Mobile Hotline & WhatsApp Channels</span>
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                        Primary Landline / Switchboard
-                      </label>
-                      <input
-                        type="text"
-                        value={contactSettingsForm.primaryPhone}
-                        onChange={(e) =>
-                          setContactSettingsForm({ ...contactSettingsForm, primaryPhone: e.target.value })
-                        }
-                        placeholder="+44 (0)20 7946 0188"
-                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                        Mobile Direct Hotline *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={contactSettingsForm.mobileNumber}
-                        onChange={(e) =>
-                          setContactSettingsForm({ ...contactSettingsForm, mobileNumber: e.target.value })
-                        }
-                        placeholder="+44 7911 123456"
-                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                        WhatsApp Concierge
-                      </label>
-                      <input
-                        type="text"
-                        value={contactSettingsForm.whatsappNumber || ''}
-                        onChange={(e) =>
-                          setContactSettingsForm({ ...contactSettingsForm, whatsappNumber: e.target.value })
-                        }
-                        placeholder="+44 7911 123456"
-                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Email Channels */}
-                <div className="space-y-3 pt-4 border-t border-white/10">
-                  <h4 className="font-serif text-base text-[#C9A56A] font-bold flex items-center gap-2">
-                    <Mail className="w-4 h-4" />
-                    <span>2. Departmental Email Addresses</span>
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                        General Inquiries Email *
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        value={contactSettingsForm.generalEmail}
-                        onChange={(e) =>
-                          setContactSettingsForm({ ...contactSettingsForm, generalEmail: e.target.value })
-                        }
-                        placeholder="concierge@atelier-living.com"
-                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                        VIP Client Services Email
-                      </label>
-                      <input
-                        type="email"
-                        value={contactSettingsForm.vipEmail}
-                        onChange={(e) =>
-                          setContactSettingsForm({ ...contactSettingsForm, vipEmail: e.target.value })
-                        }
-                        placeholder="vip@atelier-living.com"
-                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                        Press & Media Email
-                      </label>
-                      <input
-                        type="email"
-                        value={contactSettingsForm.pressEmail || ''}
-                        onChange={(e) =>
-                          setContactSettingsForm({ ...contactSettingsForm, pressEmail: e.target.value })
-                        }
-                        placeholder="press@atelier-living.com"
-                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                        Trade & Architects Email
-                      </label>
-                      <input
-                        type="email"
-                        value={contactSettingsForm.tradeEmail || ''}
-                        onChange={(e) =>
-                          setContactSettingsForm({ ...contactSettingsForm, tradeEmail: e.target.value })
-                        }
-                        placeholder="trade@atelier-living.com"
-                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Store Open / Close Time Schedule */}
-                <div className="space-y-3 pt-4 border-t border-white/10">
-                  <h4 className="font-serif text-base text-[#C9A56A] font-bold flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    <span>3. Store Open / Close Timetable & Operating Schedule</span>
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                        Monday – Friday Schedule *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={contactSettingsForm.scheduleMonFri}
-                        onChange={(e) =>
-                          setContactSettingsForm({ ...contactSettingsForm, scheduleMonFri: e.target.value })
-                        }
-                        placeholder="09:30 - 18:30"
-                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                        Saturday Schedule *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={contactSettingsForm.scheduleSat}
-                        onChange={(e) =>
-                          setContactSettingsForm({ ...contactSettingsForm, scheduleSat: e.target.value })
-                        }
-                        placeholder="10:00 - 17:00"
-                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                        Sunday Schedule *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={contactSettingsForm.scheduleSun}
-                        onChange={(e) =>
-                          setContactSettingsForm({ ...contactSettingsForm, scheduleSun: e.target.value })
-                        }
-                        placeholder="By Private Appointment Only"
-                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                        Bank Holidays & Special Closures
-                      </label>
-                      <input
-                        type="text"
-                        value={contactSettingsForm.scheduleHolidays}
-                        onChange={(e) =>
-                          setContactSettingsForm({ ...contactSettingsForm, scheduleHolidays: e.target.value })
-                        }
-                        placeholder="Closed on UK & EU Bank Holidays"
-                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. Social Media Accounts */}
-                <div className="space-y-3 pt-4 border-t border-white/10">
-                  <h4 className="font-serif text-base text-[#C9A56A] font-bold flex items-center gap-2">
-                    <Share2 className="w-4 h-4" />
-                    <span>4. Official Social Media Channels & Portals</span>
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                        Instagram Profile URL
-                      </label>
-                      <input
-                        type="url"
-                        value={contactSettingsForm.instagramUrl || ''}
-                        onChange={(e) =>
-                          setContactSettingsForm({ ...contactSettingsForm, instagramUrl: e.target.value })
-                        }
-                        placeholder="https://instagram.com/atelierliving"
-                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                        Pinterest Portfolio URL
-                      </label>
-                      <input
-                        type="url"
-                        value={contactSettingsForm.pinterestUrl || ''}
-                        onChange={(e) =>
-                          setContactSettingsForm({ ...contactSettingsForm, pinterestUrl: e.target.value })
-                        }
-                        placeholder="https://pinterest.com/atelierliving"
-                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                        LinkedIn Company URL
-                      </label>
-                      <input
-                        type="url"
-                        value={contactSettingsForm.linkedinUrl || ''}
-                        onChange={(e) =>
-                          setContactSettingsForm({ ...contactSettingsForm, linkedinUrl: e.target.value })
-                        }
-                        placeholder="https://linkedin.com/company/atelier-living"
-                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                        YouTube Channel URL
-                      </label>
-                      <input
-                        type="url"
-                        value={contactSettingsForm.youtubeUrl || ''}
-                        onChange={(e) =>
-                          setContactSettingsForm({ ...contactSettingsForm, youtubeUrl: e.target.value })
-                        }
-                        placeholder="https://youtube.com/@atelierliving"
-                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                        Twitter / X Profile URL
-                      </label>
-                      <input
-                        type="url"
-                        value={contactSettingsForm.twitterUrl || ''}
-                        onChange={(e) =>
-                          setContactSettingsForm({ ...contactSettingsForm, twitterUrl: e.target.value })
-                        }
-                        placeholder="https://twitter.com/atelierliving"
-                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                        Facebook Page URL
-                      </label>
-                      <input
-                        type="url"
-                        value={contactSettingsForm.facebookUrl || ''}
-                        onChange={(e) =>
-                          setContactSettingsForm({ ...contactSettingsForm, facebookUrl: e.target.value })
-                        }
-                        placeholder="https://facebook.com/atelierliving"
-                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Submit Save Button */}
-                <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-                  <p className="text-xs text-[#8C9A90]">
-                    All contact details sync across the live Contact page, showroom inquiry portal, and site footer.
-                  </p>
-                  <button
-                    type="submit"
-                    disabled={isSavingContactSettings}
-                    className="px-6 py-3 rounded-xl bg-[#C9A56A] text-[#0F1714] font-bold text-xs uppercase tracking-wider hover:bg-[#E6C894] transition-all flex items-center space-x-2 shadow-xl disabled:opacity-50 cursor-pointer"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>{isSavingContactSettings ? 'Saving Settings...' : 'Save & Sync Contact Settings'}</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
         {/* ================= SITE BRANDING, LOGOS, NAVIGATION & SOCIALS CONTROL CENTER ================= */}
         {activeTab === 'site-branding' && (
           <div className="space-y-8 animate-in fade-in duration-300">
@@ -3626,7 +3290,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <SlidersHorizontal className="w-3.5 h-3.5 text-[#C9A56A]" />
                       <span>Site & CMS Modules</span>
                     </span>
-                    <span className="text-[10px] text-[#8C9A90] font-mono">8 Active</span>
+                    <span className="text-[10px] text-[#8C9A90] font-mono">9 Active</span>
                   </div>
 
                   <nav className="space-y-1.5 pt-1">
@@ -3649,6 +3313,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         label: 'Logos & Brand Identity',
                         icon: ImageIcon,
                         desc: 'Header/Footer logo & mark'
+                      },
+                      {
+                        id: 'hero-slides',
+                        label: 'Homepage Hero Slider',
+                        icon: Sliders,
+                        desc: 'Scenes, images & hotspots',
+                        count: heroSlidesList.length
                       },
                       {
                         id: 'testimonials',
@@ -3680,7 +3351,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         id: 'contact',
                         label: 'Contact Details & Hours',
                         icon: Phone,
-                        desc: 'Telephony, inboxes & hours'
+                        desc: 'Showrooms, inboxes & hours',
+                        count: showroomsList.length
                       }
                     ].map((item) => {
                       const Icon = item.icon;
@@ -4901,6 +4573,192 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         />
                       </div>
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* --- SUBTAB: HOMEPAGE HERO SHOWCASE SLIDER --- */}
+            {siteSettingsSubtab === 'hero-slides' && (
+              <div className="space-y-6 animate-in fade-in">
+                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-white/10 gap-3">
+                    <div>
+                      <h3 className="font-serif text-xl font-bold text-white flex items-center gap-2">
+                        <Sliders className="w-5 h-5 text-[#C9A56A]" />
+                        <span>Homepage Hero Showcase Slider & Hotspot Pins</span>
+                      </h3>
+                      <p className="text-xs text-[#8C9A90]">
+                        Manage 3D-feel scene imagery, titles, location tags, architectural descriptions, and interactive pinpointed material specifications.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleOpenAddHeroSlide}
+                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A56A] to-[#E6C894] text-[#0F1714] font-bold text-xs uppercase tracking-wider hover:brightness-110 transition-all flex items-center gap-1.5 shadow-md cursor-pointer shrink-0"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add New Showcase Scene</span>
+                    </button>
+                  </div>
+
+                  {/* Summary Bar */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between">
+                      <span className="text-xs text-[#8C9A90]">Total Scenes</span>
+                      <span className="font-mono text-sm font-bold text-white">{heroSlidesList.length}</span>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between">
+                      <span className="text-xs text-[#8C9A90]">Active in Carousel</span>
+                      <span className="font-mono text-sm font-bold text-emerald-400">
+                        {heroSlidesList.filter((s) => s.isVisible !== false).length}
+                      </span>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between">
+                      <span className="text-xs text-[#8C9A90]">Total Hotspots Pinpointed</span>
+                      <span className="font-mono text-sm font-bold text-[#C9A56A]">
+                        {heroSlidesList.reduce((acc, s) => acc + (s.hotspots?.length || 0), 0)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Slides List */}
+                  <div className="space-y-4">
+                    {heroSlidesList.length === 0 ? (
+                      <div className="p-8 text-center text-[#8C9A90] bg-black/30 rounded-2xl border border-white/5">
+                        <Sliders className="w-8 h-8 text-[#C9A56A]/40 mx-auto mb-2" />
+                        <p className="text-sm">No hero scenes configured.</p>
+                        <button
+                          type="button"
+                          onClick={handleOpenAddHeroSlide}
+                          className="mt-3 px-4 py-2 rounded-xl bg-[#C9A56A]/20 text-[#C9A56A] border border-[#C9A56A]/40 text-xs font-semibold hover:bg-[#C9A56A]/30 cursor-pointer"
+                        >
+                          Create First Hero Scene
+                        </button>
+                      </div>
+                    ) : (
+                      heroSlidesList.map((slide, idx) => (
+                        <div
+                          key={slide.id}
+                          className={`p-5 rounded-2xl border transition-all ${
+                            slide.isVisible !== false
+                              ? 'bg-[#0F1714]/70 border-white/10 hover:border-[#C9A56A]/40'
+                              : 'bg-black/40 border-dashed border-white/10 opacity-60'
+                          }`}
+                        >
+                          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                            {/* Left Scene Thumbnail + Info */}
+                            <div className="flex items-start sm:items-center space-x-4 min-w-0">
+                              <div className="w-24 sm:w-32 h-20 sm:h-24 rounded-xl overflow-hidden bg-black shrink-0 border border-[#C9A56A]/30 shadow-md relative group">
+                                <img
+                                  src={slide.image}
+                                  alt={slide.title}
+                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                />
+                                <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-[#C9A56A] font-bold">
+                                  #{idx + 1}
+                                </div>
+                              </div>
+
+                              <div className="space-y-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="font-serif text-base sm:text-lg font-bold text-white truncate">
+                                    {slide.title}
+                                  </h4>
+                                  <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded bg-[#C9A56A]/20 text-[#C9A56A] border border-[#C9A56A]/30 flex items-center gap-1">
+                                    <MapPin className="w-2.5 h-2.5" /> {slide.location}
+                                  </span>
+                                  {slide.isVisible === false && (
+                                    <span className="text-[9px] uppercase px-2 py-0.5 rounded bg-red-950/60 text-red-300 border border-red-500/30 font-semibold">
+                                      Hidden
+                                    </span>
+                                  )}
+                                </div>
+
+                                <p className="text-xs text-[#8C9A90] line-clamp-2 leading-relaxed font-light">
+                                  {slide.tagline}
+                                </p>
+
+                                <div className="flex items-center gap-2 pt-1 flex-wrap">
+                                  <span className="text-[10px] text-[#C9A56A] font-mono font-medium flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded">
+                                    <Eye className="w-3 h-3" /> {slide.hotspots?.length || 0} Pinpointed Hotspots
+                                  </span>
+                                  {slide.hotspots &&
+                                    slide.hotspots.slice(0, 2).map((spot, sIdx) => (
+                                      <span
+                                        key={spot.id || sIdx}
+                                        className="text-[9px] text-[#8C9A90] bg-white/5 px-2 py-0.5 rounded border border-white/5 truncate max-w-[140px]"
+                                      >
+                                        &bull; {spot.label}
+                                      </span>
+                                    ))}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right Actions */}
+                            <div className="flex items-center gap-2 self-end lg:self-center shrink-0">
+                              {/* Order Up / Down */}
+                              <div className="flex items-center space-x-1 bg-black/40 p-1 rounded-xl border border-white/5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveHeroSlideUp(idx)}
+                                  disabled={idx === 0}
+                                  className="p-1.5 rounded-lg text-[#8C9A90] hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+                                  title="Move Slide Earlier in Carousel"
+                                >
+                                  <ArrowUp className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveHeroSlideDown(idx)}
+                                  disabled={idx === heroSlidesList.length - 1}
+                                  className="p-1.5 rounded-lg text-[#8C9A90] hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+                                  title="Move Slide Later in Carousel"
+                                >
+                                  <ArrowDown className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+
+                              {/* Visibility Toggle */}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleHeroSlideVisibility(slide.id)}
+                                className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                                  slide.isVisible !== false
+                                    ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400 hover:bg-emerald-900/40'
+                                    : 'bg-white/5 border-white/10 text-[#8C9A90] hover:text-white'
+                                }`}
+                                title={slide.isVisible !== false ? 'Hide from homepage slider' : 'Show on homepage slider'}
+                              >
+                                {slide.isVisible !== false ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                              </button>
+
+                              {/* Edit Slide */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditHeroSlide(slide)}
+                                className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white flex items-center gap-1.5 transition-all cursor-pointer"
+                              >
+                                <Edit className="w-3.5 h-3.5 text-[#C9A56A]" />
+                                <span>Edit & Hotspots</span>
+                              </button>
+
+                              {/* Delete Slide */}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteHeroSlide(slide.id, slide.title)}
+                                className="p-2 rounded-xl bg-red-950/30 hover:bg-red-900/50 border border-red-500/20 text-red-300 transition-all cursor-pointer"
+                                title="Delete scene from slider"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
@@ -6213,31 +6071,345 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {/* --- FLOATING WHATSAPP CONCIERGE BUTTON SETTINGS --- */}
+                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+                  <div className="pb-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-serif text-xl font-bold text-white flex items-center gap-2">
+                        <WhatsAppIcon className="w-5 h-5 text-emerald-400" />
+                        <span>Global Floating WhatsApp Concierge Button</span>
+                      </h3>
+                      <p className="text-xs text-[#8C9A90]">
+                        Control the sticky floating WhatsApp button across all website pages. Configure screen positioning (Bottom-Right or Bottom-Left), direct contact phone number, and default opening greeting message.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-[#8C9A90] font-semibold">
+                        {siteSettingsForm.whatsappFloatingEnabled !== false ? 'Widget Active' : 'Widget Disabled'}
+                      </span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={siteSettingsForm.whatsappFloatingEnabled !== false}
+                          onChange={(e) =>
+                            setSiteSettingsForm({
+                              ...siteSettingsForm,
+                              whatsappFloatingEnabled: e.target.checked
+                            })
+                          }
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Position Selector */}
+                    <div className="space-y-3">
+                      <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                        Screen Float Position
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSiteSettingsForm({
+                              ...siteSettingsForm,
+                              whatsappFloatingPosition: 'bottom-right'
+                            })
+                          }
+                          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                            (siteSettingsForm.whatsappFloatingPosition || 'bottom-right') === 'bottom-right'
+                              ? 'bg-gradient-to-r from-[#C9A56A] to-[#E6C894] text-[#0F1714] font-bold border-[#E9DFD1]/60 shadow-lg'
+                              : 'bg-[#0F1714]/60 border-white/10 text-[#8C9A90] hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold block">Bottom-Right</span>
+                            <span className="text-[10px] font-mono">Standard</span>
+                          </div>
+                          <span className="text-[10px] opacity-80 block">
+                            Floating on bottom-right corner. ScrollToTop neatly stacks above it.
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSiteSettingsForm({
+                              ...siteSettingsForm,
+                              whatsappFloatingPosition: 'bottom-left'
+                            })
+                          }
+                          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                            siteSettingsForm.whatsappFloatingPosition === 'bottom-left'
+                              ? 'bg-gradient-to-r from-[#C9A56A] to-[#E6C894] text-[#0F1714] font-bold border-[#E9DFD1]/60 shadow-lg'
+                              : 'bg-[#0F1714]/60 border-white/10 text-[#8C9A90] hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold block">Bottom-Left</span>
+                            <span className="text-[10px] font-mono">Alternate</span>
+                          </div>
+                          <span className="text-[10px] opacity-80 block">
+                            Floating on bottom-left corner opposite to ScrollToTop button.
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Dedicated WhatsApp Phone Number */}
+                    <div className="space-y-3">
+                      <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                        WhatsApp Contact Number (With Country Code)
+                      </label>
+                      <input
+                        type="text"
+                        value={siteSettingsForm.whatsappFloatingNumber ?? siteSettingsForm.whatsappNumber}
+                        onChange={(e) =>
+                          setSiteSettingsForm({
+                            ...siteSettingsForm,
+                            whatsappFloatingNumber: e.target.value
+                          })
+                        }
+                        placeholder="+44 7911 123456"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none font-mono"
+                      />
+                      <span className="text-[10px] text-[#8C9A90] block">
+                        Clients will be directed to <code className="text-emerald-400">https://wa.me/&lt;number&gt;</code> on click.
+                      </span>
+                    </div>
+
+                    {/* Default Chat Greeting Message */}
+                    <div className="space-y-3 md:col-span-2">
+                      <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                        Pre-filled WhatsApp Greeting Inquiry Text
+                      </label>
+                      <input
+                        type="text"
+                        value={siteSettingsForm.whatsappFloatingMessage || ''}
+                        onChange={(e) =>
+                          setSiteSettingsForm({
+                            ...siteSettingsForm,
+                            whatsappFloatingMessage: e.target.value
+                          })
+                        }
+                        placeholder="Hello Atelier Living Concierge, I would like to inquire about bespoke furnishings."
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                      <span className="text-[10px] text-[#8C9A90] block">
+                        Automatically populated in WhatsApp chat box when client clicks the floating button.
+                      </span>
+                    </div>
+
+                    {/* Tooltip Badge Text */}
+                    <div className="space-y-3 md:col-span-2">
+                      <label className="text-xs uppercase font-bold text-[#C9A56A] block">
+                        Hover Tooltip / Badge Title
+                      </label>
+                      <input
+                        type="text"
+                        value={siteSettingsForm.whatsappFloatingTooltip || ''}
+                        onChange={(e) =>
+                          setSiteSettingsForm({
+                            ...siteSettingsForm,
+                            whatsappFloatingTooltip: e.target.value
+                          })
+                        }
+                        placeholder="Chat with Concierge"
+                        className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* --- SUBTAB 4: CONTACT COORDINATES & OPERATING TIMETABLE --- */}
+            {/* --- SUBTAB 8: SHOWROOM LOCATIONS, CONTACT COORDINATES & OPERATING TIMETABLE --- */}
             {siteSettingsSubtab === 'contact' && (
-              <div className="space-y-6 animate-in fade-in">
-                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
-                  <div className="pb-3 border-b border-white/10">
-                    <h3 className="font-serif text-xl font-bold text-white flex items-center gap-2">
-                      <Phone className="w-5 h-5 text-[#C9A56A]" />
-                      <span>Atelier Contact Coordinates & Timetable</span>
-                    </h3>
-                    <p className="text-xs text-[#8C9A90]">
-                      Official telephone numbers, departmental routing inboxes, and store operating hours.
-                    </p>
+              <div className="space-y-8 animate-in fade-in">
+                {/* Metric Summary Banner */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 space-y-1">
+                    <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider font-semibold block">
+                      Active Showrooms
+                    </span>
+                    <span className="font-serif text-2xl font-bold text-white">{showroomsList.length} Hubs</span>
+                    <span className="text-[10px] text-[#8C9A90] block">Global Atelier Footprint</span>
                   </div>
 
-                  <div className="space-y-6">
-                    {/* Phones */}
+                  <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 space-y-1">
+                    <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider font-semibold block">
+                      Flagship Ateliers
+                    </span>
+                    <span className="font-serif text-2xl font-bold text-emerald-400">
+                      {showroomsList.filter((s) => s.isFlagship).length || 1} Flagships
+                    </span>
+                    <span className="text-[10px] text-[#8C9A90] block">Premier Showcase Locations</span>
+                  </div>
+
+                  <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 space-y-1">
+                    <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider font-semibold block">
+                      Direct Mobile
+                    </span>
+                    <span className="font-mono text-sm font-bold text-[#E9DFD1] truncate block">
+                      {siteSettingsForm.mobileNumber || '+44 7911 123456'}
+                    </span>
+                    <span className="text-[10px] text-[#8C9A90] block">WhatsApp / Concierge</span>
+                  </div>
+
+                  <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-4 space-y-1">
+                    <span className="text-[10px] text-[#C9A56A] uppercase tracking-wider font-semibold block">
+                      Store Hours (Mon-Fri)
+                    </span>
+                    <span className="font-mono text-sm font-bold text-[#C9A56A] truncate block">
+                      {siteSettingsForm.scheduleMonFri || '09:30 - 18:30'}
+                    </span>
+                    <span className="text-[10px] text-[#8C9A90] block">Public Atelier Schedule</span>
+                  </div>
+                </div>
+
+                {/* SECTION 1: GLOBAL SHOWROOM LOCATIONS */}
+                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-white/10 gap-4">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <Building2 className="w-5 h-5 text-[#C9A56A]" />
+                        <h3 className="font-serif text-xl sm:text-2xl font-bold text-white">
+                          Global Showroom Locations ({showroomsList.length})
+                        </h3>
+                      </div>
+                      <p className="text-xs text-[#8C9A90] mt-1">
+                        Manage multiple international showrooms/ateliers. Publicly displayed on Contact page showroom switcher and site footer.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleOpenAddLocation}
+                      className="px-4 py-2.5 rounded-xl bg-[#C9A56A] text-[#0F1714] font-bold text-xs uppercase tracking-wider hover:bg-[#E6C894] transition-all flex items-center justify-center space-x-2 shadow-lg cursor-pointer shrink-0"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Showroom Location</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {showroomsList.map((shw) => (
+                      <div
+                        key={shw.id}
+                        className="bg-[#0F1714]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between hover:border-[#C9A56A]/50 transition-all group"
+                      >
+                        <div>
+                          {/* Image header */}
+                          <div className="relative h-44 overflow-hidden bg-black/40">
+                            <img
+                              src={shw.image}
+                              alt={shw.city}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-between p-3.5">
+                              <div className="flex items-center justify-between">
+                                <span className="px-2.5 py-0.5 rounded-full bg-[#0F1714]/80 backdrop-blur-md text-[10px] font-mono font-bold text-[#C9A56A] border border-[#C9A56A]/30 uppercase">
+                                  {shw.id}
+                                </span>
+                                {shw.isFlagship && (
+                                  <span className="px-2.5 py-0.5 rounded-full bg-[#C9A56A] text-[#0F1714] text-[10px] font-bold uppercase tracking-widest shadow-md">
+                                    Flagship
+                                  </span>
+                                )}
+                              </div>
+                              <div>
+                                <span className="text-[10px] uppercase font-bold tracking-widest text-[#C9A56A]">
+                                  {shw.country}
+                                </span>
+                                <h4 className="font-serif text-xl font-bold text-white">{shw.city} Showroom</h4>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Details */}
+                          <div className="p-4 space-y-2.5 text-xs text-[#E9DFD1]">
+                            <div className="flex items-start space-x-2">
+                              <MapPin className="w-4 h-4 text-[#C9A56A] shrink-0 mt-0.5" />
+                              <span className="line-clamp-2">{shw.address}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Phone className="w-4 h-4 text-[#C9A56A] shrink-0" />
+                              <span className="font-mono">{shw.phone}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Mail className="w-4 h-4 text-[#C9A56A] shrink-0" />
+                              <span className="truncate">{shw.email}</span>
+                            </div>
+                            <div className="flex items-start space-x-2">
+                              <Clock className="w-4 h-4 text-[#C9A56A] shrink-0 mt-0.5" />
+                              <span className="text-[11px] text-[#8C9A90]">{shw.hours}</span>
+                            </div>
+                            {shw.notes && (
+                              <div className="p-2 rounded-lg bg-white/5 text-[11px] text-[#C9A56A] italic border border-white/5">
+                                "{shw.notes}"
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Card Footer Actions */}
+                        <div className="p-3.5 pt-0 border-t border-white/10 bg-[#0F1714]/30 flex items-center justify-between gap-2 mt-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditLocation(shw)}
+                            className="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#C9A56A] hover:text-white border border-[#C9A56A]/30 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all cursor-pointer"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                            <span>Edit Location</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteLocation(shw)}
+                            className="p-2 rounded-xl bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 transition-all cursor-pointer"
+                            title="Delete Showroom Location"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* SECTION 2: GLOBAL CONTACT NUMBERS, EMAILS & STORE OPERATING SCHEDULE */}
+                <div className="bg-[#163129]/60 backdrop-blur-xl border border-[#C9A56A]/25 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+                  <div className="pb-4 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h3 className="font-serif text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                        <Phone className="w-5 h-5 text-[#C9A56A]" />
+                        <span>Global Contact Numbers, Emails & Store Schedule</span>
+                      </h3>
+                      <p className="text-xs text-[#8C9A90] mt-1">
+                        Configure official contact details, telephony, departmental routing inboxes, and operating hours. Synchronized in real time across the Contact page and Footer.
+                      </p>
+                    </div>
+                    <span className="text-[11px] font-mono text-[#C9A56A] bg-[#C9A56A]/10 px-3 py-1 rounded-full border border-[#C9A56A]/20 self-start sm:self-auto">
+                      Live Synced
+                    </span>
+                  </div>
+
+                  <form onSubmit={handleSaveSiteSettings} className="space-y-6">
+                    {/* 1. Phones */}
                     <div className="space-y-3">
-                      <h4 className="font-serif text-sm text-[#C9A56A] font-bold">1. Telephony & Hotlines</h4>
+                      <h4 className="font-serif text-base text-[#C9A56A] font-bold flex items-center gap-2">
+                        <Smartphone className="w-4 h-4" />
+                        <span>1. Telephony, Mobile Hotline & WhatsApp Channels</span>
+                      </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                         <div>
                           <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                            Primary Switchboard
+                            Primary Landline / Switchboard
                           </label>
                           <input
                             type="text"
@@ -6268,7 +6440,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                         <div>
                           <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                            WhatsApp Number
+                            WhatsApp Concierge Number
                           </label>
                           <input
                             type="text"
@@ -6283,13 +6455,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
                     </div>
 
-                    {/* Departmental Emails */}
+                    {/* 2. Departmental Emails */}
                     <div className="space-y-3 pt-4 border-t border-white/10">
-                      <h4 className="font-serif text-sm text-[#C9A56A] font-bold">2. Departmental Email Inboxes</h4>
+                      <h4 className="font-serif text-base text-[#C9A56A] font-bold flex items-center gap-2">
+                        <Mail className="w-4 h-4" />
+                        <span>2. Departmental Email Addresses</span>
+                      </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
                         <div>
                           <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                            General Inquiries *
+                            General Inquiries Email *
                           </label>
                           <input
                             type="email"
@@ -6305,7 +6480,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                         <div>
                           <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                            VIP & Bespoke Clients
+                            VIP Client Services Email
                           </label>
                           <input
                             type="email"
@@ -6320,7 +6495,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                         <div>
                           <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                            Press & Media
+                            Press & Media Email
                           </label>
                           <input
                             type="email"
@@ -6335,7 +6510,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                         <div>
                           <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                            Trade & Architecture
+                            Trade & Architecture Email
                           </label>
                           <input
                             type="email"
@@ -6350,9 +6525,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
                     </div>
 
-                    {/* Flagship Address */}
+                    {/* 3. Flagship Address */}
                     <div className="space-y-3 pt-4 border-t border-white/10">
-                      <h4 className="font-serif text-sm text-[#C9A56A] font-bold">3. Flagship Head Atelier Address</h4>
+                      <h4 className="font-serif text-base text-[#C9A56A] font-bold flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
+                        <span>3. Flagship Head Atelier Address</span>
+                      </h4>
                       <div>
                         <input
                           type="text"
@@ -6366,13 +6544,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
                     </div>
 
-                    {/* Operating Timetable */}
+                    {/* 4. Store Operating Schedule */}
                     <div className="space-y-3 pt-4 border-t border-white/10">
-                      <h4 className="font-serif text-sm text-[#C9A56A] font-bold">4. Store Operating Schedule</h4>
+                      <h4 className="font-serif text-base text-[#C9A56A] font-bold flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        <span>4. Store Open / Close Timetable & Operating Schedule</span>
+                      </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
                         <div>
                           <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                            Monday – Friday *
+                            Monday – Friday Schedule *
                           </label>
                           <input
                             type="text"
@@ -6388,7 +6569,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                         <div>
                           <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                            Saturday *
+                            Saturday Schedule *
                           </label>
                           <input
                             type="text"
@@ -6404,7 +6585,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                         <div>
                           <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                            Sunday *
+                            Sunday Schedule *
                           </label>
                           <input
                             type="text"
@@ -6420,7 +6601,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                         <div>
                           <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
-                            Bank Holidays
+                            Bank Holidays & Special Closures
                           </label>
                           <input
                             type="text"
@@ -6434,7 +6615,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </div>
                       </div>
                     </div>
-                  </div>
+
+                    {/* Submit Save Button */}
+                    <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <p className="text-xs text-[#8C9A90]">
+                        All contact details sync across the live Contact page, showroom inquiry portal, and site footer.
+                      </p>
+                      <button
+                        type="submit"
+                        disabled={isSavingSiteSettings}
+                        className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#C9A56A] via-[#E6C894] to-[#C9A56A] text-[#0F1714] font-bold text-xs uppercase tracking-wider hover:brightness-110 transition-all flex items-center space-x-2 shadow-xl disabled:opacity-50 cursor-pointer"
+                      >
+                        <Save className="w-4 h-4" />
+                        <span>{isSavingSiteSettings ? 'Saving Settings...' : 'Save & Sync Contact Settings'}</span>
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </div>
             )}
@@ -6935,6 +7131,345 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 >
                   {editingLinkId ? 'Update Link' : 'Add Link'}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- ADD / EDIT HERO SHOWCASE SLIDE MODAL --- */}
+      {showHeroSlideModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
+          <div className="bg-[#163129] border border-[#C9A56A]/40 rounded-3xl p-6 sm:p-8 max-w-3xl w-full space-y-6 text-white shadow-2xl max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div>
+                <h3 className="font-serif text-2xl font-bold text-white flex items-center gap-2">
+                  <Sliders className="w-5 h-5 text-[#C9A56A]" />
+                  <span>{editingHeroSlideId ? 'Edit Hero Showcase Scene' : 'Add New Hero Showcase Scene'}</span>
+                </h3>
+                <p className="text-xs text-[#E9DFD1]">
+                  Configure slide background photo, mill location, architecture tagline, and pinpointed material hotspots.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowHeroSlideModal(false)}
+                className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveHeroSlide} className="space-y-6 text-xs">
+              {/* Basic Scene Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                    Scene Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={heroSlideForm.title}
+                    onChange={(e) => setHeroSlideForm({ ...heroSlideForm, title: e.target.value })}
+                    placeholder="e.g. Belgravia Grand Salon"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                    Location Badge *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={heroSlideForm.location}
+                    onChange={(e) => setHeroSlideForm({ ...heroSlideForm, location: e.target.value })}
+                    placeholder="e.g. London, UK"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">
+                  Scene Description / Architecture Tagline *
+                </label>
+                <textarea
+                  rows={2}
+                  required
+                  value={heroSlideForm.tagline}
+                  onChange={(e) => setHeroSlideForm({ ...heroSlideForm, tagline: e.target.value })}
+                  placeholder="e.g. Floor-to-ceiling acoustic linen drapes paired with hand-knotted silk rugs."
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none leading-relaxed"
+                />
+              </div>
+
+              {/* Background Image */}
+              <div className="space-y-3">
+                <ImageUploader
+                  label="Showcase High-Resolution Scene Image *"
+                  helpText="Upload a luxury wide architectural interior photograph (1800x900 recommended)"
+                  value={heroSlideForm.image}
+                  onChange={(img) => setHeroSlideForm({ ...heroSlideForm, image: img })}
+                  aspectRatio="video"
+                  presetSuggestions={[
+                    {
+                      label: 'Belgravia Salon',
+                      url: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1800&q=85'
+                    },
+                    {
+                      label: 'Como Villa',
+                      url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=85'
+                    },
+                    {
+                      label: 'Mayfair Penthouse',
+                      url: 'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1800&q=85'
+                    },
+                    {
+                      label: 'Kensington Drawing Room',
+                      url: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1800&q=85'
+                    }
+                  ]}
+                  required
+                />
+              </div>
+
+              {/* --- INTERACTIVE HOTSPOTS PINPOINT MANAGER --- */}
+              <div className="pt-4 border-t border-white/10 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h4 className="font-serif text-base text-[#C9A56A] font-bold flex items-center gap-1.5">
+                      <Eye className="w-4 h-4" />
+                      <span>Interactive Material Hotspot Pinpoints ({heroSlideForm.hotspots.length})</span>
+                    </h4>
+                    <p className="text-[11px] text-[#8C9A90]">
+                      Click on the preview image below to position the selected pin, or manually edit X% and Y% coordinates.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAddHotspotToSlide}
+                    className="px-3.5 py-2 rounded-xl bg-[#C9A56A]/20 text-[#C9A56A] hover:bg-[#C9A56A]/30 border border-[#C9A56A]/40 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer self-start sm:self-auto"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Hotspot Pin</span>
+                  </button>
+                </div>
+
+                {/* Interactive Visual Coordinate Picker Box */}
+                {heroSlideForm.image && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-[11px] text-[#8C9A90]">
+                      <span>Click image to position selected pin:</span>
+                      {selectedHotspotIdx !== null && heroSlideForm.hotspots[selectedHotspotIdx] && (
+                        <span className="text-[#C9A56A] font-mono font-bold">
+                          Selected Pin #{selectedHotspotIdx + 1}: ({heroSlideForm.hotspots[selectedHotspotIdx].x}%, {heroSlideForm.hotspots[selectedHotspotIdx].y}%)
+                        </span>
+                      )}
+                    </div>
+
+                    <div
+                      onClick={(e) => {
+                        if (selectedHotspotIdx === null || !heroSlideForm.hotspots[selectedHotspotIdx]) return;
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const x = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+                        const y = Math.round(((e.clientY - rect.top) / rect.height) * 100);
+                        handleUpdateHotspotInSlide(selectedHotspotIdx, 'x', Math.max(0, Math.min(100, x)));
+                        handleUpdateHotspotInSlide(selectedHotspotIdx, 'y', Math.max(0, Math.min(100, y)));
+                      }}
+                      className="relative w-full h-64 sm:h-80 rounded-2xl overflow-hidden bg-black border border-[#C9A56A]/40 cursor-crosshair shadow-inner select-none"
+                    >
+                      <img
+                        src={heroSlideForm.image}
+                        alt="Pin Placement Preview"
+                        className="w-full h-full object-cover filter brightness-90 pointer-events-none"
+                      />
+
+                      {/* Overlaid Pinpoints */}
+                      {heroSlideForm.hotspots.map((spot, idx) => {
+                        const isSelected = selectedHotspotIdx === idx;
+                        return (
+                          <div
+                            key={spot.id || idx}
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              setSelectedHotspotIdx(idx);
+                            }}
+                            style={{ left: `${spot.x}%`, top: `${spot.y}%` }}
+                            className={`absolute transform -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center cursor-pointer transition-all ${
+                              isSelected ? 'scale-125' : 'hover:scale-110'
+                            }`}
+                          >
+                            <span
+                              className={`w-7 h-7 rounded-full border-2 flex items-center justify-center font-bold font-mono text-[10px] shadow-2xl ${
+                                isSelected
+                                  ? 'bg-[#C9A56A] text-[#0F1714] border-white ring-4 ring-[#C9A56A]/40'
+                                  : 'bg-[#0F1714]/80 text-[#C9A56A] border-[#C9A56A]'
+                              }`}
+                            >
+                              {idx + 1}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Hotspot Form Items */}
+                <div className="space-y-3">
+                  {heroSlideForm.hotspots.map((spot, idx) => {
+                    const isSelected = selectedHotspotIdx === idx;
+                    return (
+                      <div
+                        key={spot.id || idx}
+                        onClick={() => setSelectedHotspotIdx(idx)}
+                        className={`p-4 rounded-xl border transition-all ${
+                          isSelected
+                            ? 'bg-[#0F1714]/90 border-[#C9A56A] shadow-md ring-1 ring-[#C9A56A]/30'
+                            : 'bg-[#0F1714]/50 border-white/10 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-3">
+                          <div className="flex items-center space-x-2">
+                            <span className="w-5 h-5 rounded-full bg-[#C9A56A] text-[#0F1714] font-mono font-bold text-[10px] flex items-center justify-center">
+                              {idx + 1}
+                            </span>
+                            <span className="font-serif font-bold text-white text-xs">
+                              Hotspot Specification #{idx + 1}
+                            </span>
+                            {isSelected && (
+                              <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#C9A56A]/20 text-[#C9A56A] font-bold">
+                                Selected For Positioning
+                              </span>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              handleRemoveHotspotFromSlide(idx);
+                            }}
+                            className="p-1 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded transition-colors cursor-pointer"
+                            title="Remove Hotspot"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs mb-3">
+                          <div>
+                            <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                              Material / Product Name *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={spot.label}
+                              onChange={(e) => handleUpdateHotspotInSlide(idx, 'label', e.target.value)}
+                              placeholder="e.g. Acoustic Sheer Drapes"
+                              className="w-full p-2.5 rounded-lg bg-black/40 border border-white/10 text-white focus:border-[#C9A56A] focus:outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                              Mill Origin *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={spot.origin}
+                              onChange={(e) => handleUpdateHotspotInSlide(idx, 'origin', e.target.value)}
+                              placeholder="e.g. Kortrijk, Belgium"
+                              className="w-full p-2.5 rounded-lg bg-black/40 border border-white/10 text-[#C9A56A] focus:border-[#C9A56A] focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mb-3">
+                          <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                            Specification Detail & Durability *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={spot.detail}
+                            onChange={(e) => handleUpdateHotspotInSlide(idx, 'detail', e.target.value)}
+                            placeholder="e.g. Fluid Belgian flax with 82% ambient sound attenuation."
+                            className="w-full p-2.5 rounded-lg bg-black/40 border border-white/10 text-white focus:border-[#C9A56A] focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                              X Coordinate (Horizontal: 0-100%)
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={spot.x}
+                              onChange={(e) => handleUpdateHotspotInSlide(idx, 'x', Number(e.target.value))}
+                              className="w-full p-2 rounded-lg bg-black/40 border border-white/10 text-white font-mono"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] uppercase font-bold text-[#8C9A90] block mb-1">
+                              Y Coordinate (Vertical: 0-100%)
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={spot.y}
+                              onChange={(e) => handleUpdateHotspotInSlide(idx, 'y', Number(e.target.value))}
+                              className="w-full p-2 rounded-lg bg-black/40 border border-white/10 text-white font-mono"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Visibility Toggle & Action Buttons */}
+              <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <label className="flex items-center space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={heroSlideForm.isVisible !== false}
+                    onChange={(e) => setHeroSlideForm({ ...heroSlideForm, isVisible: e.target.checked })}
+                    className="w-4 h-4 rounded text-[#C9A56A] focus:ring-[#C9A56A] bg-[#0F1714] border-white/20 cursor-pointer"
+                  />
+                  <div>
+                    <span className="font-semibold text-white block">Active in Homepage Hero Carousel</span>
+                    <span className="text-[10px] text-[#8C9A90]">Uncheck to hide without deleting</span>
+                  </div>
+                </label>
+
+                <div className="flex items-center space-x-3 self-end sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setShowHeroSlideModal(false)}
+                    className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A56A] to-[#E6C894] text-[#0F1714] font-bold uppercase tracking-wider hover:brightness-110 transition-all cursor-pointer shadow-lg"
+                  >
+                    {editingHeroSlideId ? 'Update Hero Scene' : 'Publish Hero Scene'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

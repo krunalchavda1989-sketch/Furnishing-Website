@@ -31,9 +31,17 @@ import {
 } from '../lib/supabase';
 import { useToast } from '../components/ui/ToastNotification';
 
-export const ContactPage: React.FC = () => {
-  const [showrooms, setShowrooms] = useState<Showroom[]>(SHOWROOMS_DATA);
-  const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
+interface ContactPageProps {
+  siteSettings?: SiteSettings;
+  showrooms?: Showroom[];
+}
+
+export const ContactPage: React.FC<ContactPageProps> = ({
+  siteSettings: initialSettings,
+  showrooms: initialShowrooms
+}) => {
+  const [showrooms, setShowrooms] = useState<Showroom[]>(initialShowrooms || SHOWROOMS_DATA);
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSettings || DEFAULT_SITE_SETTINGS);
   const [selectedShowroomIndex, setSelectedShowroomIndex] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,6 +55,18 @@ export const ContactPage: React.FC = () => {
     projectScope: 'Full Residence Refurbishment',
     message: ''
   });
+
+  useEffect(() => {
+    if (initialSettings) {
+      setSiteSettings(initialSettings);
+    }
+  }, [initialSettings]);
+
+  useEffect(() => {
+    if (initialShowrooms && initialShowrooms.length > 0) {
+      setShowrooms(initialShowrooms);
+    }
+  }, [initialShowrooms]);
 
   // Fetch dynamic showrooms & site settings on mount and listen to storage updates
   useEffect(() => {

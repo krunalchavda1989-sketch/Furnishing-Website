@@ -19,6 +19,26 @@ export interface CategoryInfo {
   tagline: string;
 }
 
+export interface HeroHotspot {
+  id?: string;
+  x: number; // percentage (0-100)
+  y: number; // percentage (0-100)
+  label: string;
+  detail: string;
+  origin: string;
+}
+
+export interface FurnishingScene {
+  id: string;
+  title: string;
+  location: string;
+  image: string;
+  tagline: string;
+  hotspots: HeroHotspot[];
+  order?: number;
+  isVisible?: boolean;
+}
+
 export interface SwatchColor {
   name: string;
   hex: string;
@@ -178,6 +198,13 @@ export interface SiteSettings {
   scheduleSat: string;
   scheduleSun: string;
   scheduleHolidays: string;
+
+  // Floating WhatsApp Concierge Widget
+  whatsappFloatingEnabled?: boolean;
+  whatsappFloatingPosition?: 'bottom-right' | 'bottom-left';
+  whatsappFloatingNumber?: string;
+  whatsappFloatingMessage?: string;
+  whatsappFloatingTooltip?: string;
 
   updatedAt?: string;
 }

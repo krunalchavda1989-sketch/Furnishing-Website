@@ -5,13 +5,14 @@ import { CATEGORIES_DATA } from '../data/categoriesData';
 import { PROJECTS_DATA } from '../data/projectsData';
 import { BRANDS_DATA } from '../data/brandsData';
 import { DEFAULT_TESTIMONIALS } from '../lib/supabase';
-import type { CategorySlug, Project, BrandPartner, Testimonial } from '../types';
+import type { CategorySlug, Project, BrandPartner, Testimonial, FurnishingScene } from '../types';
 import { ArrowRight, Sparkles, Star, ChevronLeft, ChevronRight, Quote, MapPin } from 'lucide-react';
 
 interface HomePageProps {
   projects?: Project[];
   brands?: BrandPartner[];
   testimonials?: Testimonial[];
+  heroSlides?: FurnishingScene[];
   onNavigate: (tab: string, categorySlug?: CategorySlug) => void;
   onOpenProject: (project: Project) => void;
   onRequestSwatches: () => void;
@@ -21,6 +22,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   projects,
   brands,
   testimonials,
+  heroSlides,
   onNavigate,
   onOpenProject,
   onRequestSwatches
@@ -106,7 +108,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 
           {/* Right Professional Furnishing Showcase */}
           <div className="lg:col-span-7">
-            <HeroCanvas />
+            <HeroCanvas slides={heroSlides} />
           </div>
         </div>
       </section>

@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowUp } from 'lucide-react';
+import type { SiteSettings } from '../../types';
 
-export const ScrollToTop: React.FC = () => {
+interface ScrollToTopProps {
+  siteSettings?: SiteSettings;
+}
+
+export const ScrollToTop: React.FC<ScrollToTopProps> = ({ siteSettings }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
+
+  const isWhatsappOnBottomRight =
+    siteSettings?.whatsappFloatingEnabled !== false &&
+    siteSettings?.whatsappFloatingPosition !== 'bottom-left';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -35,7 +44,11 @@ export const ScrollToTop: React.FC = () => {
 
   return (
     <div
-      className={`fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-50 transition-all duration-500 ease-out ${
+      className={`fixed z-50 transition-all duration-500 ease-out ${
+        isWhatsappOnBottomRight
+          ? 'bottom-22 right-6 sm:bottom-26 sm:right-8'
+          : 'bottom-6 right-6 sm:bottom-8 sm:right-8'
+      } ${
         isVisible
           ? 'opacity-100 translate-y-0 pointer-events-auto scale-100'
           : 'opacity-0 translate-y-8 pointer-events-none scale-90'

@@ -1,105 +1,22 @@
 import React, { useState } from 'react';
 import { Sparkles, Eye, MapPin, ChevronRight, CheckCircle2 } from 'lucide-react';
+import type { FurnishingScene } from '../../types';
+import { DEFAULT_HERO_SLIDES } from '../../lib/supabase';
 
-interface FurnishingScene {
-  id: string;
-  title: string;
-  location: string;
-  image: string;
-  tagline: string;
-  hotspots: {
-    x: number; // percentage
-    y: number; // percentage
-    label: string;
-    detail: string;
-    origin: string;
-  }[];
+interface HeroCanvasProps {
+  slides?: FurnishingScene[];
 }
 
-const SCENES: FurnishingScene[] = [
-  {
-    id: 'belgravia',
-    title: 'Belgravia Grand Salon',
-    location: 'London, UK',
-    image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1800&q=85',
-    tagline: 'Floor-to-ceiling acoustic linen drapes paired with hand-knotted silk rugs.',
-    hotspots: [
-      {
-        x: 28,
-        y: 35,
-        label: 'Acoustic Sheer Drapes',
-        detail: 'Fluid Belgian flax with 82% ambient sound attenuation.',
-        origin: 'Kortrijk, Belgium'
-      },
-      {
-        x: 62,
-        y: 60,
-        label: 'Tailored Mohair Lounge',
-        detail: 'Hand-dyed Florentine mohair velvet with 100,000 Martindale durability.',
-        origin: 'Florence, Italy'
-      },
-      {
-        x: 48,
-        y: 82,
-        label: 'Botanical Relief Rug',
-        detail: 'Hand-knotted Himalayan wool & mulberry silk at 150 knots/sq.in.',
-        origin: 'Kathmandu, Nepal'
-      }
-    ]
-  },
-  {
-    id: 'como',
-    title: 'Como Lakefront Villa',
-    location: 'Lombardy, Italy',
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=85',
-    tagline: 'Light-responsive woven timber shades & raw Como silk window treatments.',
-    hotspots: [
-      {
-        x: 35,
-        y: 30,
-        label: 'Architectural Timber Shade',
-        detail: 'Precision basswood slats woven with metallic copper filaments.',
-        origin: 'Kyoto, Japan'
-      },
-      {
-        x: 70,
-        y: 52,
-        label: 'Como Spun Silk Panels',
-        detail: 'Lustrous raw silk woven on 19th-century jacquard looms.',
-        origin: 'Como, Italy'
-      }
-    ]
-  },
-  {
-    id: 'mayfair',
-    title: 'Mayfair Penthouse Suite',
-    location: 'Mayfair, London',
-    image: 'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1800&q=85',
-    tagline: 'Padded silk-cashmere headboards & 1000-thread-count Giza cotton percale.',
-    hotspots: [
-      {
-        x: 50,
-        y: 45,
-        label: 'Quilted Cashmere Headboard',
-        detail: 'Hand-tufted silk & cashmere topper with brass nailhead trim.',
-        origin: 'Milan, Italy'
-      },
-      {
-        x: 25,
-        y: 70,
-        label: 'Percale Bedding Suite',
-        detail: 'Giza 45 extra-long staple Egyptian cotton with hand-hemstitched borders.',
-        origin: 'Tuscany, Italy'
-      }
-    ]
-  }
-];
-
-export const HeroCanvas: React.FC = () => {
+export const HeroCanvas: React.FC<HeroCanvasProps> = ({ slides }) => {
   const [activeSceneIndex, setActiveSceneIndex] = useState(0);
   const [activeHotspot, setActiveHotspot] = useState<number | null>(0);
 
-  const currentScene = SCENES[activeSceneIndex];
+  const rawScenes = slides && slides.length > 0 ? slides : DEFAULT_HERO_SLIDES;
+  const scenes = rawScenes.filter((s) => s.isVisible !== false);
+  const validScenes = scenes.length > 0 ? scenes : DEFAULT_HERO_SLIDES;
+
+  const safeIndex = activeSceneIndex < validScenes.length ? activeSceneIndex : 0;
+  const currentScene = validScenes[safeIndex];
 
   return (
     <div className="relative w-full h-[550px] md:h-[650px] lg:h-[700px] rounded-3xl overflow-hidden shadow-2xl border border-[#C9A56A]/30 bg-[#0F1714]">
@@ -123,16 +40,16 @@ export const HeroCanvas: React.FC = () => {
           </span>
         </div>
 
-        <div className="flex items-center space-x-2 glass-panel-dark p-1.5 rounded-full border border-white/10 shadow-lg">
-          {SCENES.map((scene, idx) => (
+        <div className="flex items-center space-x-2 glass-panel-dark p-1.5 rounded-full border border-white/10 shadow-lg max-w-full overflow-x-auto">
+          {validScenes.map((scene, idx) => (
             <button
               key={scene.id}
               onClick={() => {
                 setActiveSceneIndex(idx);
                 setActiveHotspot(0);
               }}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all ${
-                activeSceneIndex === idx
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
+                safeIndex === idx
                   ? 'bg-[#C9A56A] text-[#0F1714] shadow-md'
                   : 'text-[#E9DFD1] hover:text-[#C9A56A] hover:bg-white/5'
               }`}
@@ -144,47 +61,48 @@ export const HeroCanvas: React.FC = () => {
       </div>
 
       {/* Interactive Material Hotspot Pins */}
-      {currentScene.hotspots.map((spot, idx) => {
-        const isActive = activeHotspot === idx;
-        return (
-          <div
-            key={idx}
-            style={{ left: `${spot.x}%`, top: `${spot.y}%` }}
-            className="absolute z-20 transform -translate-x-1/2 -translate-y-1/2 group"
-          >
-            <button
-              onClick={() => setActiveHotspot(isActive ? null : idx)}
-              className="relative flex items-center justify-center focus:outline-none"
-              aria-label={`Inspect ${spot.label}`}
+      {currentScene.hotspots &&
+        currentScene.hotspots.map((spot, idx) => {
+          const isActive = activeHotspot === idx;
+          return (
+            <div
+              key={spot.id || idx}
+              style={{ left: `${spot.x}%`, top: `${spot.y}%` }}
+              className="absolute z-20 transform -translate-x-1/2 -translate-y-1/2 group"
             >
-              <span className="absolute w-8 h-8 rounded-full bg-[#C9A56A]/40 animate-ping"></span>
-              <span
-                className={`w-6 h-6 rounded-full border-2 border-[#E9DFD1] flex items-center justify-center shadow-2xl transition-all duration-300 ${
-                  isActive ? 'bg-[#C9A56A] scale-125' : 'bg-[#0F1714]/80 hover:bg-[#C9A56A]'
-                }`}
+              <button
+                onClick={() => setActiveHotspot(isActive ? null : idx)}
+                className="relative flex items-center justify-center focus:outline-none cursor-pointer"
+                aria-label={`Inspect ${spot.label}`}
               >
-                <Eye className={`w-3.5 h-3.5 ${isActive ? 'text-[#0F1714]' : 'text-[#C9A56A]'}`} />
-              </span>
-            </button>
+                <span className="absolute w-8 h-8 rounded-full bg-[#C9A56A]/40 animate-ping"></span>
+                <span
+                  className={`w-6 h-6 rounded-full border-2 border-[#E9DFD1] flex items-center justify-center shadow-2xl transition-all duration-300 ${
+                    isActive ? 'bg-[#C9A56A] scale-125' : 'bg-[#0F1714]/80 hover:bg-[#C9A56A]'
+                  }`}
+                >
+                  <Eye className={`w-3.5 h-3.5 ${isActive ? 'text-[#0F1714]' : 'text-[#C9A56A]'}`} />
+                </span>
+              </button>
 
-            {/* Hotspot Floating Detail Card */}
-            {isActive && (
-              <div className="absolute left-1/2 bottom-full mb-3 transform -translate-x-1/2 w-64 glass-panel-dark rounded-2xl p-4 border border-[#C9A56A]/40 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
-                  <span className="text-[10px] uppercase tracking-widest text-[#C9A56A] font-bold flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-[#C9A56A]" /> {spot.origin}
-                  </span>
-                  <span className="text-[9px] text-[#8C9A90] uppercase font-mono">Bespoke Mill</span>
+              {/* Hotspot Floating Detail Card */}
+              {isActive && (
+                <div className="absolute left-1/2 bottom-full mb-3 transform -translate-x-1/2 w-64 glass-panel-dark rounded-2xl p-4 border border-[#C9A56A]/40 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
+                    <span className="text-[10px] uppercase tracking-widest text-[#C9A56A] font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-[#C9A56A]" /> {spot.origin}
+                    </span>
+                    <span className="text-[9px] text-[#8C9A90] uppercase font-mono">Bespoke Mill</span>
+                  </div>
+                  <h5 className="font-serif text-sm font-semibold text-[#E9DFD1]">{spot.label}</h5>
+                  <p className="text-xs text-[#8C9A90] mt-1 font-light leading-relaxed">
+                    {spot.detail}
+                  </p>
                 </div>
-                <h5 className="font-serif text-sm font-semibold text-[#E9DFD1]">{spot.label}</h5>
-                <p className="text-xs text-[#8C9A90] mt-1 font-light leading-relaxed">
-                  {spot.detail}
-                </p>
-              </div>
-            )}
-          </div>
-        );
-      })}
+              )}
+            </div>
+          );
+        })}
 
       {/* Bottom Scene Info Banner */}
       <div className="absolute bottom-6 left-6 right-6 z-10">
@@ -208,15 +126,15 @@ export const HeroCanvas: React.FC = () => {
                 Hotspots
               </span>
               <span className="text-xs text-[#C9A56A] font-mono font-bold">
-                {currentScene.hotspots.length} Specifications Pinpointed
+                {currentScene.hotspots?.length || 0} Specifications Pinpointed
               </span>
             </div>
 
             <button
               onClick={() =>
-                setActiveSceneIndex((prev) => (prev + 1) % SCENES.length)
+                setActiveSceneIndex((prev) => (prev + 1) % validScenes.length)
               }
-              className="p-3 rounded-full bg-[#C9A56A] text-[#0F1714] hover:bg-[#E6C894] transition-all shadow-md flex items-center justify-center"
+              className="p-3 rounded-full bg-[#C9A56A] text-[#0F1714] hover:bg-[#E6C894] transition-all shadow-md flex items-center justify-center cursor-pointer"
               title="Next Scene"
             >
               <ChevronRight className="w-5 h-5" />
@@ -227,4 +145,3 @@ export const HeroCanvas: React.FC = () => {
     </div>
   );
 };
-

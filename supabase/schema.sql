@@ -259,6 +259,11 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
   schedule_sat TEXT DEFAULT '10:00 - 17:00',
   schedule_sun TEXT DEFAULT 'By Private Appointment Only',
   schedule_holidays TEXT DEFAULT 'Closed on UK & EU Bank Holidays',
+  whatsapp_floating_enabled BOOLEAN DEFAULT true,
+  whatsapp_floating_position TEXT DEFAULT 'bottom-right',
+  whatsapp_floating_number TEXT DEFAULT '+44 7911 123456',
+  whatsapp_floating_message TEXT DEFAULT 'Hello Atelier Living Concierge, I would like to inquire about bespoke furnishings.',
+  whatsapp_floating_tooltip TEXT DEFAULT 'Chat with Concierge',
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -389,6 +394,26 @@ CREATE POLICY "Public select story_settings" ON public.story_settings FOR SELECT
 DROP POLICY IF EXISTS "Admin modify story_settings" ON public.story_settings;
 CREATE POLICY "Admin modify story_settings" ON public.story_settings FOR ALL USING (true);
 
+-- 14. Create Homepage Hero Showcase Slider Table
+CREATE TABLE IF NOT EXISTS public.hero_slides (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  location TEXT DEFAULT '',
+  image TEXT NOT NULL,
+  tagline TEXT NOT NULL,
+  hotspots JSONB DEFAULT '[]'::jsonb,
+  "order" INT DEFAULT 1,
+  is_visible BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.hero_slides ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public select hero_slides" ON public.hero_slides;
+CREATE POLICY "Public select hero_slides" ON public.hero_slides FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admin modify hero_slides" ON public.hero_slides;
+CREATE POLICY "Admin modify hero_slides" ON public.hero_slides FOR ALL USING (true);
+
 -- =======================================================
 -- INITIAL DEFAULT SEED DATA INSERTION
 -- =======================================================
@@ -401,6 +426,51 @@ INSERT INTO public.contact_settings (id) VALUES ('default') ON CONFLICT (id) DO 
 
 -- Seed Our Story Settings
 INSERT INTO public.story_settings (id) VALUES ('global-story') ON CONFLICT (id) DO NOTHING;
+
+-- Seed Homepage Hero Showcase Slides
+INSERT INTO public.hero_slides (id, title, location, image, tagline, hotspots, "order", is_visible)
+VALUES
+(
+  'belgravia',
+  'Belgravia Grand Salon',
+  'London, UK',
+  'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1800&q=85',
+  'Floor-to-ceiling acoustic linen drapes paired with hand-knotted silk rugs.',
+  '[
+    {"id": "hs-1", "x": 28, "y": 35, "label": "Acoustic Sheer Drapes", "detail": "Fluid Belgian flax with 82% ambient sound attenuation.", "origin": "Kortrijk, Belgium"},
+    {"id": "hs-2", "x": 62, "y": 60, "label": "Tailored Mohair Lounge", "detail": "Hand-dyed Florentine mohair velvet with 100,000 Martindale durability.", "origin": "Florence, Italy"},
+    {"id": "hs-3", "x": 48, "y": 82, "label": "Botanical Relief Rug", "detail": "Hand-knotted Himalayan wool & mulberry silk at 150 knots/sq.in.", "origin": "Kathmandu, Nepal"}
+  ]'::jsonb,
+  1,
+  true
+),
+(
+  'como',
+  'Como Lakefront Villa',
+  'Lombardy, Italy',
+  'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=85',
+  'Light-responsive woven timber shades & raw Como silk window treatments.',
+  '[
+    {"id": "hs-4", "x": 35, "y": 30, "label": "Architectural Timber Shade", "detail": "Precision basswood slats woven with metallic copper filaments.", "origin": "Kyoto, Japan"},
+    {"id": "hs-5", "x": 70, "y": 52, "label": "Como Spun Silk Panels", "detail": "Lustrous raw silk woven on 19th-century jacquard looms.", "origin": "Como, Italy"}
+  ]'::jsonb,
+  2,
+  true
+),
+(
+  'mayfair',
+  'Mayfair Penthouse Suite',
+  'Mayfair, London',
+  'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1800&q=85',
+  'Padded silk-cashmere headboards & 1000-thread-count Giza cotton percale.',
+  '[
+    {"id": "hs-6", "x": 50, "y": 45, "label": "Quilted Cashmere Headboard", "detail": "Hand-tufted silk & cashmere topper with brass nailhead trim.", "origin": "Milan, Italy"},
+    {"id": "hs-7", "x": 25, "y": 70, "label": "Percale Bedding Suite", "detail": "Giza 45 extra-long staple Egyptian cotton with hand-hemstitched borders.", "origin": "Tuscany, Italy"}
+  ]'::jsonb,
+  3,
+  true
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- Seed Testimonials
 INSERT INTO public.testimonials (id, client_name, client_role, location, quote, rating, avatar, project_or_product, "order", is_featured, is_visible)

@@ -9,7 +9,8 @@ import type {
   HeaderNavLink,
   Testimonial,
   BrandPartner,
-  StorySettings
+  StorySettings,
+  FurnishingScene
 } from '../types';
 import { SHOWROOMS_DATA, BRANDS_DATA } from '../data/brandsData';
 import { PROJECTS_DATA } from '../data/projectsData';
@@ -779,7 +780,14 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   scheduleMonFri: '09:30 - 18:30',
   scheduleSat: '10:00 - 17:00',
   scheduleSun: 'By Private Appointment Only',
-  scheduleHolidays: 'Closed on UK & EU Bank Holidays'
+  scheduleHolidays: 'Closed on UK & EU Bank Holidays',
+
+  // Floating WhatsApp Concierge Widget
+  whatsappFloatingEnabled: true,
+  whatsappFloatingPosition: 'bottom-right',
+  whatsappFloatingNumber: '+44 7911 123456',
+  whatsappFloatingMessage: 'Hello Atelier Living Concierge, I would like to inquire about bespoke furnishings.',
+  whatsappFloatingTooltip: 'Chat with Concierge'
 };
 
 export const DEFAULT_CONTACT_SETTINGS: ContactSettings = {
@@ -1167,6 +1175,13 @@ export const fetchSiteSettingsFromSupabase = async (): Promise<SiteSettings> => 
           scheduleSun: data.schedule_sun || DEFAULT_SITE_SETTINGS.scheduleSun,
           scheduleHolidays: data.schedule_holidays || DEFAULT_SITE_SETTINGS.scheduleHolidays,
 
+          // Floating WhatsApp Concierge Widget
+          whatsappFloatingEnabled: data.whatsapp_floating_enabled ?? DEFAULT_SITE_SETTINGS.whatsappFloatingEnabled,
+          whatsappFloatingPosition: data.whatsapp_floating_position || DEFAULT_SITE_SETTINGS.whatsappFloatingPosition,
+          whatsappFloatingNumber: data.whatsapp_floating_number || DEFAULT_SITE_SETTINGS.whatsappFloatingNumber,
+          whatsappFloatingMessage: data.whatsapp_floating_message || DEFAULT_SITE_SETTINGS.whatsappFloatingMessage,
+          whatsappFloatingTooltip: data.whatsapp_floating_tooltip || DEFAULT_SITE_SETTINGS.whatsappFloatingTooltip,
+
           updatedAt: data.updated_at
         };
 
@@ -1310,6 +1325,14 @@ export const updateSiteSettingsInSupabase = async (
         schedule_sat: settings.scheduleSat,
         schedule_sun: settings.scheduleSun,
         schedule_holidays: settings.scheduleHolidays,
+
+        // Floating WhatsApp Concierge Widget
+        whatsapp_floating_enabled: settings.whatsappFloatingEnabled,
+        whatsapp_floating_position: settings.whatsappFloatingPosition,
+        whatsapp_floating_number: settings.whatsappFloatingNumber,
+        whatsapp_floating_message: settings.whatsappFloatingMessage,
+        whatsapp_floating_tooltip: settings.whatsappFloatingTooltip,
+
         updated_at: new Date().toISOString()
       });
 
@@ -2213,6 +2236,272 @@ export const updateStorySettingsInSupabase = async (
 
   return true;
 };
+
+// ==========================================
+// HOMEPAGE HERO SHOWCASE SLIDER CMS
+// ==========================================
+
+export const DEFAULT_HERO_SLIDES: FurnishingScene[] = [
+  {
+    id: 'belgravia',
+    title: 'Belgravia Grand Salon',
+    location: 'London, UK',
+    image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1800&q=85',
+    tagline: 'Floor-to-ceiling acoustic linen drapes paired with hand-knotted silk rugs.',
+    order: 1,
+    isVisible: true,
+    hotspots: [
+      {
+        id: 'hs-belgravia-1',
+        x: 28,
+        y: 35,
+        label: 'Acoustic Sheer Drapes',
+        detail: 'Fluid Belgian flax with 82% ambient sound attenuation.',
+        origin: 'Kortrijk, Belgium'
+      },
+      {
+        id: 'hs-belgravia-2',
+        x: 62,
+        y: 60,
+        label: 'Tailored Mohair Lounge',
+        detail: 'Hand-dyed Florentine mohair velvet with 100,000 Martindale durability.',
+        origin: 'Florence, Italy'
+      },
+      {
+        id: 'hs-belgravia-3',
+        x: 48,
+        y: 82,
+        label: 'Botanical Relief Rug',
+        detail: 'Hand-knotted Himalayan wool & mulberry silk at 150 knots/sq.in.',
+        origin: 'Kathmandu, Nepal'
+      }
+    ]
+  },
+  {
+    id: 'como',
+    title: 'Como Lakefront Villa',
+    location: 'Lombardy, Italy',
+    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=85',
+    tagline: 'Light-responsive woven timber shades & raw Como silk window treatments.',
+    order: 2,
+    isVisible: true,
+    hotspots: [
+      {
+        id: 'hs-como-1',
+        x: 35,
+        y: 30,
+        label: 'Architectural Timber Shade',
+        detail: 'Precision basswood slats woven with metallic copper filaments.',
+        origin: 'Kyoto, Japan'
+      },
+      {
+        id: 'hs-como-2',
+        x: 70,
+        y: 52,
+        label: 'Como Spun Silk Panels',
+        detail: 'Lustrous raw silk woven on 19th-century jacquard looms.',
+        origin: 'Como, Italy'
+      }
+    ]
+  },
+  {
+    id: 'mayfair',
+    title: 'Mayfair Penthouse Suite',
+    location: 'Mayfair, London',
+    image: 'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1800&q=85',
+    tagline: 'Padded silk-cashmere headboards & 1000-thread-count Giza cotton percale.',
+    order: 3,
+    isVisible: true,
+    hotspots: [
+      {
+        id: 'hs-mayfair-1',
+        x: 50,
+        y: 45,
+        label: 'Quilted Cashmere Headboard',
+        detail: 'Hand-tufted silk & cashmere topper with brass nailhead trim.',
+        origin: 'Milan, Italy'
+      },
+      {
+        id: 'hs-mayfair-2',
+        x: 25,
+        y: 70,
+        label: 'Percale Bedding Suite',
+        detail: 'Giza 45 extra-long staple Egyptian cotton with hand-hemstitched borders.',
+        origin: 'Tuscany, Italy'
+      }
+    ]
+  }
+];
+
+/**
+ * Fetch Homepage Hero Slides from Supabase or LocalStorage
+ */
+export const fetchHeroSlidesFromSupabase = async (): Promise<FurnishingScene[]> => {
+  const getDeletedHeroSlides = (): string[] => {
+    try {
+      const data = localStorage.getItem('atelier_deleted_hero_slides');
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const deletedKeys = getDeletedHeroSlides();
+
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('hero_slides')
+        .select('*')
+        .order('order', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        return data
+          .map((item) => ({
+            id: item.id,
+            title: item.title,
+            location: item.location || '',
+            image: item.image || '',
+            tagline: item.tagline || '',
+            hotspots: Array.isArray(item.hotspots) ? item.hotspots : [],
+            order: item.order ?? 1,
+            isVisible: item.is_visible !== false
+          }))
+          .filter((s) => !deletedKeys.includes(s.id));
+      }
+    } catch (err) {
+      console.warn('Error fetching hero slides from Supabase:', err);
+    }
+  }
+
+  // 2. Fallback to LocalStorage
+  try {
+    const saved = localStorage.getItem('atelier_hero_slides');
+    let list: FurnishingScene[] = DEFAULT_HERO_SLIDES;
+    if (saved) {
+      const parsed: FurnishingScene[] = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        list = parsed;
+      }
+    }
+    return list.filter((s) => !deletedKeys.includes(s.id));
+  } catch {
+    return DEFAULT_HERO_SLIDES.filter((s) => !deletedKeys.includes(s.id));
+  }
+};
+
+/**
+ * Save or update Homepage Hero Scene in Supabase & LocalStorage
+ */
+export const saveHeroSlideInSupabase = async (
+  slide: FurnishingScene,
+  adminEmail: string = 'admin@atelier-living.com'
+): Promise<boolean> => {
+  // 1. Sync to LocalStorage
+  try {
+    const saved = localStorage.getItem('atelier_hero_slides');
+    let list: FurnishingScene[] = saved ? JSON.parse(saved) : [...DEFAULT_HERO_SLIDES];
+    const existingIndex = list.findIndex((s) => s.id === slide.id);
+    if (existingIndex >= 0) {
+      list[existingIndex] = slide;
+    } else {
+      list.push(slide);
+    }
+    localStorage.setItem('atelier_hero_slides', JSON.stringify(list));
+
+    // Remove from deleted list if present
+    const delData = localStorage.getItem('atelier_deleted_hero_slides');
+    if (delData) {
+      const delList: string[] = JSON.parse(delData);
+      localStorage.setItem('atelier_deleted_hero_slides', JSON.stringify(delList.filter((id) => id !== slide.id)));
+    }
+
+    window.dispatchEvent(new Event('storage'));
+  } catch (e) {
+    console.warn('LocalStorage hero slide save error:', e);
+  }
+
+  // 2. Sync to Supabase
+  if (isSupabaseConfigured) {
+    try {
+      const { error } = await supabase.from('hero_slides').upsert({
+        id: slide.id,
+        title: slide.title,
+        location: slide.location,
+        image: slide.image,
+        tagline: slide.tagline,
+        hotspots: slide.hotspots,
+        order: slide.order ?? 1,
+        is_visible: slide.isVisible !== false,
+        updated_at: new Date().toISOString()
+      });
+
+      if (error) {
+        console.warn('Supabase hero_slides upsert error:', error);
+      } else {
+        await logAdminActivityInSupabase(
+          adminEmail,
+          'HERO_SLIDE_SAVED',
+          `Saved homepage hero scene: ${slide.title} [${slide.id}]`
+        );
+      }
+    } catch (err) {
+      console.warn('Exception updating hero slide in Supabase:', err);
+    }
+  }
+
+  return true;
+};
+
+/**
+ * Delete Homepage Hero Scene in Supabase & LocalStorage
+ */
+export const deleteHeroSlideInSupabase = async (
+  slideId: string,
+  adminEmail: string = 'admin@atelier-living.com'
+): Promise<boolean> => {
+  // 1. Sync to LocalStorage
+  try {
+    const delData = localStorage.getItem('atelier_deleted_hero_slides');
+    const delList: string[] = delData ? JSON.parse(delData) : [];
+    if (!delList.includes(slideId)) {
+      delList.push(slideId);
+      localStorage.setItem('atelier_deleted_hero_slides', JSON.stringify(delList));
+    }
+
+    const saved = localStorage.getItem('atelier_hero_slides');
+    if (saved) {
+      const parsed: FurnishingScene[] = JSON.parse(saved);
+      const filtered = parsed.filter((s) => s.id !== slideId);
+      localStorage.setItem('atelier_hero_slides', JSON.stringify(filtered));
+    }
+
+    window.dispatchEvent(new Event('storage'));
+  } catch (e) {
+    console.warn('LocalStorage hero slide delete error:', e);
+  }
+
+  // 2. Sync to Supabase
+  if (isSupabaseConfigured) {
+    try {
+      const { error } = await supabase.from('hero_slides').delete().eq('id', slideId);
+      if (error) {
+        console.warn('Supabase hero_slides delete error:', error);
+      } else {
+        await logAdminActivityInSupabase(
+          adminEmail,
+          'HERO_SLIDE_DELETED',
+          `Deleted homepage hero scene ID: ${slideId}`
+        );
+      }
+    } catch (err) {
+      console.warn('Exception deleting hero slide in Supabase:', err);
+    }
+  }
+
+  return true;
+};
+
 
 
 

@@ -3,6 +3,7 @@ import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
 import { SmoothScrollProvider } from './components/layout/SmoothScrollProvider';
 import { ScrollToTop } from './components/ui/ScrollToTop';
+import { FloatingWhatsApp } from './components/ui/FloatingWhatsApp';
 import { HomePage } from './pages/HomePage';
 import { StoryPage } from './pages/StoryPage';
 import { ProjectsPage } from './pages/ProjectsPage';
@@ -21,12 +22,22 @@ import {
   DEFAULT_TESTIMONIALS,
   DEFAULT_BRANDS_DATA,
   DEFAULT_STORY_SETTINGS,
+  DEFAULT_HERO_SLIDES,
   fetchTestimonialsFromSupabase,
   fetchBrandsFromSupabase,
-  fetchStorySettingsFromSupabase
+  fetchStorySettingsFromSupabase,
+  fetchHeroSlidesFromSupabase
 } from './lib/supabase';
 import { PROJECTS_DATA } from './data/projectsData';
-import type { CategorySlug, Project, SiteSettings, Testimonial, BrandPartner, StorySettings } from './types';
+import type {
+  CategorySlug,
+  Project,
+  SiteSettings,
+  Testimonial,
+  BrandPartner,
+  StorySettings,
+  FurnishingScene
+} from './types';
 import type { AdminUser } from './types/adminTypes';
 
 export function App() {
@@ -40,6 +51,7 @@ export function App() {
   const [testimonialsList, setTestimonialsList] = useState<Testimonial[]>(DEFAULT_TESTIMONIALS);
   const [brandsList, setBrandsList] = useState<BrandPartner[]>(DEFAULT_BRANDS_DATA);
   const [storySettings, setStorySettings] = useState<StorySettings>(DEFAULT_STORY_SETTINGS);
+  const [heroSlidesList, setHeroSlidesList] = useState<FurnishingScene[]>(DEFAULT_HERO_SLIDES);
 
   const loadLiveProjects = async () => {
     try {
@@ -96,12 +108,24 @@ export function App() {
     }
   };
 
+  const loadLiveHeroSlides = async () => {
+    try {
+      const slides = await fetchHeroSlidesFromSupabase();
+      if (slides && slides.length > 0) {
+        setHeroSlidesList(slides);
+      }
+    } catch (err) {
+      console.warn('Error loading live hero slides:', err);
+    }
+  };
+
   const loadAllData = () => {
     loadLiveProjects();
     loadLiveSiteSettings();
     loadLiveTestimonials();
     loadLiveBrands();
     loadLiveStorySettings();
+    loadLiveHeroSlides();
   };
 
   // Check URL pathname for /admin & restore saved admin session on initial load
@@ -129,7 +153,7 @@ export function App() {
     loadAllData();
   }, [activeTab]);
 
-  // Listen to cross-tab / master admin storage updates for projects, site settings, testimonials, brands, story
+  // Listen to cross-tab / master admin storage updates for projects, site settings, testimonials, brands, story, hero slides
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'atelier_custom_projects' || e.key === 'atelier_deleted_projects') {
@@ -146,6 +170,9 @@ export function App() {
       }
       if (e.key === 'atelier_story_settings') {
         loadLiveStorySettings();
+      }
+      if (e.key === 'atelier_hero_slides' || e.key === 'atelier_deleted_hero_slides') {
+        loadLiveHeroSlides();
       }
     };
     window.addEventListener('storage', handleStorage);
@@ -242,6 +269,7 @@ export function App() {
                   projects={projectsList}
                   brands={brandsList}
                   testimonials={testimonialsList}
+                  heroSlides={heroSlidesList}
                   onNavigate={handleNavigate}
                   onOpenProject={(prj) => setSelectedProjectModal(prj)}
                   onRequestSwatches={() => setIsSampleModalOpen(true)}
@@ -268,7 +296,7 @@ export function App() {
 
               {activeTab === 'brands' && <BrandsPage brands={brandsList} />}
 
-              {activeTab === 'contact' && <ContactPage />}
+              {activeTab === 'contact' && <ContactPage siteSettings={siteSettings} />}
             </main>
 
             {/* Global Footer */}
@@ -291,8 +319,11 @@ export function App() {
               defaultCategory={activeCategorySlug}
             />
 
+            {/* Global Floating WhatsApp Concierge Button */}
+            <FloatingWhatsApp siteSettings={siteSettings} />
+
             {/* Animated Luxury Floating Scroll to Top Button */}
-            <ScrollToTop />
+            <ScrollToTop siteSettings={siteSettings} />
           </div>
         </SmoothScrollProvider>
       )}
