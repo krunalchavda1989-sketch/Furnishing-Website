@@ -10,7 +10,9 @@ import type {
   Testimonial,
   BrandPartner,
   StorySettings,
-  FurnishingScene
+  FurnishingScene,
+  MarketingSettings,
+  PageSEOConfig
 } from '../types';
 import { SHOWROOMS_DATA, BRANDS_DATA } from '../data/brandsData';
 import { PROJECTS_DATA } from '../data/projectsData';
@@ -2501,6 +2503,315 @@ export const deleteHeroSlideInSupabase = async (
 
   return true;
 };
+
+// =======================================================
+// SEO & WEB MARKETING SUITE DATA & SUPABASE SYNC
+// =======================================================
+
+export const DEFAULT_PAGES_SEO: PageSEOConfig[] = [
+  {
+    pageId: 'home',
+    pageName: 'Home Atmosphere Showcase',
+    routePath: '/',
+    metaTitle: 'Atelier Living | Haute Living, Bespoke Drapes & Luxury Furnishings',
+    metaDescription: 'Discover Atelier Living: bespoke artisanal textiles, couture window treatments, bespoke drapes, wallcoverings, and European master craft furnishings.',
+    keywords: 'luxury furnishings, bespoke curtains, couture textiles, acoustic drapes, interior atelier, high-end upholstery, luxury residence styling',
+    canonicalUrl: 'https://atelier-living.com/',
+    ogTitle: 'Atelier Living | Bespoke Haute Living & Furnishings',
+    ogDescription: 'Curated European textiles, acoustic drapes, and bespoke interior furnishings for distinguished private residences.',
+    ogImage: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=80',
+    ogType: 'website',
+    twitterCard: 'summary_large_image',
+    twitterTitle: 'Atelier Living | Bespoke Haute Living & Furnishings',
+    twitterDescription: 'Curated European textiles, acoustic drapes, and bespoke interior furnishings for distinguished private residences.',
+    twitterImage: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=80',
+    robotsIndex: true,
+    robotsFollow: true,
+    structuredDataJson: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'HomeGoodsStore',
+      'name': 'Atelier Living',
+      'image': 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=80',
+      'description': 'Haute interior furnishings, bespoke curtains, artisanal upholstery, and architectural drapery for luxury residences.',
+      'url': 'https://atelier-living.com',
+      'telephone': '+44 20 7946 0912',
+      'priceRange': '$$$$',
+      'address': {
+        '@type': 'PostalAddress',
+        'streetAddress': '42 Grosvenor Crescent, Belgravia',
+        'addressLocality': 'London',
+        'postalCode': 'SW1X 7EE',
+        'addressCountry': 'GB'
+      }
+    }, null, 2)
+  },
+  {
+    pageId: 'story',
+    pageName: 'Our Story & Craft Heritage',
+    routePath: '/story',
+    metaTitle: 'Our Story & European Mill Heritage | Atelier Living',
+    metaDescription: 'Three decades of partnering with venerable European textile mills in Como, Flanders, Lyon, and Florence. Experience the art of bespoke fabrication.',
+    keywords: 'textile heritage, Como silk weaving, Flanders linen, Belgian jacquard, Lyon velvet, bespoke curtain atelier',
+    canonicalUrl: 'https://atelier-living.com/story',
+    ogTitle: 'Our Story & Heritage | Atelier Living',
+    ogDescription: 'Three decades of partnering with venerable European textile mills.',
+    ogImage: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=80',
+    ogType: 'article',
+    twitterCard: 'summary_large_image',
+    twitterTitle: 'Our Story & Heritage | Atelier Living',
+    twitterDescription: 'Three decades of partnering with venerable European textile mills.',
+    twitterImage: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=80',
+    robotsIndex: true,
+    robotsFollow: true,
+    structuredDataJson: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'AboutPage',
+      'name': 'Our Story - Atelier Living',
+      'description': 'History and craft heritage of Atelier Living and its master European textile partners.'
+    }, null, 2)
+  },
+  {
+    pageId: 'projects',
+    pageName: 'Residence Portfolio',
+    routePath: '/projects',
+    metaTitle: 'Private Residences & Architectural Portfolio | Atelier Living',
+    metaDescription: 'Explore completed residential commissions spanning Mayfair penthouses, Lake Como villas, Zurich chalets, and Beverly Hills estates.',
+    keywords: 'luxury interior projects, penthouse drapery, villa furnishing portfolio, bespoke acoustic sheers, residence gallery',
+    canonicalUrl: 'https://atelier-living.com/projects',
+    ogTitle: 'Residence Portfolio | Atelier Living',
+    ogDescription: 'Architectural drapery and bespoke furnishings in luxury private residences worldwide.',
+    ogImage: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80',
+    ogType: 'website',
+    twitterCard: 'summary_large_image',
+    twitterTitle: 'Residence Portfolio | Atelier Living',
+    twitterDescription: 'Architectural drapery and bespoke furnishings in luxury private residences worldwide.',
+    twitterImage: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80',
+    robotsIndex: true,
+    robotsFollow: true
+  },
+  {
+    pageId: 'catalogue',
+    pageName: 'Product Catalogue & Haute Materials',
+    routePath: '/category/fabrics',
+    metaTitle: 'Haute Textiles, Wallcoverings & Luxury Rugs | Atelier Living',
+    metaDescription: 'Browse the archival collection of bespoke fabrics, acoustic sheers, motorized drapery, natural wallcoverings, and hand-tufted silk rugs.',
+    keywords: 'designer fabrics, acoustic drapery, luxury wallpaper, custom silk rugs, motorized blinds, wool bouclé',
+    canonicalUrl: 'https://atelier-living.com/category/fabrics',
+    ogTitle: 'Haute Textiles & Product Catalogue | Atelier Living',
+    ogDescription: 'Archival collection of bespoke fabrics, acoustic drapery, wallcoverings, and hand-tufted rugs.',
+    ogImage: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=80',
+    ogType: 'website',
+    twitterCard: 'summary_large_image',
+    twitterTitle: 'Haute Textiles & Product Catalogue | Atelier Living',
+    twitterDescription: 'Archival collection of bespoke fabrics, acoustic drapery, wallcoverings, and hand-tufted rugs.',
+    twitterImage: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=80',
+    robotsIndex: true,
+    robotsFollow: true
+  },
+  {
+    pageId: 'brands',
+    pageName: 'Partner Brands & European Mills',
+    routePath: '/brands',
+    metaTitle: 'Prestigious European Mill Partners | Atelier Living',
+    metaDescription: 'Collaborations with heritage European textile powerhouses: Rubelli Venice, Loro Piana Interiors, Pierre Frey Paris, Dedar Milano, and Sahco.',
+    keywords: 'Rubelli Venice, Loro Piana Interiors, Pierre Frey, Dedar Milano, Sahco, Zimmer Rohde, luxury fabric brands',
+    canonicalUrl: 'https://atelier-living.com/brands',
+    ogTitle: 'Prestigious European Mill Partners | Atelier Living',
+    ogDescription: 'Collaborations with heritage European textile powerhouses and master weavers.',
+    ogImage: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80',
+    ogType: 'website',
+    twitterCard: 'summary_large_image',
+    twitterTitle: 'Prestigious European Mill Partners | Atelier Living',
+    twitterDescription: 'Collaborations with heritage European textile powerhouses and master weavers.',
+    twitterImage: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80',
+    robotsIndex: true,
+    robotsFollow: true
+  },
+  {
+    pageId: 'contact',
+    pageName: 'Flagship Atelier & Private Consultations',
+    routePath: '/contact',
+    metaTitle: 'Private Client Consultations & Flagship Atelier | Atelier Living',
+    metaDescription: 'Book a bespoke private curation consultation at our Belgravia Flagship Atelier or arrange a discreet residence walkthrough with our Senior Curators.',
+    keywords: 'private interior consultation, Belgravia atelier appointment, swatch sampling request, bespoke drapery fitting',
+    canonicalUrl: 'https://atelier-living.com/contact',
+    ogTitle: 'Private Consultations & Contact | Atelier Living',
+    ogDescription: 'Book a bespoke private consultation at our Belgravia Flagship Atelier.',
+    ogImage: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80',
+    ogType: 'website',
+    twitterCard: 'summary_large_image',
+    twitterTitle: 'Private Consultations & Contact | Atelier Living',
+    twitterDescription: 'Book a bespoke private consultation at our Belgravia Flagship Atelier.',
+    twitterImage: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80',
+    robotsIndex: true,
+    robotsFollow: true
+  }
+];
+
+export const DEFAULT_MARKETING_SETTINGS: MarketingSettings = {
+  id: 'default',
+  webmaster: {
+    googleSiteVerification: '',
+    bingSiteVerification: '',
+    yandexVerification: '',
+    pinterestVerification: '',
+    baiduVerification: '',
+    customVerificationMeta: '',
+    robotsTxtContent: `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /admin/\n\nSitemap: https://atelier-living.com/sitemap.xml`,
+    sitemapUrl: 'https://atelier-living.com/sitemap.xml'
+  },
+  pagesSEO: DEFAULT_PAGES_SEO,
+  googleAnalytics: {
+    enabled: false,
+    type: 'ga4',
+    measurementId: '',
+    sendPageViewOnRouteChange: true,
+    anonymizeIp: true
+  },
+  metaPixel: {
+    enabled: false,
+    pixelId: '',
+    trackPageViewOnRouteChange: true,
+    trackCustomEvents: true
+  },
+  codeInjection: {
+    enabled: true,
+    headerCode: '<!-- Custom Header Code & CSS Styles -->\n<style>\n  /* Atelier Custom Luxury Styling Hook */\n</style>',
+    bodyOpenCode: '<!-- Custom Body Start Scripts -->',
+    footerCode: '<!-- Custom Footer & Chat Widget Scripts -->'
+  }
+};
+
+/**
+ * Fetch Marketing, SEO, Analytics & Code Injection settings from Supabase (with LocalStorage fallback)
+ */
+export const fetchMarketingSettingsFromSupabase = async (): Promise<MarketingSettings> => {
+  // 1. Try Supabase Cloud
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('marketing_settings')
+        .select('*')
+        .eq('id', 'default')
+        .maybeSingle();
+
+      if (data && !error) {
+        const merged: MarketingSettings = {
+          id: 'default',
+          webmaster: {
+            ...DEFAULT_MARKETING_SETTINGS.webmaster,
+            ...(data.webmaster || {})
+          },
+          pagesSEO: data.pages_seo && Array.isArray(data.pages_seo) && data.pages_seo.length > 0
+            ? data.pages_seo
+            : DEFAULT_PAGES_SEO,
+          googleAnalytics: {
+            ...DEFAULT_MARKETING_SETTINGS.googleAnalytics,
+            ...(data.google_analytics || {})
+          },
+          metaPixel: {
+            ...DEFAULT_MARKETING_SETTINGS.metaPixel,
+            ...(data.meta_pixel || {})
+          },
+          codeInjection: {
+            ...DEFAULT_MARKETING_SETTINGS.codeInjection,
+            ...(data.code_injection || {})
+          },
+          updatedAt: data.updated_at
+        };
+
+        // Cache in LocalStorage
+        try {
+          localStorage.setItem('atelier_marketing_settings', JSON.stringify(merged));
+        } catch {
+          // ignore
+        }
+        return merged;
+      }
+    } catch (err) {
+      console.warn('Supabase fetch marketing_settings error, using local fallback:', err);
+    }
+  }
+
+  // 2. LocalStorage Fallback
+  try {
+    const saved = localStorage.getItem('atelier_marketing_settings');
+    if (saved) {
+      const parsed: Partial<MarketingSettings> = JSON.parse(saved);
+      return {
+        id: 'default',
+        webmaster: { ...DEFAULT_MARKETING_SETTINGS.webmaster, ...(parsed.webmaster || {}) },
+        pagesSEO: parsed.pagesSEO && Array.isArray(parsed.pagesSEO) && parsed.pagesSEO.length > 0
+          ? parsed.pagesSEO
+          : DEFAULT_PAGES_SEO,
+        googleAnalytics: { ...DEFAULT_MARKETING_SETTINGS.googleAnalytics, ...(parsed.googleAnalytics || {}) },
+        metaPixel: { ...DEFAULT_MARKETING_SETTINGS.metaPixel, ...(parsed.metaPixel || {}) },
+        codeInjection: { ...DEFAULT_MARKETING_SETTINGS.codeInjection, ...(parsed.codeInjection || {}) },
+        updatedAt: parsed.updatedAt
+      };
+    }
+  } catch (e) {
+    console.warn('LocalStorage marketing_settings parse error:', e);
+  }
+
+  return DEFAULT_MARKETING_SETTINGS;
+};
+
+/**
+ * Save / Update Marketing & SEO Settings in Supabase and LocalStorage
+ */
+export const updateMarketingSettingsInSupabase = async (
+  settings: MarketingSettings,
+  adminEmail: string = 'admin@atelier-living.com'
+): Promise<boolean> => {
+  const updatedObj: MarketingSettings = {
+    ...settings,
+    id: 'default',
+    updatedAt: new Date().toISOString()
+  };
+
+  // 1. Save to LocalStorage immediately and dispatch reactive storage event
+  try {
+    localStorage.setItem('atelier_marketing_settings', JSON.stringify(updatedObj));
+    window.dispatchEvent(new Event('storage'));
+  } catch (e) {
+    console.warn('LocalStorage save marketing_settings error:', e);
+  }
+
+  // 2. Persist to Supabase Cloud
+  if (isSupabaseConfigured) {
+    try {
+      const payload = {
+        id: 'default',
+        webmaster: updatedObj.webmaster,
+        pages_seo: updatedObj.pagesSEO,
+        google_analytics: updatedObj.googleAnalytics,
+        meta_pixel: updatedObj.metaPixel,
+        code_injection: updatedObj.codeInjection,
+        updated_at: updatedObj.updatedAt
+      };
+
+      const { error } = await supabase
+        .from('marketing_settings')
+        .upsert(payload, { onConflict: 'id' });
+
+      if (error) {
+        console.warn('Supabase upsert marketing_settings error:', error);
+      } else {
+        await logAdminActivityInSupabase(
+          adminEmail,
+          'MARKETING_SEO_SETTINGS_UPDATED',
+          'Updated Webmaster, Page-wise SEO, Google Analytics, Meta Pixel, and Code Injection settings'
+        );
+      }
+    } catch (err) {
+      console.warn('Exception updating marketing_settings in Supabase:', err);
+    }
+  }
+
+  return true;
+};
+
 
 
 

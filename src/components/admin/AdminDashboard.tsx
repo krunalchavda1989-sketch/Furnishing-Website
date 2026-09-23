@@ -72,7 +72,8 @@ import type {
   StoryMilestone,
   StoryGalleryItem,
   FurnishingScene,
-  HeroHotspot
+  HeroHotspot,
+  MarketingSettings
 } from '../../types';
 import { CATEGORIES_DATA } from '../../data/categoriesData';
 import { PRODUCTS_DATA } from '../../data/productsData';
@@ -121,8 +122,11 @@ import {
   updateStorySettingsInSupabase,
   fetchHeroSlidesFromSupabase,
   saveHeroSlideInSupabase,
-  deleteHeroSlideInSupabase
+  deleteHeroSlideInSupabase,
+  DEFAULT_MARKETING_SETTINGS,
+  fetchMarketingSettingsFromSupabase
 } from '../../lib/supabase';
+import { AdminMarketingSuite } from './AdminMarketingSuite';
 import { useToast } from '../ui/ToastNotification';
 import { ConfirmDeleteModal } from '../ui/ConfirmDeleteModal';
 import { ImageUploader } from '../ui/ImageUploader';
@@ -240,10 +244,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onReturnToSite
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'inquiries' | 'products' | 'swatches' | 'audit-logs' | 'projects' | 'settings' | 'newsletter' | 'site-branding'
+    'overview' | 'inquiries' | 'products' | 'swatches' | 'audit-logs' | 'projects' | 'settings' | 'newsletter' | 'site-branding' | 'marketing-seo'
   >('overview');
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Marketing & SEO State
+  const [marketingSettings, setMarketingSettings] = useState<MarketingSettings>(() => {
+    try {
+      const saved = localStorage.getItem('atelier_marketing_settings');
+      if (saved) return { ...DEFAULT_MARKETING_SETTINGS, ...JSON.parse(saved) };
+    } catch {}
+    return DEFAULT_MARKETING_SETTINGS;
+  });
 
   // Site Branding & Navigation State
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(() => {
@@ -659,6 +672,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const slides = await fetchHeroSlidesFromSupabase();
     if (slides && slides.length > 0) {
       setHeroSlidesList(slides);
+    }
+
+    // 15. Fetch Marketing & SEO Settings
+    const mkt = await fetchMarketingSettingsFromSupabase();
+    if (mkt) {
+      setMarketingSettings(mkt);
     }
   };
 
@@ -1857,6 +1876,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           id: 'site-branding',
           label: 'Site Branding & Nav',
           icon: SlidersHorizontal
+        }
+      ]
+    },
+    {
+      category: 'MARKETING & INTEGRATIONS',
+      items: [
+        {
+          id: 'marketing-seo',
+          label: 'SEO & Marketing Suite',
+          icon: Globe,
+          badge: (marketingSettings.googleAnalytics.enabled ? 1 : 0) + (marketingSettings.metaPixel.enabled ? 1 : 0),
+          badgeColor: 'bg-emerald-500 text-black'
         }
       ]
     },
@@ -6637,6 +6668,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </div>
           </div>
+        )}
+
+        {/* ================= MARKETING & SEO SUITE ================= */}
+        {activeTab === 'marketing-seo' && (
+          <AdminMarketingSuite
+            marketingSettings={marketingSettings}
+            onUpdateMarketingSettings={(updated) => setMarketingSettings(updated)}
+            adminEmail={user.email}
+          />
         )}
       </main>
 

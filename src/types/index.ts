@@ -333,4 +333,72 @@ export interface StorySettings {
   updatedAt?: string;
 }
 
+// ==========================================
+// SEO & WEB MARKETING SUITE TYPES
+// ==========================================
+
+export interface PageSEOConfig {
+  pageId: string; // 'home' | 'story' | 'projects' | 'catalogue' | 'brands' | 'contact'
+  pageName: string;
+  routePath: string;
+  metaTitle: string;
+  metaDescription: string;
+  keywords: string;
+  canonicalUrl?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogImage?: string;
+  ogType?: 'website' | 'article' | 'product';
+  twitterCard?: 'summary' | 'summary_large_image';
+  twitterTitle?: string;
+  twitterDescription?: string;
+  twitterImage?: string;
+  robotsIndex: boolean;
+  robotsFollow: boolean;
+  structuredDataJson?: string;
+}
+
+export interface WebmasterVerificationSettings {
+  googleSiteVerification?: string;
+  bingSiteVerification?: string;
+  yandexVerification?: string;
+  pinterestVerification?: string;
+  baiduVerification?: string;
+  customVerificationMeta?: string;
+  robotsTxtContent?: string;
+  sitemapUrl?: string;
+}
+
+export interface GoogleAnalyticsSettings {
+  enabled: boolean;
+  type: 'ga4' | 'gtm';
+  measurementId: string; // e.g. G-XXXXXXXXXX or GTM-XXXXXXX
+  sendPageViewOnRouteChange: boolean;
+  anonymizeIp?: boolean;
+}
+
+export interface MetaPixelSettings {
+  enabled: boolean;
+  pixelId: string;
+  trackPageViewOnRouteChange: boolean;
+  trackCustomEvents: boolean;
+}
+
+export interface CodeInjectionSettings {
+  enabled: boolean;
+  headerCode: string; // Injected into <head>
+  bodyOpenCode: string; // Injected top of <body>
+  footerCode: string; // Injected before </body>
+}
+
+export interface MarketingSettings {
+  id?: string;
+  webmaster: WebmasterVerificationSettings;
+  pagesSEO: PageSEOConfig[];
+  googleAnalytics: GoogleAnalyticsSettings;
+  metaPixel: MetaPixelSettings;
+  codeInjection: CodeInjectionSettings;
+  updatedAt?: string;
+}
+
 

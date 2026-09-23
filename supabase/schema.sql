@@ -506,3 +506,198 @@ VALUES
 ('prj-02', 'Villa d''Este Lakeside Pavilion', 'Heritage Estate', 'Lake Como, Italy', '2024', 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85', ARRAY['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85'], 'Floor-to-ceiling sheer acoustic drapes and custom hand-knotted silk rugs for a private lakefront salon.', 'Studio Vance & Partners', '[{"productName": "Symphony Acoustic Linen Sheer", "category": "curtains-upholstery", "notes": "Sun-drenched salon"}]'::jsonb),
 ('prj-03', 'Tribeca Sky Penthouse', 'Modern Penthouse', 'New York, USA', '2026', 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85', ARRAY['https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85'], 'Curvilinear alpaca bouclé seating paired with motorized woven timber Roman shades throughout a 7,000 sq ft duplex.', 'Atelier Living Studio', '[{"productName": "Verona Sculpted Bouclé Upholstery", "category": "curtains-upholstery", "notes": "Curved sofa seating"}]'::jsonb)
 ON CONFLICT (id) DO NOTHING;
+
+-- 15. Create Marketing, SEO, Analytics & Code Injection Table
+CREATE TABLE IF NOT EXISTS public.marketing_settings (
+  id TEXT PRIMARY KEY DEFAULT 'default',
+  webmaster JSONB DEFAULT '{
+    "googleSiteVerification": "",
+    "bingSiteVerification": "",
+    "yandexVerification": "",
+    "pinterestVerification": "",
+    "baiduVerification": "",
+    "customVerificationMeta": "",
+    "robotsTxtContent": "User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /admin/\n\nSitemap: https://atelier-living.com/sitemap.xml",
+    "sitemapUrl": "https://atelier-living.com/sitemap.xml"
+  }'::jsonb,
+  pages_seo JSONB DEFAULT '[]'::jsonb,
+  google_analytics JSONB DEFAULT '{
+    "enabled": false,
+    "type": "ga4",
+    "measurementId": "",
+    "sendPageViewOnRouteChange": true,
+    "anonymizeIp": true
+  }'::jsonb,
+  meta_pixel JSONB DEFAULT '{
+    "enabled": false,
+    "pixelId": "",
+    "trackPageViewOnRouteChange": true,
+    "trackCustomEvents": true
+  }'::jsonb,
+  code_injection JSONB DEFAULT '{
+    "enabled": true,
+    "headerCode": "<!-- Custom Header Code & CSS Styles -->\n<style>\n  /* Atelier Custom Luxury Styling Hook */\n</style>",
+    "bodyOpenCode": "<!-- Custom Body Start Scripts -->",
+    "footerCode": "<!-- Custom Footer & Chat Widget Scripts -->"
+  }'::jsonb,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.marketing_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public select marketing_settings" ON public.marketing_settings;
+CREATE POLICY "Public select marketing_settings" ON public.marketing_settings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admin modify marketing_settings" ON public.marketing_settings;
+CREATE POLICY "Admin modify marketing_settings" ON public.marketing_settings FOR ALL USING (true);
+
+-- Seed Default Marketing Settings
+INSERT INTO public.marketing_settings (id, webmaster, pages_seo, google_analytics, meta_pixel, code_injection)
+VALUES (
+  'default',
+  '{
+    "googleSiteVerification": "",
+    "bingSiteVerification": "",
+    "yandexVerification": "",
+    "pinterestVerification": "",
+    "baiduVerification": "",
+    "customVerificationMeta": "",
+    "robotsTxtContent": "User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /admin/\n\nSitemap: https://atelier-living.com/sitemap.xml",
+    "sitemapUrl": "https://atelier-living.com/sitemap.xml"
+  }'::jsonb,
+  '[
+    {
+      "pageId": "home",
+      "pageName": "Home Atmosphere Showcase",
+      "routePath": "/",
+      "metaTitle": "Atelier Living | Haute Living, Bespoke Drapes & Luxury Furnishings",
+      "metaDescription": "Discover Atelier Living: bespoke artisanal textiles, couture window treatments, bespoke drapes, wallcoverings, and European master craft furnishings.",
+      "keywords": "luxury furnishings, bespoke curtains, couture textiles, acoustic drapes, interior atelier, high-end upholstery, luxury residence styling",
+      "canonicalUrl": "https://atelier-living.com/",
+      "ogTitle": "Atelier Living | Bespoke Haute Living & Furnishings",
+      "ogDescription": "Curated European textiles, acoustic drapes, and bespoke interior furnishings for distinguished private residences.",
+      "ogImage": "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=80",
+      "ogType": "website",
+      "twitterCard": "summary_large_image",
+      "twitterTitle": "Atelier Living | Bespoke Haute Living & Furnishings",
+      "twitterDescription": "Curated European textiles, acoustic drapes, and bespoke interior furnishings for distinguished private residences.",
+      "twitterImage": "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=80",
+      "robotsIndex": true,
+      "robotsFollow": true
+    },
+    {
+      "pageId": "story",
+      "pageName": "Our Story & Craft Heritage",
+      "routePath": "/story",
+      "metaTitle": "Our Story & European Mill Heritage | Atelier Living",
+      "metaDescription": "Three decades of partnering with venerable European textile mills in Como, Flanders, Lyon, and Florence. Experience the art of bespoke fabrication.",
+      "keywords": "textile heritage, Como silk weaving, Flanders linen, Belgian jacquard, Lyon velvet, bespoke curtain atelier",
+      "canonicalUrl": "https://atelier-living.com/story",
+      "ogTitle": "Our Story & Heritage | Atelier Living",
+      "ogDescription": "Three decades of partnering with venerable European textile mills.",
+      "ogImage": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=80",
+      "ogType": "article",
+      "twitterCard": "summary_large_image",
+      "twitterTitle": "Our Story & Heritage | Atelier Living",
+      "twitterDescription": "Three decades of partnering with venerable European textile mills.",
+      "twitterImage": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=80",
+      "robotsIndex": true,
+      "robotsFollow": true
+    },
+    {
+      "pageId": "projects",
+      "pageName": "Residence Portfolio",
+      "routePath": "/projects",
+      "metaTitle": "Private Residences & Architectural Portfolio | Atelier Living",
+      "metaDescription": "Explore completed residential commissions spanning Mayfair penthouses, Lake Como villas, Zurich chalets, and Beverly Hills estates.",
+      "keywords": "luxury interior projects, penthouse drapery, villa furnishing portfolio, bespoke acoustic sheers, residence gallery",
+      "canonicalUrl": "https://atelier-living.com/projects",
+      "ogTitle": "Residence Portfolio | Atelier Living",
+      "ogDescription": "Architectural drapery and bespoke furnishings in luxury private residences worldwide.",
+      "ogImage": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80",
+      "ogType": "website",
+      "twitterCard": "summary_large_image",
+      "twitterTitle": "Residence Portfolio | Atelier Living",
+      "twitterDescription": "Architectural drapery and bespoke furnishings in luxury private residences worldwide.",
+      "twitterImage": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80",
+      "robotsIndex": true,
+      "robotsFollow": true
+    },
+    {
+      "pageId": "catalogue",
+      "pageName": "Product Catalogue & Haute Materials",
+      "routePath": "/category/fabrics",
+      "metaTitle": "Haute Textiles, Wallcoverings & Luxury Rugs | Atelier Living",
+      "metaDescription": "Browse the archival collection of bespoke fabrics, acoustic sheers, motorized drapery, natural wallcoverings, and hand-tufted silk rugs.",
+      "keywords": "designer fabrics, acoustic drapery, luxury wallpaper, custom silk rugs, motorized blinds, wool bouclé",
+      "canonicalUrl": "https://atelier-living.com/category/fabrics",
+      "ogTitle": "Haute Textiles & Product Catalogue | Atelier Living",
+      "ogDescription": "Archival collection of bespoke fabrics, acoustic drapery, wallcoverings, and hand-tufted rugs.",
+      "ogImage": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=80",
+      "ogType": "website",
+      "twitterCard": "summary_large_image",
+      "twitterTitle": "Haute Textiles & Product Catalogue | Atelier Living",
+      "twitterDescription": "Archival collection of bespoke fabrics, acoustic drapery, wallcoverings, and hand-tufted rugs.",
+      "twitterImage": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=80",
+      "robotsIndex": true,
+      "robotsFollow": true
+    },
+    {
+      "pageId": "brands",
+      "pageName": "Partner Brands & European Mills",
+      "routePath": "/brands",
+      "metaTitle": "Prestigious European Mill Partners | Atelier Living",
+      "metaDescription": "Collaborations with heritage European textile powerhouses: Rubelli Venice, Loro Piana Interiors, Pierre Frey Paris, Dedar Milano, and Sahco.",
+      "keywords": "Rubelli Venice, Loro Piana Interiors, Pierre Frey, Dedar Milano, Sahco, Zimmer Rohde, luxury fabric brands",
+      "canonicalUrl": "https://atelier-living.com/brands",
+      "ogTitle": "Prestigious European Mill Partners | Atelier Living",
+      "ogDescription": "Collaborations with heritage European textile powerhouses and master weavers.",
+      "ogImage": "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80",
+      "ogType": "website",
+      "twitterCard": "summary_large_image",
+      "twitterTitle": "Prestigious European Mill Partners | Atelier Living",
+      "twitterDescription": "Collaborations with heritage European textile powerhouses and master weavers.",
+      "twitterImage": "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80",
+      "robotsIndex": true,
+      "robotsFollow": true
+    },
+    {
+      "pageId": "contact",
+      "pageName": "Flagship Atelier & Private Consultations",
+      "routePath": "/contact",
+      "metaTitle": "Private Client Consultations & Flagship Atelier | Atelier Living",
+      "metaDescription": "Book a bespoke private curation consultation at our Belgravia Flagship Atelier or arrange a discreet residence walkthrough with our Senior Curators.",
+      "keywords": "private interior consultation, Belgravia atelier appointment, swatch sampling request, bespoke drapery fitting",
+      "canonicalUrl": "https://atelier-living.com/contact",
+      "ogTitle": "Private Consultations & Contact | Atelier Living",
+      "ogDescription": "Book a bespoke private consultation at our Belgravia Flagship Atelier.",
+      "ogImage": "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80",
+      "ogType": "website",
+      "twitterCard": "summary_large_image",
+      "twitterTitle": "Private Consultations & Contact | Atelier Living",
+      "twitterDescription": "Book a bespoke private consultation at our Belgravia Flagship Atelier.",
+      "twitterImage": "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80",
+      "robotsIndex": true,
+      "robotsFollow": true
+    }
+  ]'::jsonb,
+  '{
+    "enabled": false,
+    "type": "ga4",
+    "measurementId": "",
+    "sendPageViewOnRouteChange": true,
+    "anonymizeIp": true
+  }'::jsonb,
+  '{
+    "enabled": false,
+    "pixelId": "",
+    "trackPageViewOnRouteChange": true,
+    "trackCustomEvents": true
+  }'::jsonb,
+  '{
+    "enabled": true,
+    "headerCode": "<!-- Custom Header Code & CSS Styles -->\n<style>\n  /* Atelier Custom Luxury Styling Hook */\n</style>",
+    "bodyOpenCode": "<!-- Custom Body Start Scripts -->",
+    "footerCode": "<!-- Custom Footer & Chat Widget Scripts -->"
+  }'::jsonb
+)
+ON CONFLICT (id) DO NOTHING;
+

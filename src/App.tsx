@@ -4,6 +4,7 @@ import { Footer } from './components/layout/Footer';
 import { SmoothScrollProvider } from './components/layout/SmoothScrollProvider';
 import { ScrollToTop } from './components/ui/ScrollToTop';
 import { FloatingWhatsApp } from './components/ui/FloatingWhatsApp';
+import { MarketingRuntimeManager } from './components/marketing/MarketingRuntimeManager';
 import { HomePage } from './pages/HomePage';
 import { StoryPage } from './pages/StoryPage';
 import { ProjectsPage } from './pages/ProjectsPage';
@@ -23,10 +24,12 @@ import {
   DEFAULT_BRANDS_DATA,
   DEFAULT_STORY_SETTINGS,
   DEFAULT_HERO_SLIDES,
+  DEFAULT_MARKETING_SETTINGS,
   fetchTestimonialsFromSupabase,
   fetchBrandsFromSupabase,
   fetchStorySettingsFromSupabase,
-  fetchHeroSlidesFromSupabase
+  fetchHeroSlidesFromSupabase,
+  fetchMarketingSettingsFromSupabase
 } from './lib/supabase';
 import { PROJECTS_DATA } from './data/projectsData';
 import type {
@@ -36,7 +39,8 @@ import type {
   Testimonial,
   BrandPartner,
   StorySettings,
-  FurnishingScene
+  FurnishingScene,
+  MarketingSettings
 } from './types';
 import type { AdminUser } from './types/adminTypes';
 
@@ -86,6 +90,7 @@ export function App() {
   const [brandsList, setBrandsList] = useState<BrandPartner[]>(DEFAULT_BRANDS_DATA);
   const [storySettings, setStorySettings] = useState<StorySettings>(DEFAULT_STORY_SETTINGS);
   const [heroSlidesList, setHeroSlidesList] = useState<FurnishingScene[]>(DEFAULT_HERO_SLIDES);
+  const [marketingSettings, setMarketingSettings] = useState<MarketingSettings>(DEFAULT_MARKETING_SETTINGS);
 
   const loadLiveProjects = async () => {
     try {
@@ -153,6 +158,17 @@ export function App() {
     }
   };
 
+  const loadLiveMarketingSettings = async () => {
+    try {
+      const mkt = await fetchMarketingSettingsFromSupabase();
+      if (mkt) {
+        setMarketingSettings(mkt);
+      }
+    } catch (err) {
+      console.warn('Error loading live marketing settings:', err);
+    }
+  };
+
   const loadAllData = useCallback(() => {
     loadLiveProjects();
     loadLiveSiteSettings();
@@ -160,6 +176,7 @@ export function App() {
     loadLiveBrands();
     loadLiveStorySettings();
     loadLiveHeroSlides();
+    loadLiveMarketingSettings();
   }, []);
 
   // Sync state from location on initial load and restore admin session
@@ -188,7 +205,7 @@ export function App() {
     loadAllData();
   }, [activeTab, loadAllData]);
 
-  // Listen to cross-tab / master admin storage updates for projects, site settings, testimonials, brands, story, hero slides
+  // Listen to cross-tab / master admin storage updates for projects, site settings, testimonials, brands, story, hero slides, marketing
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'atelier_custom_projects' || e.key === 'atelier_deleted_projects') {
@@ -208,6 +225,9 @@ export function App() {
       }
       if (e.key === 'atelier_hero_slides' || e.key === 'atelier_deleted_hero_slides') {
         loadLiveHeroSlides();
+      }
+      if (e.key === 'atelier_marketing_settings') {
+        loadLiveMarketingSettings();
       }
     };
     window.addEventListener('storage', handleStorage);
@@ -280,6 +300,13 @@ export function App() {
 
   return (
     <ToastProvider>
+      {/* Dynamic SEO, Webmaster, Google Analytics, Pixel & Code Injection Manager */}
+      <MarketingRuntimeManager
+        activeTab={activeTab}
+        activeCategorySlug={activeCategorySlug}
+        marketingSettings={marketingSettings}
+      />
+
       {activeTab === 'admin' ? (
         !adminUser ? (
           <AdminLoginPage
