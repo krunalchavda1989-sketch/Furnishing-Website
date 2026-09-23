@@ -166,7 +166,7 @@ export const loginAdminWithSupabase = async (
     return { user: userObj, error: null };
   }
 
-  return { user: null, error: 'Invalid Master Admin credentials. Click "Auto-Fill Demo" to use valid credentials.' };
+  return { user: null, error: 'Invalid Master Admin credentials. Please verify your email and password.' };
 };
 
 /**

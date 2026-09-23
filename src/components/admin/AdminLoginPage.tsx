@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Lock, Mail, Eye, EyeOff, ShieldCheck, ArrowRight, Info, Database, Activity } from 'lucide-react';
+import React, { useState } from 'react';
+import { Lock, Mail, Eye, EyeOff, ShieldCheck, ArrowRight } from 'lucide-react';
 import { AdminForgotPasswordModal } from './AdminForgotPasswordModal';
 import type { AdminUser } from '../../types/adminTypes';
-import { loginAdminWithSupabase, testSupabaseConnection, isSupabaseConfigured } from '../../lib/supabase';
+import { loginAdminWithSupabase } from '../../lib/supabase';
 
 interface AdminLoginPageProps {
   onLoginSuccess: (user: AdminUser) => void;
@@ -20,41 +20,6 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
-
-  // Supabase Connection State
-  const [dbStatus, setDbStatus] = useState<{
-    tested: boolean;
-    connected: boolean;
-    latency: number;
-    message: string;
-  }>({
-    tested: false,
-    connected: false,
-    latency: 0,
-    message: 'Testing connection...'
-  });
-
-  const DEMO_EMAIL = 'admin@atelier-living.com';
-  const DEMO_PASSWORD = 'AtelierAdmin2026!';
-
-  useEffect(() => {
-    const checkConnection = async () => {
-      const res = await testSupabaseConnection();
-      setDbStatus({
-        tested: true,
-        connected: res.success,
-        latency: res.latencyMs,
-        message: res.message
-      });
-    };
-    checkConnection();
-  }, []);
-
-  const handleAutoFillDemo = () => {
-    setEmail(DEMO_EMAIL);
-    setPassword(DEMO_PASSWORD);
-    setError('');
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,52 +72,6 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
               Master Admin & Curator Portal
             </p>
           </div>
-        </div>
-
-        {/* Supabase Connection Status Card */}
-        <div className="p-3.5 rounded-2xl bg-[#163129] border border-[#C9A56A]/30 flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2.5">
-            <Database className="w-4 h-4 text-[#C9A56A]" />
-            <div>
-              <span className="text-white font-semibold block text-[11px]">Supabase Cloud Database:</span>
-              <span className="text-[11px] text-[#8C9A90] font-mono">
-                {isSupabaseConfigured ? 'ywsmtfhzlhljeqetmvol.supabase.co' : 'Local Standalone Mode'}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px] font-semibold">
-            {dbStatus.connected ? (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-400">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                Connected ({dbStatus.latency}ms)
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-300">
-                <Activity className="w-3 h-3 text-amber-300 animate-spin" />
-                {dbStatus.tested ? 'Standalone' : 'Connecting...'}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Demo Credentials Alert Pill */}
-        <div className="p-4 rounded-2xl bg-[#C9A56A]/10 border border-[#C9A56A]/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-[#C9A56A]">
-            <Info className="w-4 h-4 shrink-0" />
-            <div>
-              <strong className="block text-white">Demo Credentials Ready:</strong>
-              <span className="font-mono text-[11px] text-[#E9DFD1]">
-                admin@atelier-living.com • AtelierAdmin2026!
-              </span>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleAutoFillDemo}
-            className="px-3.5 py-1.5 rounded-lg bg-[#C9A56A] text-[#0F1714] font-bold text-[11px] uppercase tracking-wider hover:bg-[#E6C894] transition-all shrink-0 shadow-md cursor-pointer"
-          >
-            Auto-Fill Demo
-          </button>
         </div>
 
         {/* Login Form Container */}
@@ -236,7 +155,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
               disabled={isSubmitting}
               className="w-full py-4 rounded-xl bg-gradient-to-r from-[#C9A56A] via-[#E6C894] to-[#C9A56A] text-[#0F1714] font-bold text-xs uppercase tracking-widest shadow-xl hover:brightness-110 hover:shadow-[#C9A56A]/25 transition-all flex items-center justify-center space-x-2 border border-[#E9DFD1]/50 cursor-pointer"
             >
-              <span>{isSubmitting ? 'Authenticating with Supabase Cloud...' : 'Authenticate Master Admin'}</span>
+              <span>{isSubmitting ? 'Authenticating...' : 'Authenticate Master Admin'}</span>
               <ArrowRight className="w-4 h-4 text-[#0F1714]" />
             </button>
           </form>
@@ -244,8 +163,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
 
         {/* Footer Security Badge */}
         <div className="text-center space-y-1 text-[11px] text-[#8C9A90]">
-          <p>Atelier Living • Haute Living Security System v3.6</p>
-          <p>Connected to Supabase Cloud Instance • ywsmtfhzlhljeqetmvol</p>
+          <p>Atelier Living • Haute Living Security System</p>
         </div>
       </div>
 

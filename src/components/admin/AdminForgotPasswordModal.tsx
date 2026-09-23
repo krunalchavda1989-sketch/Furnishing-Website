@@ -13,7 +13,7 @@ export const AdminForgotPasswordModal: React.FC<AdminForgotPasswordModalProps> =
   onSuccess
 }) => {
   const [step, setStep] = useState<'email' | 'code' | 'success'>('email');
-  const [email, setEmail] = useState('admin@atelier-living.com');
+  const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -137,9 +137,6 @@ export const AdminForgotPasswordModal: React.FC<AdminForgotPasswordModalProps> =
                 placeholder="123456"
                 required
               />
-              <span className="text-[10px] text-[#C9A56A] mt-1 block">
-                * Demo Code: Type <strong>123456</strong> or any code
-              </span>
             </div>
 
             <div>
