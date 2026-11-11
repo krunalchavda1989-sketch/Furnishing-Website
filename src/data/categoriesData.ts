@@ -1,84 +1,112 @@
 import type { CategoryInfo } from '../types';
 
-export const CATEGORIES_DATA: Record<string, CategoryInfo> = {
-  'fabrics': {
-    id: 'fabrics',
-    title: 'Bespoke Fabrics',
-    subtitle: 'Woven Tactility & Pure Natural Fibers',
-    description: 'Our fabric archive spans hand-loomed Belgian linens, fluid Como silks, heavy Jacquard weaves, and textured bouclés crafted for exquisite residential draping and upholstery.',
-    heroImage: 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&w=1800&q=85',
-    materialHighlight: 'Flanders Flax Linen & Como Raw Silk',
-    craftOrigin: 'Kortrijk, Belgium & Como, Italy',
-    tagline: 'Artisanal weaves that respond to daylight and touch.'
-  },
-  'curtains-upholstery': {
-    id: 'curtains-upholstery',
-    title: 'Curtains & Upholstery',
-    subtitle: 'Architectural Drapes & Tailored Soft Seating',
-    description: 'Tailored window treatments and structural upholstery fabrics engineered with high acoustic absorption, heavy Martindale rub counts, and fluid architectural drape.',
+export const CORE_COLLECTIONS: CategoryInfo[] = [
+  {
+    id: 'drapes-curtains',
+    number: '01',
+    title: 'Drapes & Curtains',
+    subtitle: 'Architectural Window Treatments & Sheers',
+    description: 'Beautifully tailored window treatments that create the perfect balance of privacy, light and elegance. Explore sheer curtains, statement drapes, layered treatments and bespoke designs.',
     heroImage: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1800&q=85',
-    materialHighlight: 'Acoustic Sheers & Mohair Velvet',
-    craftOrigin: 'Tuscany, Italy',
-    tagline: 'Sculpting atmosphere through shadow and softness.'
+    materialHighlight: 'Acoustic Sheers, Belgian Linen & Pure Silk Drapes',
+    craftOrigin: 'Ahmedabad & Como, Italy',
+    tagline: 'Tailored window architecture balancing privacy and light.',
+    order: 1,
+    isVisible: true
   },
-  'bed': {
-    id: 'bed',
-    title: 'Bedding & Sanctuaries',
-    subtitle: 'Haute-Couture Linen, Cashmere & Padded Headboards',
-    description: 'Sleep couture crafted from 1000-thread-count Egyptian cotton percale, washed French flax, hand-tufted cashmere toppers, and padded structural headboard silhouettes.',
-    heroImage: 'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1800&q=85',
-    materialHighlight: 'Giza 45 Egyptian Cotton & Raw Silk Quilting',
-    craftOrigin: 'Milan, Italy',
-    tagline: 'Intimate tactile sanctuary designed for restored stillness.'
+  {
+    id: 'upholstery-fabrics',
+    number: '02',
+    title: 'Upholstery & Fabrics',
+    subtitle: 'Textured Bouclés, Mohair Velvets & Fine Weaves',
+    description: 'Discover an inspiring selection of textures, colours and fabrics designed to bring comfort, sophistication and personality to your furniture and interiors.',
+    heroImage: 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&w=1800&q=85',
+    materialHighlight: 'Flanders Flax Linen, Mohair Velvet & Bouclé',
+    craftOrigin: 'Ahmedabad & Flanders, Belgium',
+    tagline: 'Artisanal weaves that respond to touch and comfort.',
+    order: 2,
+    isVisible: true
   },
-  'blinds': {
-    id: 'blinds',
-    title: 'Architectural Blinds',
-    subtitle: 'Precision Roman Shades, Woven Timber & Motorized Screens',
-    description: 'Sleek light-filtering Roman shades, hand-woven basswood Venetian slats, and custom motorized solar screens engineered for seamless architectural integration.',
-    heroImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=85',
-    materialHighlight: 'Sustainable Japanese Bamboo & Solar Weave',
-    craftOrigin: 'Kyoto, Japan',
-    tagline: 'Definitive control of ambient light and privacy.'
-  },
-  'rugs': {
-    id: 'rugs',
-    title: 'Hand-Knotted Rugs',
-    subtitle: 'Tibetan Wool, Chinese Silk & Sculpted Textures',
-    description: 'Masterwork floor coverings hand-knotted at 150 knots per square inch using hand-spun Himalayan wool and mulberry silk with hand-carved relief contours.',
-    heroImage: 'https://images.unsplash.com/photo-1600121848594-d8644e57abab?auto=format&fit=crop&w=1800&q=85',
-    materialHighlight: 'High-Altitude Himalayan Wool & Botanical Silk',
-    craftOrigin: 'Kathmandu, Nepal',
-    tagline: 'Underfoot poetry woven by master artisans.'
-  },
-  'carpet': {
-    id: 'carpet',
-    title: 'Broadloom & Tailored Carpeting',
-    subtitle: 'Seamless Wool Bouclé, Velvet Pile & Custom Borders',
-    description: 'Ultra-plush wall-to-wall carpets woven from pure New Zealand wool, low-lustre velvet pile, and bound runners with hand-stitched leather or silk edging.',
-    heroImage: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1800&q=85',
-    materialHighlight: 'New Zealand Virgin Wool & Cut-Loop Wilton',
-    craftOrigin: 'Axminster, United Kingdom',
-    tagline: 'Seamless tactile warmth across grand interior spans.'
-  },
-  'wallpaper': {
-    id: 'wallpaper',
-    title: 'Wallcoverings & Murals',
-    subtitle: 'Hand-Painted Silk, Grasscloth & Textured Reliefs',
-    description: 'Immersive tactile walls incorporating hand-painted botanical silk panels, natural woven raffia, embossed mica dust, and textured linen wallcoverings.',
+  {
+    id: 'wallpapers-wallcoverings',
+    number: '03',
+    title: 'Wallpapers & Wallcoverings',
+    subtitle: 'Curated Wallcoverings & Textured Reliefs',
+    description: 'Create distinctive spaces with curated wallcoverings, from subtle textures and timeless patterns to expressive statement designs.',
     heroImage: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1800&q=85',
-    materialHighlight: 'Hand-Gilded Metallic Leaf & Sisal Fibre',
-    craftOrigin: 'Lyons, France',
-    tagline: 'Transforming vertical surfaces into tactile canvases.'
+    materialHighlight: 'Hand-Painted Silk, Grasscloth & Metallic Reliefs',
+    craftOrigin: 'Ahmedabad & Lyons, France',
+    tagline: 'Transforming vertical surfaces into tactile canvases.',
+    order: 3,
+    isVisible: true
   },
-  'luxury-collection': {
-    id: 'luxury-collection',
-    title: 'The Atelier Collection',
-    subtitle: 'Limited-Edition Objects, Bronze Accents & Couture Throws',
-    description: 'A curated suite of rare collector pieces — hand-loomed vicuña throws, cast bronze drape tie-backs, carved alabaster vessel lamps, and bespoke cashmere cushions.',
-    heroImage: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=1800&q=85',
-    materialHighlight: 'Peruvian Vicuña, Cast Bronze & Alabaster',
-    craftOrigin: 'Parisian Atelier, France',
-    tagline: 'Uncompromising rarities crafted in numbered editions.'
+  {
+    id: 'rugs-carpets',
+    number: '04',
+    title: 'Rugs & Carpets',
+    subtitle: 'Hand-Knotted Floor Coverings & Broadloom',
+    description: 'Add warmth, texture and character to your interiors with rugs that complement your aesthetic and bring the entire space together.',
+    heroImage: 'https://images.unsplash.com/photo-1600121848594-d8644e57abab?auto=format&fit=crop&w=1800&q=85',
+    materialHighlight: 'Himalayan Wool, Botanical Silk & Wilton Broadloom',
+    craftOrigin: 'Ahmedabad & Kathmandu, Nepal',
+    tagline: 'Underfoot warmth and spatial cohesion.',
+    order: 4,
+    isVisible: true
+  },
+  {
+    id: 'mattresses-sleep-comfort',
+    number: '05',
+    title: 'Mattresses & Sleep Comfort',
+    subtitle: 'Ergonomic Support & Restorative Craftsmanship',
+    description: 'Experience comfort designed around the way you rest. Explore our mattress solutions, bringing together everyday support and thoughtful craftsmanship.',
+    heroImage: 'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1800&q=85',
+    materialHighlight: 'Natural Latex, Pocket Springs & Pure Wool Quilting',
+    craftOrigin: 'Ahmedabad & Milan, Italy',
+    tagline: 'Restorative stillness designed around the way you rest.',
+    order: 5,
+    isVisible: true
+  },
+  {
+    id: 'custom-furnishing-solutions',
+    number: '06',
+    title: 'Custom Furnishing Solutions',
+    subtitle: 'Concept-to-Finish Bespoke Design & Curation',
+    description: 'From concept to finishing touches, discover personalised furnishing solutions thoughtfully developed to suit your space, preferences and lifestyle.',
+    heroImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=85',
+    materialHighlight: 'Personalised Selections & Master Finishing Touches',
+    craftOrigin: 'Ahmedabad Atelier',
+    tagline: 'Personalised interior solutions tailored to your lifestyle.',
+    order: 6,
+    isVisible: true
   }
+];
+
+const RAW_CATEGORIES: Record<string, CategoryInfo> = {
+  'drapes-curtains': CORE_COLLECTIONS[0],
+  'upholstery-fabrics': CORE_COLLECTIONS[1],
+  'wallpapers-wallcoverings': CORE_COLLECTIONS[2],
+  'rugs-carpets': CORE_COLLECTIONS[3],
+  'mattresses-sleep-comfort': CORE_COLLECTIONS[4],
+  'custom-furnishing-solutions': CORE_COLLECTIONS[5]
 };
+
+const ALIASES: Record<string, string> = {
+  'fabrics': 'upholstery-fabrics',
+  'curtains-upholstery': 'drapes-curtains',
+  'bed': 'mattresses-sleep-comfort',
+  'blinds': 'drapes-curtains',
+  'rugs': 'rugs-carpets',
+  'carpet': 'rugs-carpets',
+  'wallpaper': 'wallpapers-wallcoverings',
+  'luxury-collection': 'custom-furnishing-solutions'
+};
+
+export const CATEGORIES_DATA: Record<string, CategoryInfo> = new Proxy(RAW_CATEGORIES, {
+  get(target, prop: string) {
+    if (typeof prop === 'string') {
+      if (prop in target) return target[prop];
+      if (prop in ALIASES) return target[ALIASES[prop]];
+    }
+    return (target as any)[prop];
+  }
+});

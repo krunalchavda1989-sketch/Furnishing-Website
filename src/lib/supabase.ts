@@ -12,10 +12,23 @@ import type {
   StorySettings,
   FurnishingScene,
   MarketingSettings,
-  PageSEOConfig
+  PageSEOConfig,
+  CategoryInfo,
+  AtelierExperienceSettings,
+  AtelierExperienceStep,
+  WhyAtelierSettings,
+  WhyAtelierPillar,
+  DesignersArchitectsSettings,
+  FinalCtaSettings,
+  HomeSectionId,
+  HomeSectionLayoutItem,
+  HomeSectionLayoutSettings,
+  FooterLinkItem,
+  FooterSettings
 } from '../types';
 import { SHOWROOMS_DATA, BRANDS_DATA } from '../data/brandsData';
 import { PROJECTS_DATA } from '../data/projectsData';
+import { CORE_COLLECTIONS } from '../data/categoriesData';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -2812,7 +2825,1869 @@ export const updateMarketingSettingsInSupabase = async (
   return true;
 };
 
+const COLLECTIONS_CACHE_KEY = 'atelier_collections_cache';
+const DELETED_COLLECTIONS_KEY = 'atelier_deleted_collections';
 
+const getDeletedCollectionIds = (): string[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(DELETED_COLLECTIONS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const emitCollectionsUpdatedEvent = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('atelier_collections_updated'));
+  }
+};
+
+/**
+ * Normalizes collection records, strips soft-deleted IDs, and guarantees sequential 01..NN numbering.
+ */
+export const normalizeCollections = (items: CategoryInfo[]): CategoryInfo[] => {
+  const deletedIds = getDeletedCollectionIds();
+  return items
+    .filter((item) => item && item.id && !deletedIds.includes(item.id))
+    .map((item, idx) => {
+      const padded = String(idx + 1).padStart(2, '0');
+      return {
+        ...item,
+        number: item.number && item.number.trim() ? item.number.trim() : padded,
+        subtitle: item.subtitle || item.craftOrigin || 'Bespoke Collection',
+        materialHighlight: item.materialHighlight || item.subtitle || 'Curated Atelier Textiles & Finishes',
+        craftOrigin: item.craftOrigin || 'Ahmedabad Atelier',
+        tagline: item.tagline || item.title,
+        order: item.order ?? idx + 1,
+        isVisible: item.isVisible !== false
+      };
+    });
+};
+
+/**
+ * Generates a unique URL-friendly slug for a new collection.
+ */
+export const generateUniqueCollectionSlug = (title: string, existingIds: string[]): string => {
+  const base =
+    title
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'custom-collection';
+  if (!existingIds.includes(base)) return base;
+  let counter = 2;
+  while (existingIds.includes(`${base}-${counter}`)) {
+    counter += 1;
+  }
+  return `${base}-${counter}`;
+};
+
+/**
+ * Synchronously reads normalized cached collections from localStorage if available.
+ */
+export const getCachedCollections = (): CategoryInfo[] => {
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(COLLECTIONS_CACHE_KEY);
+    if (cached !== null) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          return normalizeCollections(parsed);
+        }
+      } catch {
+        // Fallback to defaults if cache JSON is corrupted
+      }
+    }
+  }
+  return normalizeCollections(CORE_COLLECTIONS);
+};
+
+/**
+ * Fetch Collections from Supabase or Local Storage Cache
+ */
+export const fetchCollectionsFromSupabase = async (): Promise<CategoryInfo[]> => {
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(COLLECTIONS_CACHE_KEY);
+    if (cached !== null) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          return normalizeCollections(parsed);
+        }
+      } catch {
+        // Fallback to live or defaults
+      }
+    }
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('collections')
+        .select('*')
+        .order('order', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        const mapped: CategoryInfo[] = data.map((item) => ({
+          id: item.slug || item.id,
+          number: item.number || '',
+          title: item.title,
+          subtitle: item.subtitle || '',
+          description: item.description,
+          heroImage: item.hero_image || item.image || '',
+          materialHighlight: item.material_highlight || '',
+          craftOrigin: item.craft_origin || 'Ahmedabad',
+          tagline: item.tagline || '',
+          order: item.order || 1,
+          isVisible: item.is_visible !== false
+        }));
+        return normalizeCollections(mapped);
+      }
+    } catch (err) {
+      console.warn('Collections table fetch from Supabase:', err);
+    }
+  }
+
+  return normalizeCollections(CORE_COLLECTIONS);
+};
+
+/**
+ * Save Collections Architecture to Supabase and Local Storage Cache
+ */
+export const saveCollectionsToSupabase = async (
+  collections: CategoryInfo[],
+  adminEmail: string,
+  auditAction = 'COLLECTIONS_ARCHITECTURE_UPDATED',
+  auditDetails?: string
+): Promise<boolean> => {
+  const normalized = collections.map((col, idx) => ({
+    ...col,
+    number: col.number && col.number.trim() ? col.number.trim() : String(idx + 1).padStart(2, '0'),
+    subtitle: col.subtitle || col.craftOrigin || 'Bespoke Collection',
+    materialHighlight: col.materialHighlight || col.subtitle || 'Curated Atelier Textiles & Finishes',
+    craftOrigin: col.craftOrigin || 'Ahmedabad Atelier',
+    tagline: col.tagline || col.title,
+    order: idx + 1,
+    isVisible: col.isVisible !== false
+  }));
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(COLLECTIONS_CACHE_KEY, JSON.stringify(normalized));
+    const deleted = getDeletedCollectionIds();
+    const activeIds = new Set(normalized.map((c) => c.id));
+    localStorage.setItem(
+      DELETED_COLLECTIONS_KEY,
+      JSON.stringify(deleted.filter((id) => !activeIds.has(id)))
+    );
+    emitCollectionsUpdatedEvent();
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      for (const col of normalized) {
+        await supabase.from('collections').upsert({
+          id: col.id,
+          slug: col.id,
+          number: col.number || '',
+          title: col.title,
+          subtitle: col.subtitle || '',
+          description: col.description,
+          hero_image: col.heroImage,
+          craft_origin: col.craftOrigin,
+          material_highlight: col.materialHighlight,
+          tagline: col.tagline || col.title,
+          order: col.order || 1,
+          is_visible: col.isVisible !== false,
+          updated_at: new Date().toISOString()
+        });
+      }
+
+      await logAdminActivityInSupabase(
+        adminEmail,
+        auditAction,
+        auditDetails ||
+          `Synchronized ${normalized.length} collections to live database: ${normalized.map((c) => c.title).join(', ')}`
+      );
+      return true;
+    } catch (err) {
+      console.warn('Exception saving collections to Supabase:', err);
+    }
+  }
+
+  return true;
+};
+
+/**
+ * Deletes a collection block from local cache, records soft-delete tombstone,
+ * removes it from live Supabase `collections` table if present, and logs the action.
+ */
+export const deleteCollectionFromSupabase = async (
+  collectionId: string,
+  collectionTitle: string,
+  remainingCollections: CategoryInfo[],
+  adminEmail: string
+): Promise<boolean> => {
+  if (typeof window !== 'undefined') {
+    const deleted = getDeletedCollectionIds();
+    if (!deleted.includes(collectionId)) {
+      localStorage.setItem(DELETED_COLLECTIONS_KEY, JSON.stringify([...deleted, collectionId]));
+    }
+    const normalizedRemaining = normalizeCollections(remainingCollections);
+    localStorage.setItem(COLLECTIONS_CACHE_KEY, JSON.stringify(normalizedRemaining));
+    emitCollectionsUpdatedEvent();
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from('collections').delete().eq('id', collectionId);
+      await logAdminActivityInSupabase(
+        adminEmail,
+        'COLLECTION_DELETED',
+        `Deleted collection block "${collectionTitle}" (${collectionId})`
+      );
+      return true;
+    } catch (err) {
+      console.warn('Exception deleting collection from Supabase:', err);
+    }
+  }
+
+  return true;
+};
+
+/**
+ * Restores default curated collections cleanly.
+ */
+export const restoreDefaultCollectionsInSupabase = async (
+  adminEmail: string
+): Promise<CategoryInfo[]> => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(DELETED_COLLECTIONS_KEY);
+    localStorage.setItem(COLLECTIONS_CACHE_KEY, JSON.stringify(CORE_COLLECTIONS));
+    emitCollectionsUpdatedEvent();
+  }
+
+  await saveCollectionsToSupabase(
+    CORE_COLLECTIONS,
+    adminEmail,
+    'COLLECTIONS_RESTORED_DEFAULT',
+    'Restored default 6 Atelier Living curated collections.'
+  );
+  return CORE_COLLECTIONS;
+};
+
+// ==========================================
+// THE ATELIER EXPERIENCE SECTION MANAGEMENT
+// ==========================================
+
+const EXPERIENCE_CACHE_KEY = 'atelier_experience_settings';
+const DELETED_EXPERIENCE_STEPS_KEY = 'atelier_deleted_experience_steps';
+
+export const DEFAULT_ATELIER_EXPERIENCE: AtelierExperienceSettings = {
+  id: 'default',
+  badge: 'THE ATELIER EXPERIENCE',
+  headingPrimary: 'Your Vision.',
+  headingAccent: 'Our Craftsmanship.',
+  introText: 'We believe a beautifully furnished space begins with understanding you.',
+  ctaLabel: 'Begin Your Private Consultation',
+  isVisible: true,
+  steps: [
+    {
+      id: 'step-discover',
+      number: '01',
+      title: 'Discover',
+      description:
+        'We begin by understanding your space, aesthetic preferences, lifestyle and furnishing requirements.',
+      isVisible: true,
+      order: 1
+    },
+    {
+      id: 'step-curate',
+      number: '02',
+      title: 'Curate',
+      description:
+        'Explore carefully selected fabrics, textures, colours and materials tailored to your vision.',
+      isVisible: true,
+      order: 2
+    },
+    {
+      id: 'step-customise',
+      number: '03',
+      title: 'Customise',
+      description:
+        'From measurements and material selections to stitching and finishing details, each element is thoughtfully considered.',
+      isVisible: true,
+      order: 3
+    },
+    {
+      id: 'step-transform',
+      number: '04',
+      title: 'Transform',
+      description:
+        'Watch your vision come together as individual furnishings create a cohesive and beautiful space.',
+      isVisible: true,
+      order: 4
+    }
+  ]
+};
+
+const getDeletedExperienceStepIds = (): string[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(DELETED_EXPERIENCE_STEPS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const emitAtelierExperienceUpdatedEvent = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('atelier_experience_updated'));
+  }
+};
+
+/**
+ * Normalizes Atelier Experience configuration & step numbering.
+ */
+export const normalizeAtelierExperience = (
+  raw?: Partial<AtelierExperienceSettings> | null
+): AtelierExperienceSettings => {
+  const deletedStepIds = getDeletedExperienceStepIds();
+  const baseSteps = Array.isArray(raw?.steps)
+    ? raw.steps
+    : DEFAULT_ATELIER_EXPERIENCE.steps;
+
+  const steps: AtelierExperienceStep[] = baseSteps
+    .filter((step) => step && step.id && !deletedStepIds.includes(step.id))
+    .map((step, idx) => ({
+      ...step,
+      number:
+        step.number && step.number.trim()
+          ? step.number.trim()
+          : String(idx + 1).padStart(2, '0'),
+      title: step.title || `Stage ${idx + 1}`,
+      description: step.description || '',
+      isVisible: step.isVisible !== false,
+      order: step.order ?? idx + 1
+    }));
+
+  return {
+    id: raw?.id || 'default',
+    badge:
+      raw?.badge !== undefined ? raw.badge : DEFAULT_ATELIER_EXPERIENCE.badge,
+    headingPrimary:
+      raw?.headingPrimary !== undefined
+        ? raw.headingPrimary
+        : DEFAULT_ATELIER_EXPERIENCE.headingPrimary,
+    headingAccent:
+      raw?.headingAccent !== undefined
+        ? raw.headingAccent
+        : DEFAULT_ATELIER_EXPERIENCE.headingAccent,
+    introText:
+      raw?.introText !== undefined
+        ? raw.introText
+        : DEFAULT_ATELIER_EXPERIENCE.introText,
+    ctaLabel:
+      raw?.ctaLabel !== undefined
+        ? raw.ctaLabel
+        : DEFAULT_ATELIER_EXPERIENCE.ctaLabel,
+    isVisible: raw?.isVisible !== false,
+    steps,
+    updatedAt: raw?.updatedAt
+  };
+};
+
+/**
+ * Synchronously reads cached Atelier Experience settings from localStorage.
+ */
+export const getCachedAtelierExperience = (): AtelierExperienceSettings => {
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(EXPERIENCE_CACHE_KEY);
+    if (cached !== null) {
+      try {
+        return normalizeAtelierExperience(JSON.parse(cached));
+      } catch {
+        // Fallback below if malformed JSON
+      }
+    }
+  }
+  return normalizeAtelierExperience(DEFAULT_ATELIER_EXPERIENCE);
+};
+
+/**
+ * Fetch Atelier Experience settings from local cache or Supabase.
+ */
+export const fetchAtelierExperienceFromSupabase = async (): Promise<AtelierExperienceSettings> => {
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(EXPERIENCE_CACHE_KEY);
+    if (cached !== null) {
+      try {
+        return normalizeAtelierExperience(JSON.parse(cached));
+      } catch {
+        // Continue to Supabase fallback
+      }
+    }
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('atelier_experience')
+        .select('*')
+        .eq('id', 'default')
+        .single();
+
+      if (!error && data) {
+        return normalizeAtelierExperience({
+          id: data.id,
+          badge: data.badge,
+          headingPrimary: data.heading_primary,
+          headingAccent: data.heading_accent,
+          introText: data.intro_text,
+          ctaLabel: data.cta_label,
+          steps: Array.isArray(data.steps) ? data.steps : DEFAULT_ATELIER_EXPERIENCE.steps,
+          isVisible: data.is_visible !== false,
+          updatedAt: data.updated_at
+        });
+      }
+    } catch (err) {
+      console.warn('Atelier Experience fetch from Supabase:', err);
+    }
+  }
+
+  return normalizeAtelierExperience(DEFAULT_ATELIER_EXPERIENCE);
+};
+
+/**
+ * Save Atelier Experience section & steps to local cache, Supabase, and Audit Log.
+ */
+export const saveAtelierExperienceToSupabase = async (
+  settings: AtelierExperienceSettings,
+  adminEmail: string,
+  auditAction = 'EXPERIENCE_SECTION_UPDATED',
+  auditDetails?: string
+): Promise<boolean> => {
+  const normalized = normalizeAtelierExperience({
+    ...settings,
+    steps: settings.steps.map((s, idx) => ({
+      ...s,
+      number: s.number && s.number.trim() ? s.number.trim() : String(idx + 1).padStart(2, '0'),
+      order: idx + 1
+    }))
+  });
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(EXPERIENCE_CACHE_KEY, JSON.stringify(normalized));
+    const deletedIds = getDeletedExperienceStepIds();
+    const activeIds = new Set(normalized.steps.map((s) => s.id));
+    localStorage.setItem(
+      DELETED_EXPERIENCE_STEPS_KEY,
+      JSON.stringify(deletedIds.filter((id) => !activeIds.has(id)))
+    );
+    emitAtelierExperienceUpdatedEvent();
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from('atelier_experience').upsert({
+        id: 'default',
+        badge: normalized.badge,
+        heading_primary: normalized.headingPrimary,
+        heading_accent: normalized.headingAccent,
+        intro_text: normalized.introText,
+        cta_label: normalized.ctaLabel || 'Begin Your Private Consultation',
+        steps: normalized.steps,
+        is_visible: normalized.isVisible !== false,
+        updated_at: new Date().toISOString()
+      });
+
+      await logAdminActivityInSupabase(
+        adminEmail,
+        auditAction,
+        auditDetails ||
+          `Updated Atelier Experience section ("${normalized.headingPrimary} ${normalized.headingAccent}") with ${normalized.steps.length} process steps.`
+      );
+      return true;
+    } catch (err) {
+      console.warn('Exception saving Atelier Experience to Supabase:', err);
+    }
+  }
+
+  return true;
+};
+
+/**
+ * Permanently deletes an individual Atelier Experience step block and records its tombstone.
+ */
+export const deleteAtelierExperienceStepInSupabase = async (
+  stepId: string,
+  stepTitle: string,
+  currentSettings: AtelierExperienceSettings,
+  adminEmail: string
+): Promise<AtelierExperienceSettings> => {
+  if (typeof window !== 'undefined') {
+    const deleted = getDeletedExperienceStepIds();
+    if (!deleted.includes(stepId)) {
+      localStorage.setItem(DELETED_EXPERIENCE_STEPS_KEY, JSON.stringify([...deleted, stepId]));
+    }
+  }
+
+  const nextSettings: AtelierExperienceSettings = {
+    ...currentSettings,
+    steps: currentSettings.steps
+      .filter((s) => s.id !== stepId)
+      .map((s, idx) => ({ ...s, order: idx + 1 }))
+  };
+
+  await saveAtelierExperienceToSupabase(
+    nextSettings,
+    adminEmail,
+    'EXPERIENCE_STEP_DELETED',
+    `Deleted Atelier Experience stage "${stepTitle}" (${stepId})`
+  );
+
+  return nextSettings;
+};
+
+/**
+ * Restores default Atelier Experience section copy and 4 core process stages.
+ */
+export const restoreDefaultAtelierExperienceInSupabase = async (
+  adminEmail: string
+): Promise<AtelierExperienceSettings> => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(DELETED_EXPERIENCE_STEPS_KEY);
+    localStorage.setItem(EXPERIENCE_CACHE_KEY, JSON.stringify(DEFAULT_ATELIER_EXPERIENCE));
+    emitAtelierExperienceUpdatedEvent();
+  }
+
+  await saveAtelierExperienceToSupabase(
+    DEFAULT_ATELIER_EXPERIENCE,
+    adminEmail,
+    'EXPERIENCE_RESTORED_DEFAULT',
+    'Restored default Atelier Experience section and 4 process stages.'
+  );
+
+  return DEFAULT_ATELIER_EXPERIENCE;
+};
+
+// ==========================================
+// WHY ATELIER LIVING SECTION MANAGEMENT
+// ==========================================
+
+const WHY_CACHE_KEY = 'atelier_why_settings';
+const DELETED_WHY_PILLARS_KEY = 'atelier_deleted_why_pillars';
+
+export const DEFAULT_WHY_ATELIER: WhyAtelierSettings = {
+  id: 'default',
+  badge: 'WHY ATELIER LIVING',
+  headingPrimary: 'The Art of Thoughtful',
+  headingAccent: 'Furnishing',
+  subtitle: '',
+  ctaLabel: 'Schedule a Bespoke Consultation',
+  isVisible: true,
+  pillars: [
+    {
+      id: 'why-bespoke',
+      number: '01',
+      title: 'Bespoke by Nature',
+      description:
+        'Solutions personalised to the dimensions, style and character of your space.',
+      image:
+        'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1400&q=85',
+      imageCaption: 'Tailored Spatial Proportion',
+      isVisible: true,
+      order: 1
+    },
+    {
+      id: 'why-curated',
+      number: '02',
+      title: 'A Curated Selection',
+      description:
+        'A considered collection of fabrics, wallpapers, rugs and furnishing materials.',
+      image:
+        'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&w=1400&q=85',
+      imageCaption: 'Tactile Material Archive',
+      isVisible: true,
+      order: 2
+    },
+    {
+      id: 'why-craftsmanship',
+      number: '03',
+      title: 'Craftsmanship in Every Detail',
+      description:
+        'An appreciation for precision, tailoring, texture and refined finishes.',
+      image:
+        'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1400&q=85',
+      imageCaption: 'Refined Stitch & Finish',
+      isVisible: true,
+      order: 3
+    },
+    {
+      id: 'why-one-roof',
+      number: '04',
+      title: 'Everything Under One Roof',
+      description:
+        'A convenient destination for coordinating the many elements that make an interior complete.',
+      image:
+        'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1400&q=85',
+      imageCaption: 'Cohesive Interior Composition',
+      isVisible: true,
+      order: 4
+    },
+    {
+      id: 'why-designed-around-you',
+      number: '05',
+      title: 'Designed Around You',
+      description:
+        'Personalised guidance to make selecting your furnishings an enjoyable and inspiring experience.',
+      image:
+        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=85',
+      imageCaption: 'Personalised Studio Guidance',
+      isVisible: true,
+      order: 5
+    }
+  ]
+};
+
+const getDeletedWhyPillarIds = (): string[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(DELETED_WHY_PILLARS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const emitWhyAtelierUpdatedEvent = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('atelier_why_updated'));
+  }
+};
+
+/**
+ * Normalizes Why Atelier Living section config, sequential pillar numbering, and soft-delete tombstones.
+ */
+export const normalizeWhyAtelier = (
+  raw?: Partial<WhyAtelierSettings> | null
+): WhyAtelierSettings => {
+  const deletedIds = getDeletedWhyPillarIds();
+  const basePillars = Array.isArray(raw?.pillars)
+    ? raw.pillars
+    : DEFAULT_WHY_ATELIER.pillars;
+
+  const pillars: WhyAtelierPillar[] = basePillars
+    .filter((p) => p && p.id && !deletedIds.includes(p.id))
+    .map((p, idx) => ({
+      ...p,
+      number:
+        p.number && p.number.trim()
+          ? p.number.trim()
+          : String(idx + 1).padStart(2, '0'),
+      title: p.title || `Pillar ${idx + 1}`,
+      description: p.description || '',
+      image:
+        p.image ||
+        DEFAULT_WHY_ATELIER.pillars[idx % DEFAULT_WHY_ATELIER.pillars.length]?.image ||
+        'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1400&q=85',
+      imageCaption: p.imageCaption || p.title || `Pillar ${idx + 1}`,
+      isVisible: p.isVisible !== false,
+      order: p.order ?? idx + 1
+    }));
+
+  return {
+    id: raw?.id || 'default',
+    badge: raw?.badge !== undefined ? raw.badge : DEFAULT_WHY_ATELIER.badge,
+    headingPrimary:
+      raw?.headingPrimary !== undefined
+        ? raw.headingPrimary
+        : DEFAULT_WHY_ATELIER.headingPrimary,
+    headingAccent:
+      raw?.headingAccent !== undefined
+        ? raw.headingAccent
+        : DEFAULT_WHY_ATELIER.headingAccent,
+    subtitle:
+      raw?.subtitle !== undefined ? raw.subtitle : DEFAULT_WHY_ATELIER.subtitle,
+    ctaLabel:
+      raw?.ctaLabel !== undefined ? raw.ctaLabel : DEFAULT_WHY_ATELIER.ctaLabel,
+    isVisible: raw?.isVisible !== false,
+    pillars,
+    updatedAt: raw?.updatedAt
+  };
+};
+
+/**
+ * Synchronously reads cached Why Atelier Living settings from localStorage.
+ */
+export const getCachedWhyAtelier = (): WhyAtelierSettings => {
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(WHY_CACHE_KEY);
+    if (cached !== null) {
+      try {
+        return normalizeWhyAtelier(JSON.parse(cached));
+      } catch {
+        // Fallback below on corrupt cache
+      }
+    }
+  }
+  return normalizeWhyAtelier(DEFAULT_WHY_ATELIER);
+};
+
+/**
+ * Fetch Why Atelier Living configuration from local cache or Supabase.
+ */
+export const fetchWhyAtelierFromSupabase = async (): Promise<WhyAtelierSettings> => {
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(WHY_CACHE_KEY);
+    if (cached !== null) {
+      try {
+        return normalizeWhyAtelier(JSON.parse(cached));
+      } catch {
+        // Continue to Supabase fallback
+      }
+    }
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('why_atelier_living')
+        .select('*')
+        .eq('id', 'default')
+        .single();
+
+      if (!error && data) {
+        return normalizeWhyAtelier({
+          id: data.id,
+          badge: data.badge,
+          headingPrimary: data.heading_primary,
+          headingAccent: data.heading_accent,
+          subtitle: data.subtitle,
+          ctaLabel: data.cta_label,
+          pillars: Array.isArray(data.pillars) ? data.pillars : DEFAULT_WHY_ATELIER.pillars,
+          isVisible: data.is_visible !== false,
+          updatedAt: data.updated_at
+        });
+      }
+    } catch (err) {
+      console.warn('Why Atelier Living fetch from Supabase:', err);
+    }
+  }
+
+  return normalizeWhyAtelier(DEFAULT_WHY_ATELIER);
+};
+
+/**
+ * Save Why Atelier Living settings & image-backed pillars to local cache, Supabase, and Audit Log.
+ */
+export const saveWhyAtelierToSupabase = async (
+  settings: WhyAtelierSettings,
+  adminEmail: string,
+  auditAction = 'WHY_ATELIER_UPDATED',
+  auditDetails?: string
+): Promise<boolean> => {
+  const normalized = normalizeWhyAtelier({
+    ...settings,
+    pillars: settings.pillars.map((p, idx) => ({
+      ...p,
+      number: p.number && p.number.trim() ? p.number.trim() : String(idx + 1).padStart(2, '0'),
+      order: idx + 1
+    }))
+  });
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(WHY_CACHE_KEY, JSON.stringify(normalized));
+    const deletedIds = getDeletedWhyPillarIds();
+    const activeIds = new Set(normalized.pillars.map((p) => p.id));
+    localStorage.setItem(
+      DELETED_WHY_PILLARS_KEY,
+      JSON.stringify(deletedIds.filter((id) => !activeIds.has(id)))
+    );
+    emitWhyAtelierUpdatedEvent();
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from('why_atelier_living').upsert({
+        id: 'default',
+        badge: normalized.badge,
+        heading_primary: normalized.headingPrimary,
+        heading_accent: normalized.headingAccent,
+        subtitle: normalized.subtitle || '',
+        cta_label: normalized.ctaLabel || 'Schedule a Bespoke Consultation',
+        pillars: normalized.pillars,
+        is_visible: normalized.isVisible !== false,
+        updated_at: new Date().toISOString()
+      });
+
+      await logAdminActivityInSupabase(
+        adminEmail,
+        auditAction,
+        auditDetails ||
+          `Updated Why Atelier Living section ("${normalized.headingPrimary} ${normalized.headingAccent}") with ${normalized.pillars.length} pillars.`
+      );
+      return true;
+    } catch (err) {
+      console.warn('Exception saving Why Atelier Living to Supabase:', err);
+    }
+  }
+
+  return true;
+};
+
+/**
+ * Permanently deletes a Why Atelier Living pillar item and records its soft-delete tombstone.
+ */
+export const deleteWhyAtelierPillarInSupabase = async (
+  pillarId: string,
+  pillarTitle: string,
+  currentSettings: WhyAtelierSettings,
+  adminEmail: string
+): Promise<WhyAtelierSettings> => {
+  if (typeof window !== 'undefined') {
+    const deleted = getDeletedWhyPillarIds();
+    if (!deleted.includes(pillarId)) {
+      localStorage.setItem(DELETED_WHY_PILLARS_KEY, JSON.stringify([...deleted, pillarId]));
+    }
+  }
+
+  const nextSettings: WhyAtelierSettings = {
+    ...currentSettings,
+    pillars: currentSettings.pillars
+      .filter((p) => p.id !== pillarId)
+      .map((p, idx) => ({ ...p, order: idx + 1 }))
+  };
+
+  await saveWhyAtelierToSupabase(
+    nextSettings,
+    adminEmail,
+    'WHY_ATELIER_PILLAR_DELETED',
+    `Deleted Why Atelier Living pillar "${pillarTitle}" (${pillarId})`
+  );
+
+  return nextSettings;
+};
+
+/**
+ * Restores default Why Atelier Living copy and 5 signature image pillars.
+ */
+export const restoreDefaultWhyAtelierInSupabase = async (
+  adminEmail: string
+): Promise<WhyAtelierSettings> => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(DELETED_WHY_PILLARS_KEY);
+    localStorage.setItem(WHY_CACHE_KEY, JSON.stringify(DEFAULT_WHY_ATELIER));
+    emitWhyAtelierUpdatedEvent();
+  }
+
+  await saveWhyAtelierToSupabase(
+    DEFAULT_WHY_ATELIER,
+    adminEmail,
+    'WHY_ATELIER_RESTORED_DEFAULT',
+    'Restored default Why Atelier Living section and 5 bespoke pillars.'
+  );
+
+  return DEFAULT_WHY_ATELIER;
+};
+
+// ==========================================
+// FOR DESIGNERS & ARCHITECTS SECTION MANAGEMENT
+// ==========================================
+
+const DESIGNERS_CACHE_KEY = 'atelier_designers_architects';
+
+export const DEFAULT_DESIGNERS_ARCHITECTS: DesignersArchitectsSettings = {
+  id: 'default',
+  badge: 'FOR DESIGNERS & ARCHITECTS',
+  headingPrimary: 'A Creative Partner for',
+  headingAccent: 'Inspired Interiors',
+  paragraphs: [
+    'We collaborate with architects, interior designers and design professionals to bring thoughtfully conceived spaces to life.',
+    'With an extensive range of furnishing options and customisation possibilities, Atelier Living helps translate design concepts into carefully coordinated furnishing selections.',
+    'From individual rooms to larger residential and commercial projects, we value collaborative thinking and an uncompromising attention to detail.'
+  ],
+  highlights: [
+    'Residential Commissions',
+    'Commercial Projects',
+    'Customisation Possibilities',
+    'Coordinated Selections'
+  ],
+  ctaLabel: 'Collaborate With Us',
+  heroImage:
+    'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1400&q=85',
+  imageCaption: 'Residential & Commercial Trade Collaborations',
+  isVisible: true
+};
+
+const emitDesignersUpdatedEvent = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('atelier_designers_updated'));
+  }
+};
+
+export const normalizeDesignersArchitects = (
+  raw?: Partial<DesignersArchitectsSettings> | null
+): DesignersArchitectsSettings => ({
+  id: raw?.id || 'default',
+  badge: raw?.badge !== undefined ? raw.badge : DEFAULT_DESIGNERS_ARCHITECTS.badge,
+  headingPrimary:
+    raw?.headingPrimary !== undefined
+      ? raw.headingPrimary
+      : DEFAULT_DESIGNERS_ARCHITECTS.headingPrimary,
+  headingAccent:
+    raw?.headingAccent !== undefined
+      ? raw.headingAccent
+      : DEFAULT_DESIGNERS_ARCHITECTS.headingAccent,
+  paragraphs: Array.isArray(raw?.paragraphs)
+    ? raw.paragraphs
+    : DEFAULT_DESIGNERS_ARCHITECTS.paragraphs,
+  highlights: Array.isArray(raw?.highlights)
+    ? raw.highlights
+    : DEFAULT_DESIGNERS_ARCHITECTS.highlights,
+  ctaLabel:
+    raw?.ctaLabel !== undefined ? raw.ctaLabel : DEFAULT_DESIGNERS_ARCHITECTS.ctaLabel,
+  heroImage:
+    raw?.heroImage !== undefined ? raw.heroImage : DEFAULT_DESIGNERS_ARCHITECTS.heroImage,
+  imageCaption:
+    raw?.imageCaption !== undefined
+      ? raw.imageCaption
+      : DEFAULT_DESIGNERS_ARCHITECTS.imageCaption,
+  isVisible: raw?.isVisible !== false,
+  updatedAt: raw?.updatedAt
+});
+
+export const getCachedDesignersArchitects = (): DesignersArchitectsSettings => {
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(DESIGNERS_CACHE_KEY);
+    if (cached !== null) {
+      try {
+        return normalizeDesignersArchitects(JSON.parse(cached));
+      } catch {
+        // Fallback on malformed JSON
+      }
+    }
+  }
+  return normalizeDesignersArchitects(DEFAULT_DESIGNERS_ARCHITECTS);
+};
+
+export const fetchDesignersArchitectsFromSupabase =
+  async (): Promise<DesignersArchitectsSettings> => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem(DESIGNERS_CACHE_KEY);
+      if (cached !== null) {
+        try {
+          return normalizeDesignersArchitects(JSON.parse(cached));
+        } catch {
+          // Continue to Supabase fallback
+        }
+      }
+    }
+
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('designers_architects_section')
+          .select('*')
+          .eq('id', 'default')
+          .single();
+
+        if (!error && data) {
+          return normalizeDesignersArchitects({
+            id: data.id,
+            badge: data.badge,
+            headingPrimary: data.heading_primary,
+            headingAccent: data.heading_accent,
+            paragraphs: Array.isArray(data.paragraphs)
+              ? data.paragraphs
+              : DEFAULT_DESIGNERS_ARCHITECTS.paragraphs,
+            highlights: Array.isArray(data.highlights)
+              ? data.highlights
+              : DEFAULT_DESIGNERS_ARCHITECTS.highlights,
+            ctaLabel: data.cta_label,
+            heroImage: data.hero_image,
+            imageCaption: data.image_caption,
+            isVisible: data.is_visible !== false,
+            updatedAt: data.updated_at
+          });
+        }
+      } catch (err) {
+        console.warn('Designers & Architects fetch from Supabase:', err);
+      }
+    }
+
+    return normalizeDesignersArchitects(DEFAULT_DESIGNERS_ARCHITECTS);
+  };
+
+export const saveDesignersArchitectsToSupabase = async (
+  settings: DesignersArchitectsSettings,
+  adminEmail: string,
+  auditAction = 'DESIGNERS_SECTION_UPDATED',
+  auditDetails?: string
+): Promise<boolean> => {
+  const normalized = normalizeDesignersArchitects(settings);
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(DESIGNERS_CACHE_KEY, JSON.stringify(normalized));
+    emitDesignersUpdatedEvent();
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from('designers_architects_section').upsert({
+        id: 'default',
+        badge: normalized.badge,
+        heading_primary: normalized.headingPrimary,
+        heading_accent: normalized.headingAccent,
+        paragraphs: normalized.paragraphs,
+        highlights: normalized.highlights || [],
+        cta_label: normalized.ctaLabel,
+        hero_image: normalized.heroImage,
+        image_caption: normalized.imageCaption || '',
+        is_visible: normalized.isVisible !== false,
+        updated_at: new Date().toISOString()
+      });
+
+      await logAdminActivityInSupabase(
+        adminEmail,
+        auditAction,
+        auditDetails ||
+          `Updated For Designers & Architects section ("${normalized.headingPrimary} ${normalized.headingAccent}")`
+      );
+      return true;
+    } catch (err) {
+      console.warn('Exception saving Designers & Architects to Supabase:', err);
+    }
+  }
+
+  return true;
+};
+
+export const restoreDefaultDesignersArchitectsInSupabase = async (
+  adminEmail: string
+): Promise<DesignersArchitectsSettings> => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(DESIGNERS_CACHE_KEY, JSON.stringify(DEFAULT_DESIGNERS_ARCHITECTS));
+    emitDesignersUpdatedEvent();
+  }
+
+  await saveDesignersArchitectsToSupabase(
+    DEFAULT_DESIGNERS_ARCHITECTS,
+    adminEmail,
+    'DESIGNERS_SECTION_RESTORED_DEFAULT',
+    'Restored default For Designers & Architects trade collaboration section.'
+  );
+
+  return DEFAULT_DESIGNERS_ARCHITECTS;
+};
+
+// ==========================================
+// FINAL CALL TO ACTION SECTION MANAGEMENT
+// ==========================================
+
+const FINAL_CTA_CACHE_KEY = 'atelier_final_cta';
+
+export const DEFAULT_FINAL_CTA: FinalCtaSettings = {
+  id: 'default',
+  badge: 'FINAL CALL TO ACTION',
+  headingPrimary: "Let's Create",
+  headingAccent: 'Something Beautiful.',
+  description:
+    "Whether you have a complete vision or are just beginning to explore ideas, we're here to help you find the perfect furnishings for your space.",
+  ctaLabel: 'Book Your Furnishing Consultation',
+  backgroundImage: '',
+  isVisible: true
+};
+
+const emitFinalCtaUpdatedEvent = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('atelier_final_cta_updated'));
+  }
+};
+
+export const normalizeFinalCta = (
+  raw?: Partial<FinalCtaSettings> | null
+): FinalCtaSettings => ({
+  id: raw?.id || 'default',
+  badge: raw?.badge !== undefined ? raw.badge : DEFAULT_FINAL_CTA.badge,
+  headingPrimary:
+    raw?.headingPrimary !== undefined
+      ? raw.headingPrimary
+      : DEFAULT_FINAL_CTA.headingPrimary,
+  headingAccent:
+    raw?.headingAccent !== undefined
+      ? raw.headingAccent
+      : DEFAULT_FINAL_CTA.headingAccent,
+  description:
+    raw?.description !== undefined ? raw.description : DEFAULT_FINAL_CTA.description,
+  ctaLabel: raw?.ctaLabel !== undefined ? raw.ctaLabel : DEFAULT_FINAL_CTA.ctaLabel,
+  backgroundImage:
+    raw?.backgroundImage !== undefined
+      ? raw.backgroundImage
+      : DEFAULT_FINAL_CTA.backgroundImage,
+  isVisible: raw?.isVisible !== false,
+  updatedAt: raw?.updatedAt
+});
+
+export const getCachedFinalCta = (): FinalCtaSettings => {
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(FINAL_CTA_CACHE_KEY);
+    if (cached !== null) {
+      try {
+        return normalizeFinalCta(JSON.parse(cached));
+      } catch {
+        // Fallback on malformed JSON
+      }
+    }
+  }
+  return normalizeFinalCta(DEFAULT_FINAL_CTA);
+};
+
+export const fetchFinalCtaFromSupabase = async (): Promise<FinalCtaSettings> => {
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(FINAL_CTA_CACHE_KEY);
+    if (cached !== null) {
+      try {
+        return normalizeFinalCta(JSON.parse(cached));
+      } catch {
+        // Continue to Supabase fallback
+      }
+    }
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('final_cta_section')
+        .select('*')
+        .eq('id', 'default')
+        .single();
+
+      if (!error && data) {
+        return normalizeFinalCta({
+          id: data.id,
+          badge: data.badge,
+          headingPrimary: data.heading_primary,
+          headingAccent: data.heading_accent,
+          description: data.description,
+          ctaLabel: data.cta_label,
+          backgroundImage: data.background_image,
+          isVisible: data.is_visible !== false,
+          updatedAt: data.updated_at
+        });
+      }
+    } catch (err) {
+      console.warn('Final CTA fetch from Supabase:', err);
+    }
+  }
+
+  return normalizeFinalCta(DEFAULT_FINAL_CTA);
+};
+
+export const saveFinalCtaToSupabase = async (
+  settings: FinalCtaSettings,
+  adminEmail: string,
+  auditAction = 'FINAL_CTA_UPDATED',
+  auditDetails?: string
+): Promise<boolean> => {
+  const normalized = normalizeFinalCta(settings);
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(FINAL_CTA_CACHE_KEY, JSON.stringify(normalized));
+    emitFinalCtaUpdatedEvent();
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from('final_cta_section').upsert({
+        id: 'default',
+        badge: normalized.badge,
+        heading_primary: normalized.headingPrimary,
+        heading_accent: normalized.headingAccent,
+        description: normalized.description,
+        cta_label: normalized.ctaLabel,
+        background_image: normalized.backgroundImage || '',
+        is_visible: normalized.isVisible !== false,
+        updated_at: new Date().toISOString()
+      });
+
+      await logAdminActivityInSupabase(
+        adminEmail,
+        auditAction,
+        auditDetails ||
+          `Updated Final Call To Action section ("${normalized.headingPrimary} ${normalized.headingAccent}")`
+      );
+      return true;
+    } catch (err) {
+      console.warn('Exception saving Final CTA to Supabase:', err);
+    }
+  }
+
+  return true;
+};
+
+export const restoreDefaultFinalCtaInSupabase = async (
+  adminEmail: string
+): Promise<FinalCtaSettings> => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(FINAL_CTA_CACHE_KEY, JSON.stringify(DEFAULT_FINAL_CTA));
+    emitFinalCtaUpdatedEvent();
+  }
+
+  await saveFinalCtaToSupabase(
+    DEFAULT_FINAL_CTA,
+    adminEmail,
+    'FINAL_CTA_RESTORED_DEFAULT',
+    'Restored default Final Call To Action section.'
+  );
+
+  return DEFAULT_FINAL_CTA;
+};
+
+// ==========================================
+// HOMEPAGE DYNAMIC SECTION ORDERING MANAGEMENT
+// ==========================================
+
+const HOME_LAYOUT_CACHE_KEY = 'atelier_home_section_layout';
+
+export const DEFAULT_HOME_SECTION_ORDER: HomeSectionId[] = [
+  'hero',
+  'brand-story',
+  'collections',
+  'atelier-experience',
+  'why-atelier',
+  'designers-architects',
+  'final-cta',
+  'featured-projects',
+  'brands-marquee',
+  'testimonials'
+];
+
+export const DEFAULT_HOME_SECTION_LAYOUT: HomeSectionLayoutSettings = {
+  id: 'default',
+  sections: DEFAULT_HOME_SECTION_ORDER.map((id, index) => ({
+    id,
+    isVisible: true,
+    order: index
+  }))
+};
+
+const emitHomeLayoutUpdatedEvent = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('atelier_home_layout_updated'));
+  }
+};
+
+export const normalizeHomeSectionLayout = (
+  raw?: Partial<HomeSectionLayoutSettings> | null
+): HomeSectionLayoutSettings => {
+  const validSet = new Set<HomeSectionId>(DEFAULT_HOME_SECTION_ORDER);
+  const seen = new Set<HomeSectionId>();
+  const normalized: HomeSectionLayoutItem[] = [];
+
+  if (Array.isArray(raw?.sections)) {
+    const sortedInput = [...raw.sections].sort((a, b) => {
+      const aOrder = typeof a?.order === 'number' ? a.order : 999;
+      const bOrder = typeof b?.order === 'number' ? b.order : 999;
+      return aOrder - bOrder;
+    });
+
+    sortedInput.forEach((item) => {
+      if (!item || !validSet.has(item.id) || seen.has(item.id)) return;
+      seen.add(item.id);
+      normalized.push({
+        id: item.id,
+        isVisible: item.isVisible !== false,
+        order: normalized.length
+      });
+    });
+  }
+
+  // Forward-compatibility: append any section missing from stored layout
+  DEFAULT_HOME_SECTION_ORDER.forEach((id) => {
+    if (!seen.has(id)) {
+      seen.add(id);
+      normalized.push({
+        id,
+        isVisible: true,
+        order: normalized.length
+      });
+    }
+  });
+
+  return {
+    id: raw?.id || 'default',
+    sections: normalized,
+    updatedAt: raw?.updatedAt
+  };
+};
+
+export const getCachedHomeSectionLayout = (): HomeSectionLayoutSettings => {
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(HOME_LAYOUT_CACHE_KEY);
+    if (cached !== null) {
+      try {
+        return normalizeHomeSectionLayout(JSON.parse(cached));
+      } catch {
+        // Fallback on malformed JSON
+      }
+    }
+  }
+  return normalizeHomeSectionLayout(DEFAULT_HOME_SECTION_LAYOUT);
+};
+
+export const fetchHomeSectionLayoutFromSupabase = async (): Promise<HomeSectionLayoutSettings> => {
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(HOME_LAYOUT_CACHE_KEY);
+    if (cached !== null) {
+      try {
+        return normalizeHomeSectionLayout(JSON.parse(cached));
+      } catch {
+        // Continue to Supabase fallback
+      }
+    }
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('home_section_layout')
+        .select('*')
+        .eq('id', 'default')
+        .single();
+
+      if (!error && data) {
+        return normalizeHomeSectionLayout({
+          id: data.id,
+          sections: Array.isArray(data.sections) ? data.sections : [],
+          updatedAt: data.updated_at
+        });
+      }
+    } catch (err) {
+      console.warn('Home section layout fetch from Supabase:', err);
+    }
+  }
+
+  return normalizeHomeSectionLayout(DEFAULT_HOME_SECTION_LAYOUT);
+};
+
+export const saveHomeSectionLayoutToSupabase = async (
+  settings: HomeSectionLayoutSettings,
+  adminEmail: string,
+  auditAction = 'HOME_LAYOUT_UPDATED',
+  auditDetails?: string
+): Promise<boolean> => {
+  const normalized = normalizeHomeSectionLayout(settings);
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(HOME_LAYOUT_CACHE_KEY, JSON.stringify(normalized));
+    emitHomeLayoutUpdatedEvent();
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from('home_section_layout').upsert({
+        id: 'default',
+        sections: normalized.sections,
+        updated_at: new Date().toISOString()
+      });
+
+      await logAdminActivityInSupabase(
+        adminEmail,
+        auditAction,
+        auditDetails ||
+          `Reordered homepage sections: ${normalized.sections
+            .filter((s) => s.isVisible !== false)
+            .map((s) => s.id)
+            .join(' -> ')}`
+      );
+      return true;
+    } catch (err) {
+      console.warn('Exception saving Home Section Layout to Supabase:', err);
+    }
+  }
+
+  return true;
+};
+
+export const restoreDefaultHomeSectionLayoutInSupabase = async (
+  adminEmail: string
+): Promise<HomeSectionLayoutSettings> => {
+  const normalizedDefault = normalizeHomeSectionLayout(DEFAULT_HOME_SECTION_LAYOUT);
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(HOME_LAYOUT_CACHE_KEY, JSON.stringify(normalizedDefault));
+    emitHomeLayoutUpdatedEvent();
+  }
+
+  await saveHomeSectionLayoutToSupabase(
+    normalizedDefault,
+    adminEmail,
+    'HOME_LAYOUT_RESTORED_DEFAULT',
+    'Restored default homepage section order & visibility.'
+  );
+
+  return normalizedDefault;
+};
+
+// ==========================================
+// DYNAMIC FOOTER CMS & LINKS MANAGEMENT
+// ==========================================
+
+const FOOTER_CACHE_KEY = 'atelier_footer_settings';
+
+export const DEFAULT_FOOTER_SETTINGS: FooterSettings = {
+  id: 'default',
+  newsletterVisible: true,
+  newsletterBadge: 'The Atelier Gazette',
+  newsletterHeading: 'Receive Curated Textile Archives & Private Exhibition Invitations',
+  newsletterSubtitle:
+    'Subscribe to receive our seasonal lookbooks, material sourcing documentaries, and private showroom events.',
+  newsletterPlaceholder: 'Enter your email address...',
+  newsletterButtonLabel: 'Join',
+  newsletterSuccessText: 'Welcome to The Atelier Circle. Lookbook sent.',
+
+  brandLogoImage: '',
+  brandLogoMonogram: 'A',
+  brandLogoTitle: 'Atelier Living',
+  brandDescription:
+    'Atelier Living is an international interior design house crafting bespoke textiles, architectural drapes, structural upholstery, hand-knotted rugs, and limited-edition atelier artifacts for fine private residences, superyachts, and boutique luxury hotels.',
+  showSocialLinks: true,
+
+  collectionsHeading: 'OUR COLLECTIONS',
+  collectionLinks: [
+    {
+      id: 'fc-1',
+      label: 'Bespoke Drapes',
+      target: 'category',
+      categorySlug: 'drapes-curtains',
+      isExternal: false,
+      isVisible: true,
+      order: 0
+    },
+    {
+      id: 'fc-2',
+      label: 'Upholstery & Fabrics',
+      target: 'category',
+      categorySlug: 'upholstery-fabrics',
+      isExternal: false,
+      isVisible: true,
+      order: 1
+    },
+    {
+      id: 'fc-3',
+      label: 'Wallpapers & Wallcoverings',
+      target: 'category',
+      categorySlug: 'wallpapers-wallcoverings',
+      isExternal: false,
+      isVisible: true,
+      order: 2
+    },
+    {
+      id: 'fc-4',
+      label: 'Rugs & Carpets',
+      target: 'category',
+      categorySlug: 'rugs-carpets',
+      isExternal: false,
+      isVisible: true,
+      order: 3
+    },
+    {
+      id: 'fc-5',
+      label: 'Mattresses & Sleep Comfort',
+      target: 'category',
+      categorySlug: 'mattresses-sleep-comfort',
+      isExternal: false,
+      isVisible: true,
+      order: 4
+    },
+    {
+      id: 'fc-6',
+      label: 'Custom Furnishing Solutions',
+      target: 'category',
+      categorySlug: 'custom-furnishing-solutions',
+      isExternal: false,
+      isVisible: true,
+      order: 5
+    }
+  ],
+
+  quickLinksHeading: 'Quick Links',
+  quickLinks: [
+    {
+      id: 'fq-1',
+      label: 'Home',
+      target: 'home',
+      isExternal: false,
+      isVisible: true,
+      order: 0
+    },
+    {
+      id: 'fq-2',
+      label: 'Our Story',
+      target: 'story',
+      isExternal: false,
+      isVisible: true,
+      order: 1
+    },
+    {
+      id: 'fq-3',
+      label: 'Collections',
+      target: 'section:curated-collections',
+      isExternal: false,
+      isVisible: true,
+      order: 2
+    },
+    {
+      id: 'fq-4',
+      label: 'Projects',
+      target: 'projects',
+      isExternal: false,
+      isVisible: true,
+      order: 3
+    },
+    {
+      id: 'fq-5',
+      label: 'For Professionals',
+      target: 'section:designers-architects',
+      isExternal: false,
+      isVisible: true,
+      order: 4
+    },
+    {
+      id: 'fq-6',
+      label: 'Contact Us',
+      target: 'contact',
+      isExternal: false,
+      isVisible: true,
+      order: 5
+    }
+  ],
+
+  showroomHeading: 'Ahmedabad Atelier',
+  address: '48 Berkeley Square, Mayfair, London W1J 5AW',
+  phone: '+44 (0)20 7946 0188',
+  mobile: '+44 7911 123456',
+  email: 'concierge@atelier-living.com',
+  showEmail: true,
+  showCtaButton: true,
+  ctaButtonLabel: 'Order Material Swatches',
+  ctaButtonTarget: 'swatches',
+  ctaButtonUrl: '',
+
+  copyrightText: `© ${new Date().getFullYear()} Atelier Living. All rights reserved.`,
+  bottomLinks: [
+    {
+      id: 'fb-1',
+      label: 'Craft Philosophy',
+      target: 'story',
+      isExternal: false,
+      isVisible: true,
+      order: 0
+    },
+    {
+      id: 'fb-2',
+      label: 'Private Consultation',
+      target: 'contact',
+      isExternal: false,
+      isVisible: true,
+      order: 1
+    },
+    {
+      id: 'fb-3',
+      label: 'Master Admin Portal',
+      target: 'admin',
+      isExternal: false,
+      isVisible: true,
+      order: 2
+    }
+  ]
+};
+
+const emitFooterUpdatedEvent = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('atelier_footer_updated'));
+  }
+};
+
+const normalizeFooterLinkArray = (
+  rawList: unknown,
+  fallbackList: FooterLinkItem[]
+): FooterLinkItem[] => {
+  if (!Array.isArray(rawList)) return fallbackList;
+  return rawList.map((item: Partial<FooterLinkItem>, idx) => ({
+    id: item?.id || `fl-${idx}-${Date.now()}`,
+    label: item?.label ?? '',
+    target: item?.target || 'home',
+    categorySlug: item?.categorySlug,
+    externalUrl: item?.externalUrl || '',
+    isExternal: Boolean(item?.isExternal),
+    isVisible: item?.isVisible !== false,
+    order: typeof item?.order === 'number' ? item.order : idx
+  }));
+};
+
+export const normalizeFooterSettings = (
+  raw?: Partial<FooterSettings> | null
+): FooterSettings => ({
+  id: raw?.id || 'default',
+  newsletterVisible: raw?.newsletterVisible !== false,
+  newsletterBadge:
+    raw?.newsletterBadge !== undefined
+      ? raw.newsletterBadge
+      : DEFAULT_FOOTER_SETTINGS.newsletterBadge,
+  newsletterHeading:
+    raw?.newsletterHeading !== undefined
+      ? raw.newsletterHeading
+      : DEFAULT_FOOTER_SETTINGS.newsletterHeading,
+  newsletterSubtitle:
+    raw?.newsletterSubtitle !== undefined
+      ? raw.newsletterSubtitle
+      : DEFAULT_FOOTER_SETTINGS.newsletterSubtitle,
+  newsletterPlaceholder:
+    raw?.newsletterPlaceholder !== undefined
+      ? raw.newsletterPlaceholder
+      : DEFAULT_FOOTER_SETTINGS.newsletterPlaceholder,
+  newsletterButtonLabel:
+    raw?.newsletterButtonLabel !== undefined
+      ? raw.newsletterButtonLabel
+      : DEFAULT_FOOTER_SETTINGS.newsletterButtonLabel,
+  newsletterSuccessText:
+    raw?.newsletterSuccessText !== undefined
+      ? raw.newsletterSuccessText
+      : DEFAULT_FOOTER_SETTINGS.newsletterSuccessText,
+
+  brandLogoImage:
+    raw?.brandLogoImage !== undefined
+      ? raw.brandLogoImage
+      : DEFAULT_FOOTER_SETTINGS.brandLogoImage,
+  brandLogoMonogram:
+    raw?.brandLogoMonogram !== undefined
+      ? raw.brandLogoMonogram
+      : DEFAULT_FOOTER_SETTINGS.brandLogoMonogram,
+  brandLogoTitle:
+    raw?.brandLogoTitle !== undefined
+      ? raw.brandLogoTitle
+      : DEFAULT_FOOTER_SETTINGS.brandLogoTitle,
+  brandDescription:
+    raw?.brandDescription !== undefined
+      ? raw.brandDescription
+      : DEFAULT_FOOTER_SETTINGS.brandDescription,
+  showSocialLinks: raw?.showSocialLinks !== false,
+
+  collectionsHeading:
+    raw?.collectionsHeading !== undefined
+      ? raw.collectionsHeading
+      : DEFAULT_FOOTER_SETTINGS.collectionsHeading,
+  collectionLinks: normalizeFooterLinkArray(
+    raw?.collectionLinks,
+    DEFAULT_FOOTER_SETTINGS.collectionLinks
+  ),
+
+  quickLinksHeading:
+    raw?.quickLinksHeading !== undefined
+      ? raw.quickLinksHeading
+      : DEFAULT_FOOTER_SETTINGS.quickLinksHeading,
+  quickLinks: normalizeFooterLinkArray(
+    raw?.quickLinks,
+    DEFAULT_FOOTER_SETTINGS.quickLinks
+  ),
+
+  showroomHeading:
+    raw?.showroomHeading !== undefined
+      ? raw.showroomHeading
+      : DEFAULT_FOOTER_SETTINGS.showroomHeading,
+  address: raw?.address !== undefined ? raw.address : DEFAULT_FOOTER_SETTINGS.address,
+  phone: raw?.phone !== undefined ? raw.phone : DEFAULT_FOOTER_SETTINGS.phone,
+  mobile: raw?.mobile !== undefined ? raw.mobile : DEFAULT_FOOTER_SETTINGS.mobile,
+  email: raw?.email !== undefined ? raw.email : DEFAULT_FOOTER_SETTINGS.email,
+  showEmail: raw?.showEmail !== false,
+  showCtaButton: raw?.showCtaButton !== false,
+  ctaButtonLabel:
+    raw?.ctaButtonLabel !== undefined
+      ? raw.ctaButtonLabel
+      : DEFAULT_FOOTER_SETTINGS.ctaButtonLabel,
+  ctaButtonTarget:
+    raw?.ctaButtonTarget !== undefined
+      ? raw.ctaButtonTarget
+      : DEFAULT_FOOTER_SETTINGS.ctaButtonTarget,
+  ctaButtonUrl:
+    raw?.ctaButtonUrl !== undefined ? raw.ctaButtonUrl : DEFAULT_FOOTER_SETTINGS.ctaButtonUrl,
+
+  copyrightText:
+    raw?.copyrightText !== undefined
+      ? raw.copyrightText
+      : DEFAULT_FOOTER_SETTINGS.copyrightText,
+  bottomLinks: normalizeFooterLinkArray(
+    raw?.bottomLinks,
+    DEFAULT_FOOTER_SETTINGS.bottomLinks
+  ),
+  updatedAt: raw?.updatedAt
+});
+
+export const getCachedFooterSettings = (): FooterSettings => {
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(FOOTER_CACHE_KEY);
+    if (cached !== null) {
+      try {
+        return normalizeFooterSettings(JSON.parse(cached));
+      } catch {
+        // Fallback on malformed JSON
+      }
+    }
+  }
+  return normalizeFooterSettings(DEFAULT_FOOTER_SETTINGS);
+};
+
+export const fetchFooterSettingsFromSupabase = async (): Promise<FooterSettings> => {
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(FOOTER_CACHE_KEY);
+    if (cached !== null) {
+      try {
+        return normalizeFooterSettings(JSON.parse(cached));
+      } catch {
+        // Continue to Supabase fallback
+      }
+    }
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('footer_settings')
+        .select('*')
+        .eq('id', 'default')
+        .single();
+
+      if (!error && data) {
+        return normalizeFooterSettings({
+          id: data.id,
+          newsletterVisible: data.newsletter_visible !== false,
+          newsletterBadge: data.newsletter_badge,
+          newsletterHeading: data.newsletter_heading,
+          newsletterSubtitle: data.newsletter_subtitle,
+          newsletterPlaceholder: data.newsletter_placeholder,
+          newsletterButtonLabel: data.newsletter_button_label,
+          newsletterSuccessText: data.newsletter_success_text,
+          brandLogoImage: data.brand_logo_image,
+          brandLogoMonogram: data.brand_logo_monogram,
+          brandLogoTitle: data.brand_logo_title,
+          brandDescription: data.brand_description,
+          showSocialLinks: data.show_social_links !== false,
+          collectionsHeading: data.collections_heading,
+          collectionLinks: data.collection_links,
+          quickLinksHeading: data.quick_links_heading,
+          quickLinks: data.quick_links,
+          showroomHeading: data.showroom_heading,
+          address: data.address,
+          phone: data.phone,
+          mobile: data.mobile,
+          email: data.email,
+          showEmail: data.show_email !== false,
+          showCtaButton: data.show_cta_button !== false,
+          ctaButtonLabel: data.cta_button_label,
+          ctaButtonTarget: data.cta_button_target,
+          ctaButtonUrl: data.cta_button_url,
+          copyrightText: data.copyright_text,
+          bottomLinks: data.bottom_links,
+          updatedAt: data.updated_at
+        });
+      }
+    } catch (err) {
+      console.warn('Footer settings fetch from Supabase:', err);
+    }
+  }
+
+  return normalizeFooterSettings(DEFAULT_FOOTER_SETTINGS);
+};
+
+export const saveFooterSettingsToSupabase = async (
+  settings: FooterSettings,
+  adminEmail: string,
+  auditAction = 'FOOTER_SETTINGS_UPDATED',
+  auditDetails?: string
+): Promise<boolean> => {
+  const normalized = normalizeFooterSettings(settings);
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(FOOTER_CACHE_KEY, JSON.stringify(normalized));
+    emitFooterUpdatedEvent();
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from('footer_settings').upsert({
+        id: 'default',
+        newsletter_visible: normalized.newsletterVisible !== false,
+        newsletter_badge: normalized.newsletterBadge,
+        newsletter_heading: normalized.newsletterHeading,
+        newsletter_subtitle: normalized.newsletterSubtitle,
+        newsletter_placeholder: normalized.newsletterPlaceholder,
+        newsletter_button_label: normalized.newsletterButtonLabel,
+        newsletter_success_text: normalized.newsletterSuccessText,
+        brand_logo_image: normalized.brandLogoImage || '',
+        brand_logo_monogram: normalized.brandLogoMonogram,
+        brand_logo_title: normalized.brandLogoTitle,
+        brand_description: normalized.brandDescription,
+        show_social_links: normalized.showSocialLinks !== false,
+        collections_heading: normalized.collectionsHeading,
+        collection_links: normalized.collectionLinks,
+        quick_links_heading: normalized.quickLinksHeading,
+        quick_links: normalized.quickLinks,
+        showroom_heading: normalized.showroomHeading,
+        address: normalized.address,
+        phone: normalized.phone,
+        mobile: normalized.mobile,
+        email: normalized.email,
+        show_email: normalized.showEmail !== false,
+        show_cta_button: normalized.showCtaButton !== false,
+        cta_button_label: normalized.ctaButtonLabel,
+        cta_button_target: normalized.ctaButtonTarget,
+        cta_button_url: normalized.ctaButtonUrl || '',
+        copyright_text: normalized.copyrightText,
+        bottom_links: normalized.bottomLinks,
+        updated_at: new Date().toISOString()
+      });
+
+      await logAdminActivityInSupabase(
+        adminEmail,
+        auditAction,
+        auditDetails ||
+          `Updated dynamic footer (${normalized.collectionLinks.length} collection links, ${normalized.quickLinks.length} quick links)`
+      );
+      return true;
+    } catch (err) {
+      console.warn('Exception saving Footer settings to Supabase:', err);
+    }
+  }
+
+  return true;
+};
+
+export const restoreDefaultFooterSettingsInSupabase = async (
+  adminEmail: string
+): Promise<FooterSettings> => {
+  const restored = normalizeFooterSettings(DEFAULT_FOOTER_SETTINGS);
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(FOOTER_CACHE_KEY, JSON.stringify(restored));
+    emitFooterUpdatedEvent();
+  }
+
+  await saveFooterSettingsToSupabase(
+    restored,
+    adminEmail,
+    'FOOTER_SETTINGS_RESTORED_DEFAULT',
+    'Restored default OUR COLLECTIONS links, Quick Links, and footer details.'
+  );
+
+  return restored;
+};
 
 
 

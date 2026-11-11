@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { CATEGORIES_DATA } from '../../data/categoriesData';
-import type { CategorySlug, SiteSettings, HeaderNavLink } from '../../types';
+import { CORE_COLLECTIONS } from '../../data/categoriesData';
+import type { CategoryInfo, CategorySlug, SiteSettings, HeaderNavLink } from '../../types';
 import { DEFAULT_SITE_SETTINGS, DEFAULT_HEADER_NAV_LINKS } from '../../lib/supabase';
 import {
   Menu,
@@ -20,6 +20,7 @@ import {
 interface NavbarProps {
   activeTab: string;
   siteSettings?: SiteSettings;
+  collections?: CategoryInfo[];
   onNavigate: (tab: string, categorySlug?: CategorySlug) => void;
   onRequestSwatches: () => void;
 }
@@ -27,6 +28,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   siteSettings = DEFAULT_SITE_SETTINGS,
+  collections = CORE_COLLECTIONS,
   onNavigate,
   onRequestSwatches
 }) => {
@@ -297,10 +299,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                     {/* Mega Menu Dropdown */}
                     {isMegaMenuOpen && (
-                      <div className="absolute top-full -left-48 w-[840px] bg-[#0F1714]/98 backdrop-blur-2xl rounded-2xl p-6 shadow-2xl border border-[#C9A56A]/40 grid grid-cols-4 gap-4 animate-in fade-in slide-from-top-3 duration-300 z-50">
-                        <div className="col-span-4 pb-3 mb-2 border-b border-[#C9A56A]/30 flex items-center justify-between">
+                      <div className="absolute top-full -left-48 w-[840px] bg-[#0F1714]/98 backdrop-blur-2xl rounded-2xl p-6 shadow-2xl border border-[#C9A56A]/40 grid grid-cols-3 gap-4 animate-in fade-in slide-from-top-3 duration-300 z-50">
+                        <div className="col-span-3 pb-3 mb-2 border-b border-[#C9A56A]/30 flex items-center justify-between">
                           <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-bold flex items-center gap-1.5">
-                            <Compass className="w-4 h-4 text-[#C9A56A]" /> Explore Product Catalogue (8 Archives)
+                            <Compass className="w-4 h-4 text-[#C9A56A]" /> Explore Collections ({collections.length} Archive{collections.length === 1 ? '' : 's'})
                           </span>
                           <button
                             onClick={() => {
@@ -313,7 +315,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           </button>
                         </div>
 
-                        {Object.values(CATEGORIES_DATA).map((cat) => (
+                        {collections.map((cat) => (
                           <button
                             key={cat.id}
                             onClick={() => handleCategoryClick(cat.id as CategorySlug)}
@@ -483,7 +485,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       {/* Collapsible Category Grid inside Dropdown */}
                       {mobileCategoriesExpanded && (
                         <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[45vh] overflow-y-auto pr-1">
-                          {Object.values(CATEGORIES_DATA).map((cat) => (
+                          {collections.map((cat) => (
                             <button
                               key={cat.id}
                               onClick={() => handleCategoryClick(cat.id as CategorySlug)}

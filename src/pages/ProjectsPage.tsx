@@ -46,11 +46,11 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({
         <div className="bg-[#0F1714] text-[#E9DFD1] p-6 sm:p-8 rounded-3xl border border-[#C9A56A]/30 shadow-2xl">
           <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#C9A56A]/20">
             <span className="text-xs uppercase tracking-widest text-[#C9A56A] font-semibold flex items-center gap-2">
-              <Compass className="w-4 h-4" /> Category Hub — Direct Access to All 8 Product Archives
+              <Compass className="w-4 h-4" /> Direct Access to All 6 Core Collections
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {Object.values(CATEGORIES_DATA).map((cat) => (
               <button
                 key={cat.id}

@@ -1,22 +1,28 @@
 import React, { useState } from 'react';
-import { CATEGORIES_DATA } from '../data/categoriesData';
+import { CATEGORIES_DATA, CORE_COLLECTIONS } from '../data/categoriesData';
 import { PRODUCTS_DATA } from '../data/productsData';
-import type { CategorySlug } from '../types';
+import type { CategoryInfo, CategorySlug } from '../types';
 import { PackageCheck, ArrowLeft, Filter } from 'lucide-react';
 
 interface CategoryPageProps {
   categorySlug: CategorySlug;
+  collections?: CategoryInfo[];
   onNavigate: (tab: string, categorySlug?: CategorySlug) => void;
   onRequestSwatches: () => void;
 }
 
 export const CategoryPage: React.FC<CategoryPageProps> = ({
   categorySlug,
+  collections = CORE_COLLECTIONS,
   onNavigate,
   onRequestSwatches
 }) => {
-  const categoryInfo = CATEGORIES_DATA[categorySlug] || CATEGORIES_DATA['fabrics'];
-  const categoryProducts = PRODUCTS_DATA.filter((p) => p.categorySlug === categorySlug);
+  const categoryInfo =
+    collections.find((c) => c.id === categorySlug) ||
+    CATEGORIES_DATA[categorySlug] ||
+    collections[0] ||
+    CATEGORIES_DATA['drapes-curtains'];
+  const categoryProducts = PRODUCTS_DATA.filter((p) => p.categorySlug === categorySlug || p.categorySlug === categoryInfo.id);
 
   const [filterPrice, setFilterPrice] = useState<string>('All');
 

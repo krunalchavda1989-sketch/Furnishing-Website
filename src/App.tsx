@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
 import { SmoothScrollProvider } from './components/layout/SmoothScrollProvider';
@@ -29,18 +29,39 @@ import {
   fetchBrandsFromSupabase,
   fetchStorySettingsFromSupabase,
   fetchHeroSlidesFromSupabase,
-  fetchMarketingSettingsFromSupabase
+  fetchMarketingSettingsFromSupabase,
+  fetchCollectionsFromSupabase,
+  getCachedCollections,
+  fetchAtelierExperienceFromSupabase,
+  getCachedAtelierExperience,
+  fetchWhyAtelierFromSupabase,
+  getCachedWhyAtelier,
+  fetchDesignersArchitectsFromSupabase,
+  getCachedDesignersArchitects,
+  fetchFinalCtaFromSupabase,
+  getCachedFinalCta,
+  fetchHomeSectionLayoutFromSupabase,
+  getCachedHomeSectionLayout,
+  fetchFooterSettingsFromSupabase,
+  getCachedFooterSettings
 } from './lib/supabase';
 import { PROJECTS_DATA } from './data/projectsData';
 import type {
   CategorySlug,
+  CategoryInfo,
   Project,
   SiteSettings,
   Testimonial,
   BrandPartner,
   StorySettings,
   FurnishingScene,
-  MarketingSettings
+  MarketingSettings,
+  AtelierExperienceSettings,
+  WhyAtelierSettings,
+  DesignersArchitectsSettings,
+  FinalCtaSettings,
+  HomeSectionLayoutSettings,
+  FooterSettings
 } from './types';
 import type { AdminUser } from './types/adminTypes';
 
@@ -91,6 +112,97 @@ export function App() {
   const [storySettings, setStorySettings] = useState<StorySettings>(DEFAULT_STORY_SETTINGS);
   const [heroSlidesList, setHeroSlidesList] = useState<FurnishingScene[]>(DEFAULT_HERO_SLIDES);
   const [marketingSettings, setMarketingSettings] = useState<MarketingSettings>(DEFAULT_MARKETING_SETTINGS);
+  const [collectionsList, setCollectionsList] = useState<CategoryInfo[]>(() =>
+    getCachedCollections()
+  );
+  const [experienceSettings, setExperienceSettings] = useState<AtelierExperienceSettings>(() =>
+    getCachedAtelierExperience()
+  );
+  const [whySettings, setWhySettings] = useState<WhyAtelierSettings>(() =>
+    getCachedWhyAtelier()
+  );
+  const [designersSettings, setDesignersSettings] = useState<DesignersArchitectsSettings>(() =>
+    getCachedDesignersArchitects()
+  );
+  const [finalCtaSettings, setFinalCtaSettings] = useState<FinalCtaSettings>(() =>
+    getCachedFinalCta()
+  );
+  const [homeSectionLayout, setHomeSectionLayout] = useState<HomeSectionLayoutSettings>(() =>
+    getCachedHomeSectionLayout()
+  );
+  const [footerSettings, setFooterSettings] = useState<FooterSettings>(() =>
+    getCachedFooterSettings()
+  );
+  const pendingHomeAnchorRef = useRef<string | null>(null);
+
+  const loadLiveFooterSettings = async () => {
+    try {
+      const res = await fetchFooterSettingsFromSupabase();
+      if (res) setFooterSettings(res);
+    } catch (err) {
+      console.warn('Error loading Footer settings:', err);
+    }
+  };
+
+  const loadLiveHomeSectionLayout = async () => {
+    try {
+      const res = await fetchHomeSectionLayoutFromSupabase();
+      if (res) setHomeSectionLayout(res);
+    } catch (err) {
+      console.warn('Error loading Homepage Section Layout:', err);
+    }
+  };
+
+  const loadLiveDesignersSettings = async () => {
+    try {
+      const res = await fetchDesignersArchitectsFromSupabase();
+      if (res) setDesignersSettings(res);
+    } catch (err) {
+      console.warn('Error loading Designers & Architects section:', err);
+    }
+  };
+
+  const loadLiveFinalCtaSettings = async () => {
+    try {
+      const res = await fetchFinalCtaFromSupabase();
+      if (res) setFinalCtaSettings(res);
+    } catch (err) {
+      console.warn('Error loading Final CTA section:', err);
+    }
+  };
+
+  const loadLiveWhySettings = async () => {
+    try {
+      const res = await fetchWhyAtelierFromSupabase();
+      if (res) {
+        setWhySettings(res);
+      }
+    } catch (err) {
+      console.warn('Error loading live Why Atelier Living:', err);
+    }
+  };
+
+  const loadLiveExperienceSettings = async () => {
+    try {
+      const exp = await fetchAtelierExperienceFromSupabase();
+      if (exp) {
+        setExperienceSettings(exp);
+      }
+    } catch (err) {
+      console.warn('Error loading live Atelier Experience:', err);
+    }
+  };
+
+  const loadLiveCollections = async () => {
+    try {
+      const data = await fetchCollectionsFromSupabase();
+      if (Array.isArray(data)) {
+        setCollectionsList(data);
+      }
+    } catch (err) {
+      console.warn('Error loading live collections:', err);
+    }
+  };
 
   const loadLiveProjects = async () => {
     try {
@@ -177,6 +289,13 @@ export function App() {
     loadLiveStorySettings();
     loadLiveHeroSlides();
     loadLiveMarketingSettings();
+    loadLiveCollections();
+    loadLiveExperienceSettings();
+    loadLiveWhySettings();
+    loadLiveDesignersSettings();
+    loadLiveFinalCtaSettings();
+    loadLiveHomeSectionLayout();
+    loadLiveFooterSettings();
   }, []);
 
   // Sync state from location on initial load and restore admin session
@@ -229,9 +348,73 @@ export function App() {
       if (e.key === 'atelier_marketing_settings') {
         loadLiveMarketingSettings();
       }
+      if (e.key === 'atelier_collections_cache' || e.key === 'atelier_deleted_collections') {
+        loadLiveCollections();
+      }
+      if (
+        e.key === 'atelier_experience_settings' ||
+        e.key === 'atelier_deleted_experience_steps'
+      ) {
+        loadLiveExperienceSettings();
+      }
+      if (
+        e.key === 'atelier_why_settings' ||
+        e.key === 'atelier_deleted_why_pillars'
+      ) {
+        loadLiveWhySettings();
+      }
+      if (e.key === 'atelier_designers_architects') {
+        loadLiveDesignersSettings();
+      }
+      if (e.key === 'atelier_final_cta') {
+        loadLiveFinalCtaSettings();
+      }
+      if (e.key === 'atelier_home_section_layout') {
+        loadLiveHomeSectionLayout();
+      }
+      if (e.key === 'atelier_footer_settings') {
+        loadLiveFooterSettings();
+      }
+    };
+    const handleCollectionsUpdated = () => {
+      loadLiveCollections();
+    };
+    const handleExperienceUpdated = () => {
+      loadLiveExperienceSettings();
+    };
+    const handleWhyUpdated = () => {
+      loadLiveWhySettings();
+    };
+    const handleDesignersUpdated = () => {
+      loadLiveDesignersSettings();
+    };
+    const handleFinalCtaUpdated = () => {
+      loadLiveFinalCtaSettings();
+    };
+    const handleHomeLayoutUpdated = () => {
+      loadLiveHomeSectionLayout();
+    };
+    const handleFooterUpdated = () => {
+      loadLiveFooterSettings();
     };
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    window.addEventListener('atelier_collections_updated', handleCollectionsUpdated);
+    window.addEventListener('atelier_experience_updated', handleExperienceUpdated);
+    window.addEventListener('atelier_why_updated', handleWhyUpdated);
+    window.addEventListener('atelier_designers_updated', handleDesignersUpdated);
+    window.addEventListener('atelier_final_cta_updated', handleFinalCtaUpdated);
+    window.addEventListener('atelier_home_layout_updated', handleHomeLayoutUpdated);
+    window.addEventListener('atelier_footer_updated', handleFooterUpdated);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('atelier_collections_updated', handleCollectionsUpdated);
+      window.removeEventListener('atelier_experience_updated', handleExperienceUpdated);
+      window.removeEventListener('atelier_why_updated', handleWhyUpdated);
+      window.removeEventListener('atelier_designers_updated', handleDesignersUpdated);
+      window.removeEventListener('atelier_final_cta_updated', handleFinalCtaUpdated);
+      window.removeEventListener('atelier_home_layout_updated', handleHomeLayoutUpdated);
+      window.removeEventListener('atelier_footer_updated', handleFooterUpdated);
+    };
   }, []);
 
   // Listen to popstate (browser Back / Forward buttons) to seamlessly sync tab & view
@@ -247,12 +430,40 @@ export function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Scroll to top on tab change
+  // Scroll to top or pending anchor on tab change
   useEffect(() => {
+    if (activeTab === 'home' && pendingHomeAnchorRef.current) {
+      const anchorId = pendingHomeAnchorRef.current;
+      pendingHomeAnchorRef.current = null;
+      const timer = window.setTimeout(() => {
+        const el = document.getElementById(anchorId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 120);
+      return () => window.clearTimeout(timer);
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab, activeCategorySlug]);
 
   const handleNavigate = (tab: string, categorySlug?: CategorySlug) => {
+    if (tab.startsWith('section:')) {
+      const anchorId = tab.replace('section:', '');
+      if (activeTab === 'home') {
+        const el = document.getElementById(anchorId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+          return;
+        }
+      }
+      pendingHomeAnchorRef.current = anchorId;
+      setActiveTab('home');
+      if (window.location.pathname !== '/') {
+        window.history.pushState({}, '', '/');
+      }
+      return;
+    }
+
     let targetPath = '/';
     if (tab === 'admin') {
       targetPath = '/admin';
@@ -263,6 +474,9 @@ export function App() {
       setActiveTab('category');
       targetPath = `/category/${targetSlug}`;
     } else if (tab === 'home') {
+      if (activeTab === 'home') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
       setActiveTab('home');
       targetPath = '/';
     } else {
@@ -317,7 +531,16 @@ export function App() {
           <AdminDashboard
             user={adminUser}
             onLogout={handleAdminLogout}
-            onReturnToSite={() => handleNavigate('home')}
+            onReturnToSite={() => {
+              loadLiveCollections();
+              loadLiveExperienceSettings();
+              loadLiveWhySettings();
+              loadLiveDesignersSettings();
+              loadLiveFinalCtaSettings();
+              loadLiveHomeSectionLayout();
+              loadLiveFooterSettings();
+              handleNavigate('home');
+            }}
           />
         )
       ) : (
@@ -327,6 +550,7 @@ export function App() {
             <Navbar
               activeTab={activeTab}
               siteSettings={siteSettings}
+              collections={collectionsList}
               onNavigate={handleNavigate}
               onRequestSwatches={() => setIsSampleModalOpen(true)}
             />
@@ -339,6 +563,12 @@ export function App() {
                   brands={brandsList}
                   testimonials={testimonialsList}
                   heroSlides={heroSlidesList}
+                  collections={collectionsList}
+                  experience={experienceSettings}
+                  whyAtelier={whySettings}
+                  designersArchitects={designersSettings}
+                  finalCta={finalCtaSettings}
+                  sectionLayout={homeSectionLayout}
                   onNavigate={handleNavigate}
                   onOpenProject={(prj) => setSelectedProjectModal(prj)}
                   onRequestSwatches={() => setIsSampleModalOpen(true)}
@@ -358,6 +588,7 @@ export function App() {
               {activeTab === 'category' && (
                 <CategoryPage
                   categorySlug={activeCategorySlug}
+                  collections={collectionsList}
                   onNavigate={handleNavigate}
                   onRequestSwatches={() => setIsSampleModalOpen(true)}
                 />
@@ -371,6 +602,8 @@ export function App() {
             {/* Global Footer */}
             <Footer
               siteSettings={siteSettings}
+              footerSettings={footerSettings}
+              collections={collectionsList}
               onNavigate={handleNavigate}
               onRequestSwatches={() => setIsSampleModalOpen(true)}
             />

@@ -47,7 +47,9 @@ import {
   Compass,
   Award,
   History,
-  User
+  User,
+  CheckCircle2,
+  Link2
 } from 'lucide-react';
 import {
   InstagramIcon,
@@ -73,7 +75,14 @@ import type {
   StoryGalleryItem,
   FurnishingScene,
   HeroHotspot,
-  MarketingSettings
+  MarketingSettings,
+  CategoryInfo,
+  AtelierExperienceSettings,
+  WhyAtelierSettings,
+  DesignersArchitectsSettings,
+  FinalCtaSettings,
+  HomeSectionLayoutSettings,
+  FooterSettings
 } from '../../types';
 import { CATEGORIES_DATA } from '../../data/categoriesData';
 import { PRODUCTS_DATA } from '../../data/productsData';
@@ -86,6 +95,12 @@ import {
   fetchProductsFromSupabase,
   createProductInSupabase,
   deleteProductInSupabase,
+  fetchCollectionsFromSupabase,
+  getCachedCollections,
+  saveCollectionsToSupabase,
+  deleteCollectionFromSupabase,
+  generateUniqueCollectionSlug,
+  restoreDefaultCollectionsInSupabase,
   fetchProjectsFromSupabase,
   createOrUpdateProjectInSupabase,
   deleteProjectInSupabase,
@@ -124,9 +139,27 @@ import {
   saveHeroSlideInSupabase,
   deleteHeroSlideInSupabase,
   DEFAULT_MARKETING_SETTINGS,
-  fetchMarketingSettingsFromSupabase
+  fetchMarketingSettingsFromSupabase,
+  getCachedAtelierExperience,
+  fetchAtelierExperienceFromSupabase,
+  getCachedWhyAtelier,
+  fetchWhyAtelierFromSupabase,
+  getCachedDesignersArchitects,
+  fetchDesignersArchitectsFromSupabase,
+  getCachedFinalCta,
+  fetchFinalCtaFromSupabase,
+  getCachedHomeSectionLayout,
+  fetchHomeSectionLayoutFromSupabase,
+  getCachedFooterSettings,
+  fetchFooterSettingsFromSupabase
 } from '../../lib/supabase';
 import { AdminMarketingSuite } from './AdminMarketingSuite';
+import { AdminExperienceModule } from './AdminExperienceModule';
+import { AdminWhyAtelierModule } from './AdminWhyAtelierModule';
+import { AdminDesignersModule } from './AdminDesignersModule';
+import { AdminFinalCtaModule } from './AdminFinalCtaModule';
+import { AdminHomeLayoutModule } from './AdminHomeLayoutModule';
+import { AdminFooterModule } from './AdminFooterModule';
 import { useToast } from '../ui/ToastNotification';
 import { ConfirmDeleteModal } from '../ui/ConfirmDeleteModal';
 import { ImageUploader } from '../ui/ImageUploader';
@@ -244,10 +277,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onReturnToSite
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'inquiries' | 'products' | 'swatches' | 'audit-logs' | 'projects' | 'settings' | 'newsletter' | 'site-branding' | 'marketing-seo'
+    'overview' | 'inquiries' | 'products' | 'swatches' | 'audit-logs' | 'projects' | 'settings' | 'newsletter' | 'site-branding' | 'home-layout' | 'footer-cms' | 'atelier-experience' | 'why-atelier' | 'designers-architects' | 'final-cta' | 'marketing-seo'
   >('overview');
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Homepage Section Drag-and-Drop Ordering State
+  const [homeSectionLayout, setHomeSectionLayout] = useState<HomeSectionLayoutSettings>(() =>
+    getCachedHomeSectionLayout()
+  );
+
+  // Dynamic Footer Settings & Links State
+  const [footerSettings, setFooterSettings] = useState<FooterSettings>(() =>
+    getCachedFooterSettings()
+  );
+
+  // Atelier Experience Process State
+  const [experienceSettings, setExperienceSettings] = useState<AtelierExperienceSettings>(() =>
+    getCachedAtelierExperience()
+  );
+
+  // Why Atelier Living Scrolling Showcase State
+  const [whySettings, setWhySettings] = useState<WhyAtelierSettings>(() =>
+    getCachedWhyAtelier()
+  );
+
+  // Designers & Architects Trade Section State
+  const [designersSettings, setDesignersSettings] = useState<DesignersArchitectsSettings>(() =>
+    getCachedDesignersArchitects()
+  );
+
+  // Final Call To Action Section State
+  const [finalCtaSettings, setFinalCtaSettings] = useState<FinalCtaSettings>(() =>
+    getCachedFinalCta()
+  );
 
   // Marketing & SEO State
   const [marketingSettings, setMarketingSettings] = useState<MarketingSettings>(() => {
@@ -402,6 +465,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const deleted = getDeletedKeys('atelier_deleted_products').concat(getDeletedKeys('maison_deleted_products'));
     return PRODUCTS_DATA.filter((p) => !deleted.includes(p.id));
   });
+
+  const [collectionsList, setCollectionsList] = useState<CategoryInfo[]>(() =>
+    getCachedCollections()
+  );
+  const [editingCollection, setEditingCollection] = useState<CategoryInfo | null>(null);
+  const [showEditCollectionModal, setShowEditCollectionModal] = useState(false);
+  const [showAddCollectionModal, setShowAddCollectionModal] = useState(false);
+  const [newCollectionForm, setNewCollectionForm] = useState({
+    number: '',
+    id: '',
+    title: '',
+    subtitle: '',
+    craftOrigin: 'Ahmedabad Atelier',
+    materialHighlight: '',
+    tagline: '',
+    heroImage: '',
+    description: ''
+  });
+  const [isSyncingCollections, setIsSyncingCollections] = useState(false);
 
   const [showroomsList, setShowroomsList] = useState<Showroom[]>(() => {
     const deleted = getDeletedKeys('atelier_deleted_showrooms').concat(getDeletedKeys('maison_deleted_showrooms'));
@@ -558,7 +640,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Add Product Form State
   const [newProductForm, setNewProductForm] = useState({
     name: '',
-    categorySlug: 'fabrics' as CategorySlug,
+    categorySlug: 'drapes-curtains' as CategorySlug,
     materialComposition: '',
     origin: 'Como, Italy',
     priceCategory: 'Bespoke',
@@ -601,7 +683,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     // 2. Fetch Swatch Requests
     fetchSupabaseSwatchRequests();
 
-    // 3. Fetch Products
+    // 3. Fetch Products & Collections
     const dbProds = await fetchProductsFromSupabase();
     const deletedProds = getDeletedKeys('maison_deleted_products');
     if (dbProds && dbProds.length > 0) {
@@ -609,6 +691,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     } else {
       setProductsList((prev) => prev.filter((p) => !deletedProds.includes(p.id)));
     }
+
+    const dbCols = await fetchCollectionsFromSupabase();
+    setCollectionsList(dbCols);
 
     // 4. Fetch Audit Logs
     const logs = await fetchAdminAuditLogsFromSupabase();
@@ -678,6 +763,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const mkt = await fetchMarketingSettingsFromSupabase();
     if (mkt) {
       setMarketingSettings(mkt);
+    }
+
+    // 16. Fetch Atelier Experience Process Section
+    const exp = await fetchAtelierExperienceFromSupabase();
+    if (exp) {
+      setExperienceSettings(exp);
+    }
+
+    // 17. Fetch Why Atelier Living Section
+    const whyRes = await fetchWhyAtelierFromSupabase();
+    if (whyRes) {
+      setWhySettings(whyRes);
+    }
+
+    // 18. Fetch Designers & Architects Trade Section
+    const designersRes = await fetchDesignersArchitectsFromSupabase();
+    if (designersRes) {
+      setDesignersSettings(designersRes);
+    }
+
+    // 19. Fetch Final Call To Action Section
+    const ctaRes = await fetchFinalCtaFromSupabase();
+    if (ctaRes) {
+      setFinalCtaSettings(ctaRes);
+    }
+
+    // 20. Fetch Homepage Section Layout Order
+    const layoutRes = await fetchHomeSectionLayoutFromSupabase();
+    if (layoutRes) {
+      setHomeSectionLayout(layoutRes);
+    }
+
+    // 21. Fetch Dynamic Footer Settings & Links
+    const footerRes = await fetchFooterSettingsFromSupabase();
+    if (footerRes) {
+      setFooterSettings(footerRes);
     }
   };
 
@@ -934,12 +1055,201 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // Collection Architecture Handlers
+  const openAddCollectionModal = () => {
+    const nextNum = String(collectionsList.length + 1).padStart(2, '0');
+    setNewCollectionForm({
+      number: nextNum,
+      id: '',
+      title: '',
+      subtitle: '',
+      craftOrigin: 'Ahmedabad Atelier',
+      materialHighlight: '',
+      tagline: '',
+      heroImage: '',
+      description: ''
+    });
+    setShowAddCollectionModal(true);
+  };
+
+  const handleCreateCollection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedTitle = newCollectionForm.title.trim();
+    const trimmedDesc = newCollectionForm.description.trim();
+    if (!trimmedTitle || !trimmedDesc) {
+      showToast('Missing Information', 'Please enter both a collection title and description.', 'error');
+      return;
+    }
+    if (!newCollectionForm.heroImage) {
+      showToast('Collection Image Required', 'Please upload an image for this collection block.', 'error');
+      return;
+    }
+
+    const existingIds = collectionsList.map((c) => c.id);
+    const slug = (newCollectionForm.id.trim()
+      ? generateUniqueCollectionSlug(newCollectionForm.id, existingIds)
+      : generateUniqueCollectionSlug(trimmedTitle, existingIds)) as CategorySlug;
+    const displayNum =
+      newCollectionForm.number.trim() || String(collectionsList.length + 1).padStart(2, '0');
+    const craftOrigin = newCollectionForm.craftOrigin.trim() || 'Ahmedabad Atelier';
+    const subtitle = newCollectionForm.subtitle.trim() || craftOrigin;
+
+    const newCollection: CategoryInfo = {
+      id: slug,
+      number: displayNum,
+      title: trimmedTitle,
+      subtitle,
+      description: trimmedDesc,
+      heroImage: newCollectionForm.heroImage,
+      materialHighlight:
+        newCollectionForm.materialHighlight.trim() ||
+        'Curated Atelier Textiles & Bespoke Craftsmanship',
+      craftOrigin,
+      tagline: newCollectionForm.tagline.trim() || trimmedTitle,
+      order: collectionsList.length + 1,
+      isVisible: true
+    };
+
+    const updated = [...collectionsList, newCollection];
+    setCollectionsList(updated);
+    setShowAddCollectionModal(false);
+    showToast(
+      'Collection Added',
+      `"${displayNum}. ${trimmedTitle}" added to Our Collections architecture.`,
+      'add'
+    );
+
+    await saveCollectionsToSupabase(
+      updated,
+      user.email,
+      'COLLECTION_CREATED',
+      `Created collection "${displayNum}. ${trimmedTitle}" (${slug})`
+    );
+    const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+    setAuditLogs(updatedLogs);
+  };
+
+  const handleSaveCollection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCollection) return;
+    if (!editingCollection.heroImage) {
+      showToast('Collection Image Required', 'Please upload an image or provide an image URL.', 'error');
+      return;
+    }
+
+    const updated = collectionsList.map((col, idx) =>
+      col.id === editingCollection.id
+        ? {
+            ...editingCollection,
+            number:
+              editingCollection.number && editingCollection.number.trim()
+                ? editingCollection.number.trim()
+                : String(idx + 1).padStart(2, '0'),
+            title: editingCollection.title.trim(),
+            craftOrigin: editingCollection.craftOrigin.trim() || 'Ahmedabad Atelier',
+            subtitle:
+              editingCollection.subtitle?.trim() ||
+              editingCollection.craftOrigin.trim() ||
+              'Bespoke Collection',
+            materialHighlight:
+              editingCollection.materialHighlight?.trim() || 'Curated Atelier Finishes',
+            description: editingCollection.description.trim()
+          }
+        : col
+    );
+
+    setCollectionsList(updated);
+    setShowEditCollectionModal(false);
+    showToast('Collection Updated', `Updated "${editingCollection.title}" successfully.`, 'success');
+
+    await saveCollectionsToSupabase(
+      updated,
+      user.email,
+      'COLLECTION_UPDATED',
+      `Updated collection "${editingCollection.title}" (${editingCollection.id})`
+    );
+    const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+    setAuditLogs(updatedLogs);
+  };
+
+  const handleDeleteCollection = (id: string, title: string) => {
+    setDeleteModalState({
+      isOpen: true,
+      title: 'Delete Collection Block',
+      itemName: title,
+      itemType: 'collection block',
+      onConfirm: async () => {
+        setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+        setShowEditCollectionModal(false);
+        const remaining = collectionsList
+          .filter((col) => col.id !== id)
+          .map((col, idx) => ({
+            ...col,
+            number: col.number && col.number.trim() ? col.number : String(idx + 1).padStart(2, '0'),
+            order: idx + 1
+          }));
+        setCollectionsList(remaining);
+        if (selectedCategoryFilter === id) {
+          setSelectedCategoryFilter('All');
+        }
+        showToast('Collection Deleted', `"${title}" removed from Our Collections.`, 'delete');
+
+        await deleteCollectionFromSupabase(id, title, remaining, user.email);
+        const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+        setAuditLogs(updatedLogs);
+      }
+    });
+  };
+
+  const handleRestoreDefaultCollections = async () => {
+    setIsSyncingCollections(true);
+    try {
+      const restored = await restoreDefaultCollectionsInSupabase(user.email);
+      setCollectionsList(restored);
+      showToast(
+        'Defaults Restored',
+        'Restored the 6 core Atelier Living collections.',
+        'success'
+      );
+      const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+      setAuditLogs(updatedLogs);
+    } finally {
+      setIsSyncingCollections(false);
+    }
+  };
+
+  const handleSyncAllCollections = async () => {
+    setIsSyncingCollections(true);
+    try {
+      const success = await saveCollectionsToSupabase(collectionsList, user.email);
+      if (success) {
+        showToast(
+          'Collections Synchronized',
+          `${collectionsList.length} collection block${collectionsList.length === 1 ? '' : 's'} synchronized cleanly.`,
+          'success'
+        );
+        const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+        setAuditLogs(updatedLogs);
+      } else {
+        showToast('Sync Notice', 'Collections updated locally and logged to audit trail.', 'info');
+      }
+    } catch {
+      showToast('Sync Error', 'Failed to sync with Supabase.', 'error');
+    } finally {
+      setIsSyncingCollections(false);
+    }
+  };
+
   // Create Product Handler
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProductForm.name || !newProductForm.materialComposition) return;
 
-    const catObj = CATEGORIES_DATA[newProductForm.categorySlug] || CATEGORIES_DATA['fabrics'];
+    const catObj =
+      collectionsList.find((c) => c.id === newProductForm.categorySlug) ||
+      CATEGORIES_DATA[newProductForm.categorySlug] ||
+      collectionsList[0] ||
+      CATEGORIES_DATA['drapes-curtains'];
 
     const newProd: Product = {
       id: `PRD-${Date.now().toString().slice(-4)}`,
@@ -955,7 +1265,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       image: newProductForm.image,
       galleryImages: [newProductForm.image],
       swatchColors: [{ name: 'Classic Gold', hex: '#C5A059' }],
-      swatchType: newProductForm.categorySlug === 'fabrics' ? 'silk' : 'linen',
+      swatchType: newProductForm.categorySlug === 'fabrics' || newProductForm.categorySlug === 'upholstery-fabrics' ? 'silk' : 'linen',
       tags: ['Bespoke', 'Atelier']
     };
 
@@ -971,7 +1281,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     setNewProductForm({
       name: '',
-      categorySlug: 'fabrics',
+      categorySlug: collectionsList[0]?.id || 'drapes-curtains',
       materialComposition: '',
       origin: 'Como, Italy',
       priceCategory: 'Bespoke',
@@ -1873,9 +2183,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       category: 'SITE IDENTITY & BRANDING',
       items: [
         {
+          id: 'home-layout',
+          label: 'Homepage Layout',
+          icon: Layout,
+          badge: homeSectionLayout.sections.filter((s) => s.isVisible !== false).length,
+          badgeColor: 'bg-[#C9A56A] text-[#0F1714]'
+        },
+        {
           id: 'site-branding',
           label: 'Site Branding & Nav',
           icon: SlidersHorizontal
+        },
+        {
+          id: 'footer-cms',
+          label: 'Footer & Links',
+          icon: Link2,
+          badge:
+            footerSettings.collectionLinks.filter((l) => l.isVisible !== false).length +
+            footerSettings.quickLinks.filter((l) => l.isVisible !== false).length,
+          badgeColor: 'bg-[#C9A56A] text-[#0F1714]'
+        },
+        {
+          id: 'atelier-experience',
+          label: 'Atelier Experience',
+          icon: Compass,
+          badge: experienceSettings.steps.length,
+          badgeColor: 'bg-[#C9A56A] text-[#0F1714]'
+        },
+        {
+          id: 'why-atelier',
+          label: 'Why Atelier Living',
+          icon: ImageIcon,
+          badge: whySettings.pillars.length,
+          badgeColor: 'bg-[#C9A56A] text-[#0F1714]'
+        },
+        {
+          id: 'designers-architects',
+          label: 'Designers & Architects',
+          icon: Building2
+        },
+        {
+          id: 'final-cta',
+          label: 'Final Call To Action',
+          icon: Sparkles
         }
       ]
     },
@@ -2685,51 +3035,214 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         {/* ================= PRODUCTS TAB ================= */}
         {activeTab === 'products' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
-              <div>
-                <h2 className="font-serif text-2xl font-bold text-white">Product Catalog Management</h2>
-                <p className="text-xs text-[#D8C8B8]">
-                  Inspect and curate active luxury furnishing items synced live with Supabase Cloud DB.
-                </p>
+          <div className="space-y-8 animate-in fade-in duration-300">
+            {/* ================= MASTER COLLECTIONS ARCHITECTURE CONTROL CENTER ================= */}
+            <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#163129] via-[#0F1714] to-[#163129] border border-[#C9A56A]/30 shadow-2xl space-y-6">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-[#C9A56A]/20">
+                <div className="space-y-1.5">
+                  <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#C9A56A]/15 border border-[#C9A56A]/40 text-[#C9A56A] text-[10px] font-bold uppercase tracking-widest">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>OUR COLLECTIONS • ARCHITECTURE CONTROL CENTER</span>
+                  </div>
+                  <h2 className="font-serif text-3xl sm:text-4xl text-white font-normal">
+                    Everything Your Space Deserves
+                  </h2>
+                  <p className="text-xs sm:text-sm text-[#A6B5AD] max-w-3xl font-light leading-relaxed">
+                    Dynamic master control for the {collectionsList.length} curated collection{collectionsList.length === 1 ? '' : 's'} featured across the storefront and synchronised across the master catalog.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={openAddCollectionModal}
+                    className="px-5 py-3 rounded-xl bg-emerald-500/15 border border-emerald-400/50 text-emerald-300 hover:bg-emerald-500 hover:text-[#0F1714] font-bold text-xs uppercase tracking-widest transition-all flex items-center space-x-2 shadow-md cursor-pointer"
+                  >
+                    <Layers className="w-4 h-4" />
+                    <span>+ Add Collection</span>
+                  </button>
+
+                  <button
+                    onClick={handleSyncAllCollections}
+                    disabled={isSyncingCollections}
+                    className="px-5 py-3 rounded-xl border border-[#C9A56A] text-[#C9A56A] hover:bg-[#C9A56A] hover:text-[#0F1714] font-bold text-xs uppercase tracking-widest transition-all flex items-center space-x-2 shadow-md cursor-pointer disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{isSyncingCollections ? 'Syncing...' : 'Sync to Live Supabase'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setNewProductForm((prev) => ({
+                        ...prev,
+                        categorySlug: collectionsList.some((c) => c.id === prev.categorySlug)
+                          ? prev.categorySlug
+                          : collectionsList[0]?.id || 'drapes-curtains'
+                      }));
+                      setShowAddProductModal(true);
+                    }}
+                    className="px-5 py-3 rounded-xl bg-[#C9A56A] text-[#0F1714] font-bold text-xs uppercase tracking-widest hover:bg-[#D4AF37] transition-all flex items-center space-x-2 shadow-lg cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add New Product</span>
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => setShowAddProductModal(true)}
-                className="px-4 py-2.5 rounded-xl bg-[#C5A059] text-[#121110] font-bold text-xs uppercase tracking-widest hover:bg-[#D4AF37] transition-all flex items-center justify-center space-x-2 shadow-lg cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add New Catalog Product</span>
-              </button>
+
+              {/* Collections Architecture Grid */}
+              {collectionsList.length === 0 ? (
+                <div className="p-8 rounded-2xl bg-[#0F1714]/60 border border-dashed border-[#C9A56A]/40 text-center space-y-4">
+                  <p className="text-sm text-[#E9DFD1]">
+                    No collection blocks are currently configured.
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={openAddCollectionModal}
+                      className="px-5 py-2.5 rounded-xl bg-[#C9A56A] text-[#0F1714] font-bold text-xs uppercase tracking-widest hover:bg-[#D4AF37] transition-all inline-flex items-center space-x-2 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add First Collection</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRestoreDefaultCollections}
+                      disabled={isSyncingCollections}
+                      className="px-5 py-2.5 rounded-xl border border-white/20 text-white hover:bg-white/10 font-semibold text-xs uppercase tracking-widest transition-all inline-flex items-center space-x-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <RotateCcw className="w-4 h-4 text-[#C9A56A]" />
+                      <span>Restore Default 6 Collections</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {collectionsList.map((col, idx) => {
+                    const displayNum =
+                      col.number && col.number.trim()
+                        ? col.number.trim()
+                        : String(idx + 1).padStart(2, '0');
+                    const matchingCount = productsList.filter(
+                      (p) => p.categorySlug === col.id || p.categoryName === col.title
+                    ).length;
+
+                    return (
+                      <div
+                        key={col.id}
+                        className="p-5 sm:p-6 rounded-2xl bg-[#0F1714]/75 border border-white/10 hover:border-[#C9A56A]/60 transition-all flex flex-col justify-between space-y-4 group shadow-lg"
+                      >
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="w-8 h-8 rounded-full bg-[#C9A56A] text-[#0F1714] font-serif font-bold text-xs flex items-center justify-center shadow">
+                              {displayNum}
+                            </span>
+                            <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                              {matchingCount} {matchingCount === 1 ? 'Product' : 'Products'} Active
+                            </span>
+                          </div>
+
+                          <div className="flex items-center space-x-3.5">
+                            <img
+                              src={col.heroImage}
+                              alt={col.title}
+                              className="w-14 h-14 rounded-xl object-cover border border-white/15 group-hover:scale-105 transition-transform shrink-0"
+                            />
+                            <div>
+                              <h4 className="font-serif text-lg text-white group-hover:text-[#C9A56A] transition-colors leading-snug">
+                                {displayNum}. {col.title}
+                              </h4>
+                              <span className="text-[11px] text-[#C9A56A] font-medium block">
+                                {col.craftOrigin}
+                              </span>
+                            </div>
+                          </div>
+
+                          <p className="text-xs text-[#B3C0B8] font-light leading-relaxed line-clamp-3">
+                            {col.description}
+                          </p>
+                        </div>
+
+                        <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedCategoryFilter(col.id);
+                              showToast('Filter Applied', `Filtered catalog table to ${col.title}.`, 'info');
+                            }}
+                            className="text-xs text-[#C9A56A] hover:underline uppercase tracking-wider font-semibold cursor-pointer"
+                          >
+                            View Items ({matchingCount}) &rarr;
+                          </button>
+
+                          <div className="flex items-center space-x-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingCollection({ ...col, number: displayNum });
+                                setShowEditCollectionModal(true);
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white text-xs font-semibold transition-all border border-white/10 flex items-center space-x-1.5 cursor-pointer"
+                            >
+                              <Edit className="w-3.5 h-3.5 text-[#C9A56A]" />
+                              <span>Edit</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCollection(col.id, col.title)}
+                              className="px-2.5 py-1.5 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 text-xs font-semibold transition-all border border-red-500/30 flex items-center space-x-1 cursor-pointer"
+                              title={`Delete ${col.title}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {/* Filter Bar */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-              <div className="md:col-span-8 relative">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search products by name or material composition..."
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/15 focus:border-[#C5A059] focus:outline-none text-xs text-white placeholder-white/40"
-                />
-                <Search className="w-4 h-4 text-[#C5A059] absolute left-3.5 top-3" />
+            {/* Product Catalog Management Section */}
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10">
+                <div>
+                  <h3 className="font-serif text-xl font-bold text-white">Item-by-Item Catalog Inventory</h3>
+                  <p className="text-xs text-[#D8C8B8]">
+                    Manage individual fabrics, drapery textiles, rugs, and custom furniture objects synced live with Supabase Cloud DB.
+                  </p>
+                </div>
               </div>
 
-              <div className="md:col-span-4">
-                <select
-                  value={selectedCategoryFilter}
-                  onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-[#163129]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none cursor-pointer"
-                >
-                  <option value="All" className="bg-[#163129] text-white">
-                    All Categories ({productsList.length})
-                  </option>
-                  {Object.values(CATEGORIES_DATA).map((cat) => (
-                    <option key={cat.id} value={cat.id} className="bg-[#163129] text-white">
-                      {cat.title}
+              {/* Filter Bar */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                <div className="md:col-span-8 relative">
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search products by name or material composition..."
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/15 focus:border-[#C5A059] focus:outline-none text-xs text-white placeholder-white/40"
+                  />
+                  <Search className="w-4 h-4 text-[#C5A059] absolute left-3.5 top-3" />
+                </div>
+
+                <div className="md:col-span-4">
+                  <select
+                    value={selectedCategoryFilter}
+                    onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl bg-[#163129]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none cursor-pointer"
+                  >
+                    <option value="All" className="bg-[#163129] text-white">
+                      All Collections ({productsList.length})
                     </option>
-                  ))}
-                </select>
+                    {collectionsList.map((cat) => (
+                      <option key={cat.id} value={cat.id} className="bg-[#163129] text-white">
+                        {cat.number ? `${cat.number}. ` : ''}{cat.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -6670,6 +7183,186 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         )}
 
+        {/* ================= ATELIER EXPERIENCE CMS MODULE ================= */}
+        {activeTab === 'atelier-experience' && (
+          <AdminExperienceModule
+            experience={experienceSettings}
+            adminEmail={user.email}
+            onUpdateExperience={(updated) => setExperienceSettings(updated)}
+            onAuditLogRefresh={async () => {
+              const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+              setAuditLogs(updatedLogs);
+            }}
+            onRequestDelete={({ title, itemName, itemType, onConfirm }) => {
+              setDeleteModalState({
+                isOpen: true,
+                title,
+                itemName,
+                itemType,
+                onConfirm: async () => {
+                  setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+                  await onConfirm();
+                }
+              });
+            }}
+          />
+        )}
+
+        {/* ================= WHY ATELIER LIVING CMS MODULE ================= */}
+        {activeTab === 'why-atelier' && (
+          <AdminWhyAtelierModule
+            whyData={whySettings}
+            adminEmail={user.email}
+            onUpdateWhyData={(updated) => setWhySettings(updated)}
+            onAuditLogRefresh={async () => {
+              const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+              setAuditLogs(updatedLogs);
+            }}
+            onRequestDelete={({ title, itemName, itemType, onConfirm }) => {
+              setDeleteModalState({
+                isOpen: true,
+                title,
+                itemName,
+                itemType,
+                onConfirm: async () => {
+                  setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+                  await onConfirm();
+                }
+              });
+            }}
+          />
+        )}
+
+        {/* ================= FOR DESIGNERS & ARCHITECTS CMS MODULE ================= */}
+        {activeTab === 'designers-architects' && (
+          <AdminDesignersModule
+            data={designersSettings}
+            adminEmail={user.email}
+            onUpdate={(updated) => setDesignersSettings(updated)}
+            onAuditLogRefresh={async () => {
+              const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+              setAuditLogs(updatedLogs);
+            }}
+            onRequestDelete={({ title, itemName, itemType, onConfirm }) => {
+              setDeleteModalState({
+                isOpen: true,
+                title,
+                itemName,
+                itemType,
+                onConfirm: async () => {
+                  setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+                  await onConfirm();
+                }
+              });
+            }}
+          />
+        )}
+
+        {/* ================= FINAL CALL TO ACTION CMS MODULE ================= */}
+        {activeTab === 'final-cta' && (
+          <AdminFinalCtaModule
+            data={finalCtaSettings}
+            adminEmail={user.email}
+            onUpdate={(updated) => setFinalCtaSettings(updated)}
+            onAuditLogRefresh={async () => {
+              const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+              setAuditLogs(updatedLogs);
+            }}
+            onRequestDelete={({ title, itemName, itemType, onConfirm }) => {
+              setDeleteModalState({
+                isOpen: true,
+                title,
+                itemName,
+                itemType,
+                onConfirm: async () => {
+                  setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+                  await onConfirm();
+                }
+              });
+            }}
+          />
+        )}
+
+        {/* ================= HOMEPAGE DRAG & DROP LAYOUT MODULE ================= */}
+        {activeTab === 'home-layout' && (
+          <AdminHomeLayoutModule
+            layout={homeSectionLayout}
+            adminEmail={user.email}
+            sectionStatuses={{
+              hero: {
+                detailText: `${heroSlidesList.filter((s) => s.isVisible !== false).length} Slides`
+              },
+              collections: {
+                detailText: `${collectionsList.filter((c) => c.isVisible !== false).length} Collections`
+              },
+              'atelier-experience': {
+                moduleHidden: experienceSettings.isVisible === false,
+                detailText: `${experienceSettings.steps.filter((s) => s.isVisible !== false).length} Stages`
+              },
+              'why-atelier': {
+                moduleHidden: whySettings.isVisible === false,
+                detailText: `${whySettings.pillars.filter((p) => p.isVisible !== false).length} Pillars`
+              },
+              'designers-architects': {
+                moduleHidden: designersSettings.isVisible === false
+              },
+              'final-cta': {
+                moduleHidden: finalCtaSettings.isVisible === false
+              },
+              'featured-projects': {
+                detailText: `${projectsList.slice(0, 3).length} Featured`
+              },
+              'brands-marquee': {
+                detailText: `${brandsList.filter((b) => b.isVisible !== false).length} Partners`
+              },
+              testimonials: {
+                detailText: `${testimonialsList.filter((t) => t.isVisible !== false).length} Reviews`
+              }
+            }}
+            onUpdate={(updated) => setHomeSectionLayout(updated)}
+            onAuditLogRefresh={async () => {
+              const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+              setAuditLogs(updatedLogs);
+            }}
+            onNavigateTab={(tab, siteSubtab) => {
+              setActiveTab(tab);
+              if (tab === 'site-branding' && siteSubtab) {
+                setSiteSettingsSubtab(siteSubtab);
+              }
+            }}
+          />
+        )}
+
+        {/* ================= DYNAMIC FOOTER CMS & LINKS MODULE ================= */}
+        {activeTab === 'footer-cms' && (
+          <AdminFooterModule
+            data={footerSettings}
+            collections={collectionsList}
+            adminEmail={user.email}
+            onUpdate={(updated) => setFooterSettings(updated)}
+            onAuditLogRefresh={async () => {
+              const updatedLogs = await fetchAdminAuditLogsFromSupabase();
+              setAuditLogs(updatedLogs);
+            }}
+            onRequestDelete={({ title, itemName, itemType, onConfirm }) => {
+              setDeleteModalState({
+                isOpen: true,
+                title,
+                itemName,
+                itemType,
+                onConfirm: async () => {
+                  setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+                  await onConfirm();
+                }
+              });
+            }}
+            onOpenSocialSettings={() => {
+              setActiveTab('site-branding');
+              setSiteSettingsSubtab('socials');
+            }}
+          />
+        )}
+
         {/* ================= MARKETING & SEO SUITE ================= */}
         {activeTab === 'marketing-seo' && (
           <AdminMarketingSuite
@@ -7706,6 +8399,250 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
+      {/* --- ADD COLLECTION MODAL --- */}
+      {showAddCollectionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+          <div className="bg-[#163129] border border-[#C9A56A]/40 rounded-3xl p-6 sm:p-8 max-w-xl w-full max-h-[90vh] overflow-y-auto space-y-5 text-white shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div>
+                <h3 className="font-serif text-2xl font-bold text-white">
+                  Add New Collection Block
+                </h3>
+                <p className="text-xs text-[#E9DFD1]/80">
+                  Create a new collection under OUR COLLECTIONS with uploaded photography.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddCollectionModal(false)}
+                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCollection} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Number</label>
+                  <input
+                    type="text"
+                    value={newCollectionForm.number}
+                    onChange={(e) => setNewCollectionForm({ ...newCollectionForm, number: e.target.value })}
+                    placeholder="e.g. 07"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Collection Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newCollectionForm.title}
+                    onChange={(e) => setNewCollectionForm({ ...newCollectionForm, title: e.target.value })}
+                    placeholder="e.g. Sheer Linens & Silk Voiles"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Craft Origin</label>
+                  <input
+                    type="text"
+                    value={newCollectionForm.craftOrigin}
+                    onChange={(e) => setNewCollectionForm({ ...newCollectionForm, craftOrigin: e.target.value })}
+                    placeholder="e.g. Ahmedabad & Como, Italy"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Subtitle / Highlight</label>
+                  <input
+                    type="text"
+                    value={newCollectionForm.subtitle}
+                    onChange={(e) => setNewCollectionForm({ ...newCollectionForm, subtitle: e.target.value })}
+                    placeholder="e.g. Bespoke Architectural Textiles"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <ImageUploader
+                label="Collection Cover Image *"
+                helpText="Upload a cover image from your computer (JPG, PNG, WEBP) or choose a URL/preset"
+                value={newCollectionForm.heroImage}
+                onChange={(img) => setNewCollectionForm({ ...newCollectionForm, heroImage: img })}
+                aspectRatio="video"
+                presetSuggestions={[
+                  { label: 'Drapes & Curtains', url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&q=80&w=1200' },
+                  { label: 'Upholstery & Fabrics', url: 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&q=80&w=1200' },
+                  { label: 'Wallcoverings', url: 'https://images.unsplash.com/photo-1615873968403-89e068629265?auto=format&fit=crop&q=80&w=1200' },
+                  { label: 'Rugs & Carpets', url: 'https://images.unsplash.com/photo-1600166898405-da9535204843?auto=format&fit=crop&q=80&w=1200' }
+                ]}
+                required
+              />
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Description *</label>
+                <textarea
+                  rows={4}
+                  required
+                  value={newCollectionForm.description}
+                  onChange={(e) => setNewCollectionForm({ ...newCollectionForm, description: e.target.value })}
+                  placeholder="Describe the craftsmanship, mood, and interior possibilities of this collection..."
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none leading-relaxed"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-white/10 flex items-center justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddCollectionModal(false)}
+                  className="px-4 py-2.5 rounded-xl border border-white/15 text-xs text-white hover:bg-white/5 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-[#C9A56A] text-[#0F1714] font-bold text-xs uppercase tracking-widest hover:bg-[#D4AF37] cursor-pointer shadow-lg inline-flex items-center space-x-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create Collection</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- EDIT COLLECTION MODAL --- */}
+      {showEditCollectionModal && editingCollection && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+          <div className="bg-[#163129] border border-[#C9A56A]/40 rounded-3xl p-6 sm:p-8 max-w-xl w-full max-h-[90vh] overflow-y-auto space-y-5 text-white shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div>
+                <h3 className="font-serif text-2xl font-bold text-white">
+                  Edit Collection {editingCollection.number ? `#${editingCollection.number}` : ''}
+                </h3>
+                <p className="text-xs text-[#E9DFD1]/80">
+                  Update collection architecture, title, uploaded artwork, and marketing copy.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditCollectionModal(false)}
+                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCollection} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Number</label>
+                  <input
+                    type="text"
+                    value={editingCollection.number || ''}
+                    onChange={(e) => setEditingCollection({ ...editingCollection, number: e.target.value })}
+                    placeholder="e.g. 01"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Collection Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingCollection.title}
+                    onChange={(e) => setEditingCollection({ ...editingCollection, title: e.target.value })}
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Craft Origin</label>
+                  <input
+                    type="text"
+                    value={editingCollection.craftOrigin}
+                    onChange={(e) => setEditingCollection({ ...editingCollection, craftOrigin: e.target.value })}
+                    placeholder="e.g. Ahmedabad & Como, Italy"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Subtitle / Highlight</label>
+                  <input
+                    type="text"
+                    value={editingCollection.subtitle || ''}
+                    onChange={(e) => setEditingCollection({ ...editingCollection, subtitle: e.target.value })}
+                    placeholder="e.g. Bespoke Furnishings"
+                    className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <ImageUploader
+                label="Collection Cover Image *"
+                helpText="Upload a new photo from your device (JPG, PNG, WEBP) or switch to Web URL / Presets"
+                value={editingCollection.heroImage}
+                onChange={(img) => setEditingCollection({ ...editingCollection, heroImage: img })}
+                aspectRatio="video"
+                presetSuggestions={[
+                  { label: 'Drapes & Curtains', url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&q=80&w=1200' },
+                  { label: 'Upholstery & Fabrics', url: 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&q=80&w=1200' },
+                  { label: 'Wallcoverings', url: 'https://images.unsplash.com/photo-1615873968403-89e068629265?auto=format&fit=crop&q=80&w=1200' },
+                  { label: 'Rugs & Carpets', url: 'https://images.unsplash.com/photo-1600166898405-da9535204843?auto=format&fit=crop&q=80&w=1200' }
+                ]}
+                required
+              />
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#C9A56A] block mb-1">Description *</label>
+                <textarea
+                  rows={4}
+                  required
+                  value={editingCollection.description}
+                  onChange={(e) => setEditingCollection({ ...editingCollection, description: e.target.value })}
+                  className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none leading-relaxed"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteCollection(editingCollection.id, editingCollection.title)}
+                  className="px-4 py-2.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 text-red-300 text-xs font-semibold border border-red-500/30 inline-flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Block</span>
+                </button>
+
+                <div className="flex items-center space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditCollectionModal(false)}
+                    className="px-4 py-2.5 rounded-xl border border-white/15 text-xs text-white hover:bg-white/5 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-[#C9A56A] text-[#0F1714] font-bold text-xs uppercase tracking-widest hover:bg-[#D4AF37] cursor-pointer shadow-lg"
+                  >
+                    Save &amp; Update
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* --- ADD PRODUCT MODAL --- */}
       {showAddProductModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
@@ -7738,9 +8675,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     onChange={(e) => setNewProductForm({ ...newProductForm, categorySlug: e.target.value as CategorySlug })}
                     className="w-full p-3 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none cursor-pointer"
                   >
-                    {Object.values(CATEGORIES_DATA).map((cat) => (
+                    {collectionsList.map((cat) => (
                       <option key={cat.id} value={cat.id} className="bg-[#163129]">
-                        {cat.title}
+                        {cat.number ? `${cat.number}. ` : ''}{cat.title}
                       </option>
                     ))}
                   </select>
@@ -8077,9 +9014,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       onChange={(e) => setNewProjectProdCategory(e.target.value as CategorySlug)}
                       className="w-full p-2.5 rounded-xl bg-[#0F1714]/60 border border-white/15 text-xs text-white focus:border-[#C9A56A] focus:outline-none cursor-pointer"
                     >
-                      {Object.values(CATEGORIES_DATA).map((cat) => (
+                      {collectionsList.map((cat) => (
                         <option key={cat.id} value={cat.id} className="bg-[#163129]">
-                          {cat.title}
+                          {cat.number ? `${cat.number}. ` : ''}{cat.title}
                         </option>
                       ))}
                     </select>

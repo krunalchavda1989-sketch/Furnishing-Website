@@ -1,4 +1,10 @@
 export type CategorySlug =
+  | 'drapes-curtains'
+  | 'upholstery-fabrics'
+  | 'wallpapers-wallcoverings'
+  | 'rugs-carpets'
+  | 'mattresses-sleep-comfort'
+  | 'custom-furnishing-solutions'
   | 'fabrics'
   | 'curtains-upholstery'
   | 'bed'
@@ -6,10 +12,12 @@ export type CategorySlug =
   | 'rugs'
   | 'carpet'
   | 'wallpaper'
-  | 'luxury-collection';
+  | 'luxury-collection'
+  | (string & {});
 
 export interface CategoryInfo {
   id: CategorySlug;
+  number?: string;
   title: string;
   subtitle: string;
   description: string;
@@ -17,6 +25,8 @@ export interface CategoryInfo {
   materialHighlight: string;
   craftOrigin: string;
   tagline: string;
+  order?: number;
+  isVisible?: boolean;
 }
 
 export interface HeroHotspot {
@@ -400,5 +410,174 @@ export interface MarketingSettings {
   codeInjection: CodeInjectionSettings;
   updatedAt?: string;
 }
+
+// ==========================================
+// THE ATELIER EXPERIENCE SECTION TYPES
+// ==========================================
+
+export interface AtelierExperienceStep {
+  id: string;
+  number: string;
+  title: string;
+  description: string;
+  isVisible?: boolean;
+  order?: number;
+}
+
+export interface AtelierExperienceSettings {
+  id?: string;
+  badge: string;
+  headingPrimary: string;
+  headingAccent: string;
+  introText: string;
+  ctaLabel?: string;
+  steps: AtelierExperienceStep[];
+  isVisible?: boolean;
+  updatedAt?: string;
+}
+
+// ==========================================
+// WHY ATELIER LIVING SECTION TYPES
+// ==========================================
+
+export interface WhyAtelierPillar {
+  id: string;
+  number: string;
+  title: string;
+  description: string;
+  image: string;
+  imageCaption?: string;
+  isVisible?: boolean;
+  order?: number;
+}
+
+export interface WhyAtelierSettings {
+  id?: string;
+  badge: string;
+  headingPrimary: string;
+  headingAccent: string;
+  subtitle?: string;
+  ctaLabel?: string;
+  pillars: WhyAtelierPillar[];
+  isVisible?: boolean;
+  updatedAt?: string;
+}
+
+// ==========================================
+// FOR DESIGNERS & ARCHITECTS SECTION TYPES
+// ==========================================
+
+export interface DesignersArchitectsSettings {
+  id?: string;
+  badge: string;
+  headingPrimary: string;
+  headingAccent: string;
+  paragraphs: string[];
+  highlights?: string[];
+  ctaLabel: string;
+  heroImage: string;
+  imageCaption?: string;
+  isVisible?: boolean;
+  updatedAt?: string;
+}
+
+// ==========================================
+// FINAL CALL TO ACTION SECTION TYPES
+// ==========================================
+
+export interface FinalCtaSettings {
+  id?: string;
+  badge: string;
+  headingPrimary: string;
+  headingAccent: string;
+  description: string;
+  ctaLabel: string;
+  backgroundImage?: string;
+  isVisible?: boolean;
+  updatedAt?: string;
+}
+
+// ==========================================
+// HOMEPAGE DYNAMIC SECTION ORDERING TYPES
+// ==========================================
+
+export type HomeSectionId =
+  | 'hero'
+  | 'brand-story'
+  | 'collections'
+  | 'atelier-experience'
+  | 'why-atelier'
+  | 'designers-architects'
+  | 'final-cta'
+  | 'featured-projects'
+  | 'brands-marquee'
+  | 'testimonials';
+
+export interface HomeSectionLayoutItem {
+  id: HomeSectionId;
+  isVisible: boolean;
+  order: number;
+}
+
+export interface HomeSectionLayoutSettings {
+  id?: string;
+  sections: HomeSectionLayoutItem[];
+  updatedAt?: string;
+}
+
+// ==========================================
+// DYNAMIC FOOTER CMS & LINKS TYPES
+// ==========================================
+
+export interface FooterLinkItem {
+  id: string;
+  label: string;
+  target: string;
+  categorySlug?: CategorySlug;
+  externalUrl?: string;
+  isExternal?: boolean;
+  isVisible?: boolean;
+  order?: number;
+}
+
+export interface FooterSettings {
+  id?: string;
+  newsletterVisible?: boolean;
+  newsletterBadge: string;
+  newsletterHeading: string;
+  newsletterSubtitle: string;
+  newsletterPlaceholder: string;
+  newsletterButtonLabel: string;
+  newsletterSuccessText: string;
+
+  brandLogoImage?: string;
+  brandLogoMonogram: string;
+  brandLogoTitle: string;
+  brandDescription: string;
+  showSocialLinks?: boolean;
+
+  collectionsHeading: string;
+  collectionLinks: FooterLinkItem[];
+
+  quickLinksHeading: string;
+  quickLinks: FooterLinkItem[];
+
+  showroomHeading: string;
+  address: string;
+  phone: string;
+  mobile: string;
+  email: string;
+  showEmail?: boolean;
+  showCtaButton?: boolean;
+  ctaButtonLabel: string;
+  ctaButtonTarget: string;
+  ctaButtonUrl?: string;
+
+  copyrightText: string;
+  bottomLinks: FooterLinkItem[];
+
+  updatedAt?: string;
+}
+
 
 
